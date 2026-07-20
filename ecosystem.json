@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "branch": "main",
+  "cloneUrlTemplate": "git@github.com:morfredus/{name}.git",
+  "projects": [
+    "ComponentHub",
+    "GateWayLab",
+    "MeteoHub",
+    "morfAnalytics",
+    "morfBeacon",
+    "morfMonitor",
+    "morfNotify",
+    "morfSensor",
+    "morfSync",
+    "morfTemplateService",
+    "morfUpdate",
+    "RaspberryDashboard",
+    "SiteWatch"
+  ]
+}
