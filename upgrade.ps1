@@ -1,4 +1,7 @@
 [CmdletBinding()]
-param([string]$Profile)
+param(
+    [Alias('Profile')]
+    [string]$Preset
+)
 
-& "$PSScriptRoot/morf.ps1" upgrade -Profile $Profile
+& "$PSScriptRoot/morf.ps1" upgrade -Preset $Preset

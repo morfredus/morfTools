@@ -22,9 +22,9 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `clone` | none | Clone missing projects on the manifest branch. |
 | `fetch` | none | Fetch remotes and prune deleted references. |
 | `pull`, `update` | none | Fast-forward pull from the manifest branch. |
-| `build` | optional CMake profile | Build PlatformIO projects, or configure and build CMake projects. |
+| `build` | optional CMake preset | Build PlatformIO projects, or configure and build CMake projects. |
 | `install` | none | Install `requirements.txt` when present. |
-| `upgrade` | optional CMake profile | Pull then rebuild CMake projects. |
+| `upgrade` | optional CMake preset | Pull then rebuild CMake projects. |
 | `doctor` | none | Verify Git repositories and their `origin`; run it before `push`. |
 | `clean` | none | Remove the default `build/` directory only. |
 | `status` | none | Show the short Git status and branch. |
@@ -33,21 +33,22 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `shared-config` (Linux) | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared configuration read by morfMonitor and RaspberryDashboard. |
 | `shared-config.ps1` (Windows) | `-Action Status|Validate|Edit|Diff|Install` | Manage the local shared configuration used by Windows morfSystem applications. |
 
-For Linux and Raspberry Pi, use `--profile <name>` (or `-p <name>`) with `build` and `upgrade`:
+For Linux and Raspberry Pi, use CMake's own vocabulary: `--preset <name>`
+(or `-p <name>`) with `build` and `upgrade`:
 
 ```bash
-./morfTools/build.sh --profile linux-arm64
+./morfTools/build.sh --preset linux-arm64
 ./morfTools/upgrade.sh -p linux
 ```
 
-The shortcut also accepts a single positional profile, for example `./morfTools/build.sh linux-arm64`. On PowerShell, use `-Profile <name>`:
+The shortcut also accepts a single positional preset, for example `./morfTools/build.sh linux-arm64`. On PowerShell, use `-Preset <name>`:
 
 ```powershell
-.\morfTools\build.ps1 -Profile mingw
-pwsh .\morfTools\morf.ps1 upgrade -Profile linux-arm64
+.\morfTools\build.ps1 -Preset mingw
+pwsh .\morfTools\morf.ps1 upgrade -Preset linux-arm64
 ```
 
-The profile selects the project's CMake configure and build preset. Typical profiles are `mingw` (Windows/MSYS2), `linux` (native x86_64 Linux or WSL2), `linux-arm64` (native 64-bit Raspberry Pi / ARM64), and, where defined, `linux-arm64-cross` (cross-compilation). A profile must be listed in the target project's `CMakePresets.json`. It is ignored for PlatformIO projects.
+The preset selects the project's CMake configure and build preset. Typical presets are `mingw` (Windows/MSYS2), `linux` (native x86_64 Linux or WSL2), `linux-arm64` (native 64-bit Raspberry Pi / ARM64), and, where defined, `linux-arm64-cross` (cross-compilation). A preset must be listed in the target project's `CMakePresets.json`. It is ignored for PlatformIO projects. `--profile` and `-Profile` remain accepted as compatibility aliases.
 
 ### Shared Linux configuration
 
