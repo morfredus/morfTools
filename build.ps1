@@ -1,1 +1,4 @@
-& "$PSScriptRoot/morf.ps1" build @args
+[CmdletBinding()]
+param([string]$Profile)
+
+& "$PSScriptRoot/morf.ps1" build -Profile $Profile

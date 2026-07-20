@@ -1,8 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-command_name="${1:?Usage: morf.sh <command> [message]}"
-message="${2:-}"
+command_name="${1:?Usage: morf.sh <command> [message] [--profile <name>]}"
+shift
+message=""
+profile=""
+while (($#)); do
+  case "$1" in
+    --profile|-p)
+      (($# >= 2)) || { echo "Missing value for $1." >&2; exit 2; }
+      profile="$2"
+      shift 2
+      ;;
+    --) shift; message="$*"; break ;;
+    *) [[ -z "$message" ]] || { echo "Unexpected argument: $1" >&2; exit 2; }; message="$1"; shift ;;
+  esac
+done
+[[ -z "$profile" || "$command_name" == build || "$command_name" == upgrade ]] ||
+  { echo "--profile is only supported by build and upgrade." >&2; exit 2; }
+if [[ -z "$profile" && -n "$message" && ( "$command_name" == build || "$command_name" == upgrade ) ]]; then
+  profile="$message"
+  message=""
+fi
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tool_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 manifest="$tool_dir/ecosystem.json"
@@ -31,9 +50,9 @@ while IFS= read -r project; do
       status) git status --short --branch ;;
       push) git push origin "$(branch)" ;;
       commit) [[ -n "$message" ]] || { echo 'A commit message is required.' >&2; exit 2; }; git add -A; [[ -z "$(git status --porcelain)" ]] || git commit -m "$message" ;;
-      build) if [[ -f platformio.ini ]]; then pio run; elif [[ -f CMakeLists.txt ]]; then cmake -S . -B build && cmake --build build; else echo '[SKIP] no known build definition'; fi ;;
+      build) if [[ -f platformio.ini ]]; then [[ -z "$profile" ]] || echo "[INFO] profile ignored for PlatformIO: $profile"; pio run; elif [[ -f CMakeLists.txt ]]; then if [[ -n "$profile" ]]; then cmake --preset "$profile" && cmake --build --preset "$profile"; else cmake -S . -B build && cmake --build build; fi; else echo '[SKIP] no known build definition'; fi ;;
       install) if [[ -f requirements.txt ]]; then python3 -m pip install -r requirements.txt; else echo '[SKIP] no generic install definition'; fi ;;
-      upgrade) git pull --ff-only origin "$(branch)"; [[ ! -f CMakeLists.txt ]] || { cmake -S . -B build && cmake --build build; } ;;
+      upgrade) git pull --ff-only origin "$(branch)"; [[ ! -f CMakeLists.txt ]] || { if [[ -n "$profile" ]]; then cmake --preset "$profile" && cmake --build --preset "$profile"; else cmake -S . -B build && cmake --build build; fi; } ;;
       clean) [[ ! -d build ]] || rm -rf build ;;
       doctor)
         git rev-parse --is-inside-work-tree >/dev/null

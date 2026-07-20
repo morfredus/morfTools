@@ -1,1 +1,4 @@
-& "$PSScriptRoot/morf.ps1" upgrade @args
+[CmdletBinding()]
+param([string]$Profile)
+
+& "$PSScriptRoot/morf.ps1" upgrade -Profile $Profile
