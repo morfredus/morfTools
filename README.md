@@ -30,6 +30,8 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `status` | none | Show the short Git status and branch. |
 | `commit` | message required | Stage all changes and commit when needed. |
 | `push` | none | Push the manifest branch to `origin`. |
+| `shared-config` (Linux) | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared configuration read by morfMonitor and RaspberryDashboard. |
+| `shared-config.ps1` (Windows) | `-Action Status|Validate|Edit|Diff|Install` | Manage the local shared configuration used by Windows morfSystem applications. |
 
 For Linux and Raspberry Pi, use `--profile <name>` (or `-p <name>`) with `build` and `upgrade`:
 
@@ -46,6 +48,39 @@ pwsh .\morfTools\morf.ps1 upgrade -Profile linux-arm64
 ```
 
 The profile selects the project's CMake configure and build preset. Typical profiles are `mingw` (Windows/MSYS2), `linux` (native x86_64 Linux or WSL2), `linux-arm64` (native 64-bit Raspberry Pi / ARM64), and, where defined, `linux-arm64-cross` (cross-compilation). A profile must be listed in the target project's `CMakePresets.json`. It is ignored for PlatformIO projects.
+
+### Shared Linux configuration
+
+`morfMonitor` and `RaspberryDashboard` both read
+`/etc/morfsystem/morfsystem.json`. The editable, versioned source is
+`morfMonitor/config/morfsystem.example.json`; it is deliberately kept in the
+repository so changes can be reviewed and committed.
+
+```bash
+./morfTools/shared-config.sh status
+./morfTools/shared-config.sh edit
+./morfTools/shared-config.sh diff
+./morfTools/shared-config.sh install
+./morfTools/shared-config.sh apply
+```
+
+`edit` opens `$EDITOR` (or `nano`) and validates the JSON. `install`
+creates a dated backup before copying to `/etc`; `apply` additionally
+restarts both services. These two commands request sudo only for system writes.
+
+On Windows, the equivalent installed location is
+`%ProgramData%\morfSystem\morfsystem.json`. Both morfMonitor and
+RaspberryDashboard now look there by default (unless `MORFSYSTEM_CONFIG` is
+set). The PowerShell tool stays entirely local:
+
+```powershell
+.\morfTools\shared-config.ps1 -Action Edit
+.\morfTools\shared-config.ps1 -Action Diff
+.\morfTools\shared-config.ps1 -Action Install
+```
+
+`Install` validates first, creates a dated backup when needed, then copies
+the file locally. Use `-ConfigPath` to choose a different installation path.
 
 `ecosystem.json` always contains canonical production names. Production tools use these names without modification.
 
