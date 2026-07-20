@@ -8,7 +8,7 @@ tool_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 manifest="$tool_dir/ecosystem.json"
 [[ "$(basename "$tool_dir")" == *_travail ]] && sandbox=true || sandbox=false
 
-projects() { python3 -c 'import json,sys; print("\\n".join(json.load(open(sys.argv[1]))["projects"]))' "$manifest"; }
+projects() { python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["projects"]))' "$manifest"; }
 branch() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["branch"])' "$manifest"; }
 clone_url() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["cloneUrlTemplate"].replace("{name}",sys.argv[2]))' "$manifest" "$1"; }
 local_project() { $sandbox && printf '%s_travail\n' "$1" || printf '%s\n' "$1"; }
