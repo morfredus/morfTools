@@ -4,8 +4,9 @@
 
 ## Layout
 
-- `ecosystem.json`: project manifest and clone URL template.
+- `ecosystem.json`: project manifest, clone URL template, port allocation registry, and vendored-copy registry.
 - scripts at this project root: portable ecosystem administration commands.
+- `scripts/ecosystem-check.py`: shared implementation of the ecosystem-wide checks run by `doctor`.
 - sibling component directories: independent morfSystem projects.
 - `docs/`: workspace documentation.
 
@@ -41,7 +42,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `build` | CMake preset (asked when omitted) | Build PlatformIO projects, or configure and build CMake projects. |
 | `install` | none | Install `requirements.txt` when present. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
-| `doctor` | none | Verify Git repositories and their `origin`; run it before `push`. |
+| `doctor` | none | Check the port registry and the vendored copies, then verify Git repositories and their `origin`; run it before `push`. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |
 | `commit` | message (asked when omitted) | Stage all changes and commit when needed. |
@@ -119,6 +120,32 @@ set). The PowerShell tool stays entirely local:
 the file locally. Use `-ConfigPath` to choose a different installation path.
 
 `ecosystem.json` always contains canonical production names, including `GateWayLab`; production tools use these names without modification.
+
+## Ecosystem checks
+
+`doctor` starts with two checks that no single project can perform, because
+they describe a resource shared by the whole parc:
+
+- **Port registry.** `ecosystem.json` owns the addressing plan under `ports`.
+  Each allocation names the configuration file and JSON key expected to declare
+  it, and the check reports collisions, mismatches, and ports declared in a
+  configuration but absent from the registry.
+- **Vendored copies.** Libraries copied into `third_party/morf/` are compared
+  against their canonical project. Drift is reported with the offending files
+  and the resynchronisation command.
+
+```text
+[ecosystem]
+--- addressing plan ---
+[OK] morfSensor: 8788
+--- vendored copies ---
+[OK] morfSensor/third_party/morf/beacon matches morfBeacon
+```
+
+Allocate a port in `ecosystem.json` **before** writing it into a service
+configuration; `doctor` fails while the two disagree. See
+[`docs/ECOSYSTEM-CHECKS.md`](docs/ECOSYSTEM-CHECKS.md) for the registry format,
+the reserved ranges, and how to resolve reported drift.
 
 ## Deployment synchronization
 

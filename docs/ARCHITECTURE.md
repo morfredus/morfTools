@@ -4,4 +4,6 @@ The `morfTools` project owns the shared manifest and administration scripts. Pro
 
 The manifest contains canonical production project names, the default branch, and the SSH clone template. Production tools use canonical names unchanged.
 
+The manifest also owns the two ecosystem-wide registries: the port allocation plan and the list of vendored shared libraries with their canonical sources. Both describe resources no single project can validate on its own, so they belong to the tools project rather than to any component. `doctor` checks them before its per-project pass. See [`ECOSYSTEM-CHECKS.md`](ECOSYSTEM-CHECKS.md).
+
 The Windows deployment synchronization script is deliberately separate from generic administration commands. It copies each declared sandbox project into its canonical production directory with Robocopy while excluding `.git` and build/editor artefacts. It does not rename content or replace text: production-capable scripts derive their mode from the enclosing project directory name.

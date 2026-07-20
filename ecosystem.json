@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "branch": "main",
   "cloneUrlTemplate": "git@github.com:morfredus/{name}.git",
   "projects": [
@@ -16,5 +16,83 @@
     "morfUpdate",
     "RaspberryDashboard",
     "SiteWatch"
-  ]
+  ],
+
+  "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
+  "ports": {
+    "beaconUdp": 45454,
+
+    "_comment_ranges": "8080 is a historical allocation (morfSync). The 8787-8799 block is reserved for parc services. The 8800-8899 block is free. The 8900-8999 block is reserved for templates and examples: a port from that range must never appear in production.",
+    "serviceRange": [8787, 8799],
+    "templateRange": [8900, 8999],
+
+    "allocations": [
+      {
+        "project": "morfSync",
+        "http": 8080,
+        "config": "config.example.json",
+        "key": "port",
+        "note": "Historical allocation, outside the service block."
+      },
+      {
+        "project": "morfBeacon",
+        "http": 8787,
+        "config": null,
+        "key": null,
+        "note": "Default value of PresenceConfig::statusPort. No configuration file: the value lives in the library. Reserved so that no service takes it."
+      },
+      {
+        "project": "morfSensor",
+        "http": 8788,
+        "config": "config/morfsensor.example.json",
+        "key": "http_port",
+        "note": "Sensors: LD2410C presence, probes."
+      },
+      {
+        "project": "morfNotify",
+        "http": 8789,
+        "config": "config/morfnotify.example.json",
+        "key": "http_port",
+        "note": "Notification fan-out point."
+      },
+      {
+        "project": "morfMonitor",
+        "http": 8790,
+        "config": "config/morfmonitor.example.json",
+        "key": "http_port",
+        "note": "Machine system state."
+      },
+      {
+        "project": "morfAnalytics",
+        "http": 8799,
+        "config": "config/morfanalytics.example.json",
+        "key": "http_port",
+        "note": "Analysis engine."
+      },
+      {
+        "project": "morfTemplateService",
+        "http": 8901,
+        "config": "config/morftemplate.example.json",
+        "key": "http_port",
+        "note": "TEMPLATE. Port deliberately taken outside the service block so a cloned service cannot be mistaken for a parc service. First step after cloning: reserve a port here, then write it into the new service configuration."
+      }
+    ]
+  },
+
+  "_comment_vendored": "Shared libraries copied into their consumers (third_party/morf/<module>). The copy strategy is deliberate: it guarantees an identical build on Windows, Linux x64 and Raspberry Pi without depending on an external repository. This registry does not question that choice; it lets 'morf doctor' verify that each copy matches its canonical source, instead of relying on vigilance alone.",
+  "vendored": {
+    "modules": [
+      { "module": "beacon", "source": "morfBeacon", "compare": ["src", "include"] },
+      { "module": "update", "source": "morfUpdate", "compare": ["src", "include"] }
+    ],
+    "consumers": [
+      "ComponentHub",
+      "SiteWatch",
+      "morfAnalytics",
+      "morfMonitor",
+      "morfNotify",
+      "morfSensor",
+      "morfTemplateService"
+    ]
+  }
 }

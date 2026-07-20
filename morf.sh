@@ -127,6 +127,16 @@ esac
 
 failed=()
 
+# The addressing plan and the conformance of vendored copies describe a SHARED
+# resource: a port collision or a drifting copy is invisible from inside any
+# single project, where each one stays individually valid. They are therefore
+# checked once, before the project-by-project loop.
+if [[ "$command_name" == doctor ]]; then
+  echo "[ecosystem]"
+  python3 "$tool_dir/scripts/ecosystem-check.py" "$root" "$manifest" || failed+=("ecosystem")
+  echo
+fi
+
 while IFS= read -r project; do
   local_name="$(local_project "$project")"
   path="$root/$local_name"

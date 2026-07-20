@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `ecosystem.json` now owns the **port allocation registry** (`ports`), raised to `schemaVersion` 2. The parc plan previously existed only as a `_comment_port` string inside `morfMonitor/config/morfmonitor.example.json`: a component with no authority over the others, holding a partial copy of an ecosystem-wide fact. That copy was already incomplete — it omitted 8789 (morfNotify) and 8787 (the morfBeacon status default) — so a developer consulting it to pick a free port got wrong information with no way to know it.
+- Fixed the resulting collision: `morfTemplateService` shipped `http_port: 8799`, the port allocated to morfAnalytics. Every service created through the documented procedure therefore started on an occupied port. The template now uses 8901, inside a `templateRange` (8900-8999) reserved for templates and examples and deliberately outside the 8787-8799 service block, so a clone that has not yet reserved its own port is visibly unfinished instead of silently conflicting.
+- `ecosystem.json` also declares the **vendored copies** (`vendored`): the shared libraries copied into `third_party/morf/`, with their canonical source project. The copy strategy itself is unchanged — it is what keeps the build reproducible across Windows, Linux x64 and Raspberry Pi without an external repository.
+- `doctor` now runs both ecosystem-wide checks before its per-project pass, through `scripts/ecosystem-check.py`. Ports: registry self-consistency, registry against each declared configuration, and each configuration against the registry so an unmanaged allocation cannot keep the registry green while making it incomplete. Vendored copies: content comparison of `src` and `include` against the canonical project, with line endings normalised so a CRLF-converted copy is not reported as drift.
+- The check logic lives in one Python script called by both `morf.sh` and `morf.ps1`. Neither gains a dependency (`morf.sh` already parses the manifest with `python3`, `morf.ps1` already calls `python` for `install`), and a PowerShell reimplementation would let the two checkers disagree.
+- Documented the registries, the reserved ranges, the allocation procedure for a new service, and how to resolve reported drift in `docs/ECOSYSTEM-CHECKS.md`.
+
 - Fixed `morf.sh` skipping every project on Windows: python3 emits CRLF on stdout, so project names were read as `Name\r_travail`.
 - A project failing no longer aborts the remaining projects silently; failures are collected and reported, and the command exits non-zero.
 - `morf.ps1` now checks the exit code of `cmake`, `git` and `pio` instead of chaining with `;`, so a failed configure no longer runs a build against a stale directory.

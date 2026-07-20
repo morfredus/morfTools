@@ -118,6 +118,20 @@ if ($Command -eq 'commit' -and -not $Message) {
     while (-not $Message) { $Message = Read-Host 'Commit message' }
 }
 
+# The addressing plan and the conformance of vendored copies describe a SHARED
+# resource: a port collision or a drifting copy is invisible from inside any
+# single project, where each one stays individually valid. They are therefore
+# checked once, before the project-by-project loop. The logic lives in a single
+# Python script shared with morf.sh: reimplementing it in PowerShell would let
+# the two checkers diverge.
+if ($Command -eq 'doctor') {
+    Write-Host '[ecosystem]'
+    $CheckScript = Join-Path $PSScriptRoot 'scripts/ecosystem-check.py'
+    & python $CheckScript $RepositoryRoot $ManifestPath
+    if ($LASTEXITCODE -ne 0) { $Failed.Add('ecosystem') }
+    Write-Host ''
+}
+
 foreach ($Project in $Manifest.projects) {
     $LocalProject = Get-LocalProjectName $Project
     $Path = Join-Path $RepositoryRoot $LocalProject
