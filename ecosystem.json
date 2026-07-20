@@ -4,7 +4,7 @@
   "cloneUrlTemplate": "git@github.com:morfredus/{name}.git",
   "projects": [
     "ComponentHub",
-    "GateWayLab",
+    "GatewayLab",
     "MeteoHub",
     "morfAnalytics",
     "morfBeacon",

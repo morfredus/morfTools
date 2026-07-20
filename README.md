@@ -9,6 +9,22 @@
 - sibling component directories: independent morfSystem projects.
 - `docs/`: workspace documentation.
 
+## Sandbox and production workspaces
+
+The tools decide which projects to drive from **their own directory name**, so
+the same scripts serve both workspaces without any configuration:
+
+| Tools directory | Projects driven | Usage |
+| --- | --- | --- |
+| `morfTools` | `ComponentHub`, `SiteWatch`, … | Production workspace. |
+| `morfTools_travail` | `ComponentHub_travail`, `SiteWatch_travail`, … | Sandbox workspace. |
+
+`ecosystem.json` only ever lists canonical names (`ComponentHub`); the
+`_travail` suffix is added at runtime when the tools directory carries it.
+Renaming the tools directory therefore switches the whole workspace, and a
+project whose directory does not match the expected name is reported as
+`[SKIP] <name> (not cloned)` rather than being touched.
+
 ## Commands
 
 Run PowerShell commands from any directory with `pwsh <workspace>/morfTools/morf.ps1 status`. On Linux or Raspberry Pi, use `bash <workspace>/morfTools/morf.sh status`.
@@ -22,13 +38,13 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `clone` | none | Clone missing projects on the manifest branch. |
 | `fetch` | none | Fetch remotes and prune deleted references. |
 | `pull`, `update` | none | Fast-forward pull from the manifest branch. |
-| `build` | optional CMake preset | Build PlatformIO projects, or configure and build CMake projects. |
+| `build` | CMake preset (asked when omitted) | Build PlatformIO projects, or configure and build CMake projects. |
 | `install` | none | Install `requirements.txt` when present. |
-| `upgrade` | optional CMake preset | Pull then rebuild CMake projects. |
+| `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
 | `doctor` | none | Verify Git repositories and their `origin`; run it before `push`. |
-| `clean` | none | Remove the default `build/` directory only. |
+| `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |
-| `commit` | message required | Stage all changes and commit when needed. |
+| `commit` | message (asked when omitted) | Stage all changes and commit when needed. |
 | `push` | none | Push the manifest branch to `origin`. |
 | `shared-config` (Linux) | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared configuration read by morfMonitor and RaspberryDashboard. |
 | `shared-config.ps1` (Windows) | `-Action Status|Validate|Edit|Diff|Install` | Manage the local shared configuration used by Windows morfSystem applications. |
@@ -48,7 +64,26 @@ The shortcut also accepts a single positional preset, for example `./morfTools/b
 pwsh .\morfTools\morf.ps1 upgrade -Preset linux-arm64
 ```
 
-The preset selects the project's CMake configure and build preset. Typical presets are `mingw` (Windows/MSYS2), `linux` (native x86_64 Linux or WSL2), `linux-arm64` (native 64-bit Raspberry Pi / ARM64), and, where defined, `linux-arm64-cross` (cross-compilation). A preset must be listed in the target project's `CMakePresets.json`. It is ignored for PlatformIO projects. `--profile` and `-Profile` remain accepted as compatibility aliases.
+The preset selects the project's CMake configure and build preset. Typical presets are `mingw` (Windows/MSYS2), `linux` (native x86_64 Linux or WSL2), `linux-arm64` (native 64-bit Raspberry Pi / ARM64), and, where defined, `linux-arm64-cross` (cross-compilation). It is ignored for PlatformIO projects. `--profile` and `-Profile` remain accepted as compatibility aliases.
+
+When no preset is given, `build` and `upgrade` list the presets declared across
+the cloned projects and ask which one to use, rather than falling back to a
+default build directory:
+
+```text
+No preset given for 'build'. Available presets:
+  1) linux                (10/10 projects)
+  2) linux-arm64          (10/10 projects)
+  3) linux-arm64-cross    (3/10 projects)
+  4) mingw                (10/10 projects)
+Choice [1-4]:
+```
+
+The count shows how many projects declare each preset. A project that does not
+declare the selected preset is reported as `[SKIP]` and does not fail the run.
+`commit` prompts for its message the same way. Without a terminal (cron, CI,
+redirected input) both commands list the valid values and exit with status 2
+instead of guessing.
 
 ### Shared Linux configuration
 
@@ -83,13 +118,7 @@ set). The PowerShell tool stays entirely local:
 `Install` validates first, creates a dated backup when needed, then copies
 the file locally. Use `-ConfigPath` to choose a different installation path.
 
-`ecosystem.json` always contains canonical production names. Production tools use these names without modification.
-
-Supported commands are `clone`, `fetch`, `pull`, `build`, `install`, `update`, `upgrade`, `doctor`, `clean`, `status`, `commit`, and `push`. `commit` requires `-Message` in PowerShell or a second argument in Bash. Commands only operate on projects declared by `ecosystem.json`.
-
-`doctor` verifies that each present project is a Git repository and reports its `origin`; it is the safety check to run before `push`.
-
-`GateWayLab` is declared in the manifest and is managed like every other component.
+`ecosystem.json` always contains canonical production names, including `GateWayLab`; production tools use these names without modification.
 
 ## Deployment synchronization
 
