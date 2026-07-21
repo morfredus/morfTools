@@ -1,0 +1,131 @@
+"""systemd backend — Linux x64 and ARM64.
+
+Reproduces what the install-service.sh scripts did, including the details that
+look incidental and are not: the unit is generated from a template committed in
+the project, and `daemon-reload` is issued before enabling, because systemd
+otherwise acts on the unit it read at boot.
+"""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+from ..manifest import Manifest
+from .base import ServiceBackend
+
+UNIT_DIR = Path("/etc/systemd/system")
+
+
+class SystemdBackend(ServiceBackend):
+    name = "systemd"
+    supported = True
+
+    # -- Helpers ----------------------------------------------------------
+
+    def _unit_path(self, manifest: Manifest) -> Path:
+        return UNIT_DIR / f"{manifest.service_name}.service"
+
+    def _systemctl(self, *args: str, check: bool = True) -> int:
+        result = subprocess.run(["systemctl", *args], check=False)
+        if check and result.returncode != 0:
+            raise RuntimeError(f"systemctl {' '.join(args)} failed ({result.returncode})")
+        return result.returncode
+
+    def _unit_template(self, manifest: Manifest) -> Path:
+        """The unit committed in the project.
+
+        Kept in the project rather than generated here on purpose: ExecStart
+        arguments, Restart policy and hardening options are that service's
+        business, and a template generated from this side would force every
+        service to want the same thing.
+        """
+        candidates = [
+            manifest.repo_root / "scripts" / "linux" / f"{manifest.service_name}.service",
+            manifest.repo_root / "deploy" / f"{manifest.service_name}.service",
+        ]
+        for path in candidates:
+            if path.is_file():
+                return path
+        raise RuntimeError(
+            f"No systemd unit template found for {manifest.service_name}.\n"
+            "Looked in:\n  " + "\n  ".join(str(p) for p in candidates)
+        )
+
+    # -- Interrogation ----------------------------------------------------
+
+    def is_installed(self, manifest: Manifest) -> bool:
+        return self._unit_path(manifest).is_file()
+
+    def status(self, manifest: Manifest) -> str:
+        result = subprocess.run(
+            ["systemctl", "--no-pager", "--lines=0", "status", manifest.service_name],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return (result.stdout or result.stderr).strip()
+
+    # -- Lifecycle --------------------------------------------------------
+
+    def install(self, manifest: Manifest, app_dir: Path, run_user: str) -> None:
+        template = self._unit_template(manifest)
+        unit = template.read_text(encoding="utf-8")
+        unit = unit.replace("__RUN_USER__", run_user).replace("__APP_DIR__", str(app_dir))
+
+        dest = self._unit_path(manifest)
+        previous = dest.read_text(encoding="utf-8") if dest.is_file() else None
+        if previous == unit:
+            print(f"  unit unchanged: {dest}")
+        else:
+            dest.write_text(unit, encoding="utf-8")
+            dest.chmod(0o644)
+            print(f"  unit {'updated' if previous else 'installed'}: {dest}")
+
+        # Before enable, always: systemd otherwise acts on the definition it
+        # last read, and a unit edited in the repository would never take
+        # effect while nothing reported anything wrong.
+        self._systemctl("daemon-reload")
+        self._systemctl("enable", "--now", manifest.service_name)
+
+    def stop(self, manifest: Manifest) -> None:
+        # A service that is absent or already stopped satisfies the goal.
+        self._systemctl("stop", manifest.service_name, check=False)
+
+    def start(self, manifest: Manifest) -> None:
+        self._systemctl("start", manifest.service_name)
+
+    def uninstall(self, manifest: Manifest) -> None:
+        self._systemctl("disable", "--now", manifest.service_name, check=False)
+        unit = self._unit_path(manifest)
+        if unit.is_file():
+            unit.unlink()
+        self._systemctl("daemon-reload", check=False)
+
+    # -- Privileges -------------------------------------------------------
+
+    def requires_privileges(self) -> bool:
+        return True
+
+    def has_privileges(self) -> bool:
+        return os.geteuid() == 0
+
+    def privilege_hint(self) -> str:
+        return "Re-run with sudo."
+
+    # -- Build ------------------------------------------------------------
+
+    def build_as_user(self, repo_root: Path, preset: str, run_user: str) -> None:
+        """Build as the invoking user, never as root.
+
+        Running cmake under sudo leaves a build tree owned by root inside the
+        clone; the next ordinary build then fails on permissions, in a place
+        that says nothing about the install that caused it.
+        """
+        command = f"cd {repo_root!s} && cmake --preset {preset} && cmake --build --preset {preset}"
+        if run_user != "root" and shutil.which("sudo"):
+            subprocess.run(["sudo", "-u", run_user, "bash", "-lc", command], check=True)
+        else:
+            subprocess.run(["bash", "-lc", command], check=True)
