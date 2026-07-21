@@ -13,25 +13,59 @@ morfSystem n'est pas un logiciel, c'est **un ensemble de petits services
 indépendants** qui vivent sur votre réseau local. Chacun fait une seule chose et
 tourne tout seul.
 
+```
+                     ┌────────────────────┐
+                     │ RaspberryDashboard │   affiche
+                     └──────────┬─────────┘
+                                │  lit /api/
+                     ┌──────────▼─────────┐
+                     │    morfMonitor     │   centralise et expose
+                     └──────────▲─────────┘
+                                │  entend les annonces (morfbeacon/1)
+        ┌───────────┬───────────┼───────────┬───────────┐
+    morfSync    morfSensor  morfNotify   MeteoHub   GatewayLab
+        └───────────┴───────────┴───────────┴───────────┘
+              chacun tourne seul, et annonce sa présence
+```
+
+Les flèches vont dans **un seul sens**. Les services annoncent leur présence ;
+morfMonitor les entend et expose ce qu'il sait ; le Dashboard lit morfMonitor.
+Personne ne pilote personne.
+
+Conséquence directe, et c'est le test qui tranche : **arrêtez morfMonitor, et
+tout le reste continue de fonctionner**. Vous perdez la vue d'ensemble, pas les
+services. morfMonitor est un observatoire, pas un portail — il ne s'interpose
+jamais entre vous et un service.
+
+> ### Important — chaque projet est autonome
+>
+> Vous pouvez n'installer **que** morfMonitor. Ou **que** morfSync. Ou **que**
+> MeteoHub. Aucun ne dépend des autres pour démarrer.
+>
+> morfSystem n'est **pas une dépendance obligatoire** : c'est un ensemble de
+> services qui **enrichissent** les applications lorsqu'ils sont présents. Une
+> application qui n'entend aucune annonce fonctionne normalement — elle affiche
+> simplement moins de choses.
+>
+> C'est la différence principale avec la plupart des écosystèmes, où retirer une
+> brique casse les autres. Ici, une brique absente est une information en moins,
+> jamais une panne.
+
 | Service | Ce qu'il fait |
 |---|---|
-| **morfMonitor** | Collecte l'état d'une machine (CPU, mémoire, disques, services) et le sert en JSON. N'affiche rien. |
+| **morfMonitor** | **Centralise et expose** l'état d'une machine en JSON — ce que ses propres modules mesurent, et ce que les autres services annoncent. N'affiche rien. |
 | **RaspberryDashboard** | Affiche cet état sur un écran. Ne collecte rien. |
 | **morfSync** | Synchronise des données entre machines, sans cloud. |
 | **morfNotify**, **morfSensor**, **morfAnalytics** | Notifications, capteurs, analyses. |
 | **morfTemplateService** | Le patron dont on clone un nouveau service. Ne sert à rien en production. |
 
-Deux idées expliquent tout le reste :
+Avec l'autonomie, une seconde idée explique tout le reste : **les services se
+découvrent tout seuls.** Chacun annonce sa présence sur le réseau local ; les
+autres l'entendent. Vous n'avez jamais à dire à morfMonitor où se trouve
+morfSync — il l'apprend.
 
-**Chaque service est autonome.** Vous pouvez n'en installer qu'un. Arrêter
-morfMonitor n'empêche pas morfSync de fonctionner.
-
-**Les services se découvrent tout seuls.** Chacun annonce sa présence sur le
-réseau local ; les autres l'entendent. Vous n'avez pas à dire à morfMonitor où
-se trouve morfSync — il l'apprend.
-
-Vous n'êtes pas obligé de tout installer. Commencez par ce dont vous avez
-besoin.
+Commencez donc par ce dont vous avez besoin. Vous pourrez en ajouter plus tard
+sans rien reconfigurer : un nouveau service s'annonce, et il apparaît.
 
 ---
 
