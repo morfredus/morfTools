@@ -15,11 +15,16 @@ convention no single project can enforce on itself:
   vendor    the conformance of the libraries copied into third_party/morf/. A
             copy that drifts still compiles, and nothing reports it.
 
+  manifests every configuration a service.json names must exist in a CLONE. A
+            manifest is written on one machine and executed on every other:
+            naming an untracked file is right where it sits and wrong
+            everywhere else.
+
 Both rules previously relied on human vigilance. They are mechanised here and
 wired into `morf doctor`.
 
 Usage:
-    ecosystem-check.py <workspace-root> <manifest.json> [ports|versions|vendor]
+    ecosystem-check.py <workspace-root> <manifest.json> [ports|versions|vendor|manifests]
 
 Exit code: 0 when everything conforms, 1 otherwise.
 """
@@ -27,6 +32,7 @@ Exit code: 0 when everything conforms, 1 otherwise.
 import json
 import os
 import re
+import subprocess
 import sys
 
 OK, WARN, FAIL = "[OK]", "[WARN]", "[FAIL]"
@@ -193,6 +199,66 @@ def compare_tree(canonical, copy):
 
 
 # --------------------------------------------------------------------------
+# manifests
+# --------------------------------------------------------------------------
+
+def check_manifests(root, manifest):
+    """Every configuration a service.json names must exist in a CLONE.
+
+    A manifest is written on one machine and executed on every other. Naming
+    config/<service>.json is correct where that file happens to sit untracked,
+    and wrong everywhere else -- so the install finds no source, and the
+    service is registered against a configuration that was never placed.
+
+    morfNotify shipped exactly that way: /etc/morfnotify never got created, and
+    systemd restarted it 85 times against a file nobody had put there. Nothing
+    reported it, because nothing was looking.
+
+    Tracked, not merely present: the question is what a fresh clone receives,
+    not what this working copy happens to hold.
+    """
+    problems = 0
+    checked = 0
+
+    for project in manifest.get("projects", []):
+        base = local_dir(root, project)
+        if base is None:
+            continue
+        path = os.path.join(base, "service.json")
+        if not os.path.isfile(path):
+            continue
+
+        try:
+            declared = load(path)
+        except ValueError as error:
+            print(f"{FAIL} {project}: unreadable service.json: {error}")
+            problems += 1
+            continue
+
+        for entry in declared.get("configs", []):
+            source = entry.get("source")
+            if not source:
+                continue
+            checked += 1
+            result = subprocess.run(
+                ["git", "ls-files", "--error-unmatch", source],
+                cwd=base, capture_output=True, check=False,
+            )
+            if result.returncode != 0:
+                print(f"{FAIL} {project}: service.json names '{source}', "
+                      "which git does not track")
+                print("       A clone will not have it, and the install will find "
+                      "no configuration to place.")
+                problems += 1
+            else:
+                print(f"{OK} {project}: {source}")
+
+    if checked == 0:
+        print(f"{WARN} no service.json declaring a configuration: check skipped")
+    return problems == 0
+
+
+# --------------------------------------------------------------------------
 # versions
 # --------------------------------------------------------------------------
 
@@ -345,6 +411,9 @@ def main(argv):
     if which in ("all", "vendor"):
         print("--- vendored copies ---")
         healthy &= check_vendor(root, manifest)
+    if which in ("all", "manifests"):
+        print("--- deployment manifests ---")
+        healthy &= check_manifests(root, manifest)
 
     return 0 if healthy else 1
 
