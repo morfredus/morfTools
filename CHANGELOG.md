@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+## [0.2.0] — 2026-07-21
+
+- **`config` becomes the single entry point for configuration deployment**, on
+  both platforms: `config shared <action>` for the parc file, `config deploy
+  <project>` for a project's own file. `shared-config` still works and points at
+  the new name.
+
+  `deploy` **delegates** to the project's own script rather than learning its
+  install directory and service name — the rule that keeps morfTools free of
+  business knowledge, and that `morf build` already follows by delegating to
+  each project's build system. A project cloned on its own therefore still
+  deploys its configuration without morfTools.
+
+  A project name is required rather than defaulting to "all": the command
+  overwrites deployed configurations, and doing that to every project because an
+  argument was forgotten is not a reasonable default.
+
+- **Fixed a trap in `shared-config`: the source was hard-coded to
+  `morfsystem.example.json`.** A clone carrying a real `config/morfsystem.json`
+  beside it — which is the normal case — saw `install` silently deploy the
+  sample OVER the parc description. Both platforms now prefer the real file and
+  fall back to the example, the same rule `deploy-config` already applied.
+
+- `install` shows a capped diff of what it changes. Overwriting a parc
+  description without showing what moves is a poor way to be simple.
+
+- Fixed a silent failure in the new dispatcher: under `set -e`, a helper
+  returning non-zero inside `$(...)` killed the script **before** the error
+  message explaining what was missing. The exit code was right and the user saw
+  nothing.
+
 - Added the standard ecosystem documents the project was missing: `VERSION` (first published version, 0.1.0), `LICENSE` (GPL-3.0-only, identical body to every sibling project), `CONTRIBUTING.md`, `ROADMAP.md` and a French `README.fr.md`. morfTools drives the whole parc yet was the only project without a version of its own, so no inventory could include the tool performing it.
 - `CONTRIBUTING.md` records two rules that were previously only implicit and had each already been broken once: script output stays in English, and JSON logic stays in Python called by both dispatchers rather than reimplemented in Bash and PowerShell.
 

@@ -10,7 +10,12 @@ if [[ "$(basename "$tool_dir")" == *_travail ]]; then
 else
     monitor_dir="$workspace/morfMonitor"
 fi
-source_config="$monitor_dir/config/morfsystem.example.json"
+# Source: the real configuration when the clone carries one, the example
+# otherwise. Same rule as morfMonitor's deploy-config.sh, and it closes a trap:
+# with the example hard-coded, `install` silently deployed it OVER a real
+# morfsystem.json kept beside it -- replacing the parc description by a sample.
+source_config="$monitor_dir/config/morfsystem.json"
+[[ -f "$source_config" ]] || source_config="$monitor_dir/config/morfsystem.example.json"
 target_dir="/etc/morfsystem"
 target_config="$target_dir/morfsystem.json"
 
@@ -67,11 +72,22 @@ case "$action" in
         ;;
     install|apply)
         validate
+        echo "Source: $source_config"
         timestamp="$(date +%Y%m%d-%H%M%S)"
         if sudo test -f "$target_config"; then
             backup="$target_config.bak-$timestamp"
             sudo cp -p "$target_config" "$backup"
             echo "Backup created: $backup"
+            # Show what changes, capped. Overwriting a parc description without
+            # showing what moves is a poor way to be simple.
+            if ! sudo diff -q "$backup" "$source_config" >/dev/null 2>&1; then
+                echo
+                echo "Changes being applied:"
+                sudo diff -u "$backup" "$source_config" | tail -n +3 | head -n 30 | sed 's/^/    /'
+                lines="$(sudo diff -u "$backup" "$source_config" | tail -n +3 | wc -l)"
+                (( lines > 30 )) && echo "    ... ($((lines - 30)) more lines)"
+                echo
+            fi
         fi
         sudo install -d -m 0755 "$target_dir"
         sudo install -m 0644 "$source_config" "$target_config"

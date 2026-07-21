@@ -9,7 +9,14 @@ $ErrorActionPreference = 'Stop'
 $toolRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $workspace = Split-Path -Parent $toolRoot
 $monitorName = if ((Split-Path -Leaf $toolRoot) -like '*_travail') { 'morfMonitor_travail' } else { 'morfMonitor' }
-$sourceConfig = Join-Path $workspace "$monitorName\config\morfsystem.example.json"
+# Source : la configuration REELLE quand le clone en porte une, l'exemple sinon.
+# Meme regle que deploy-config, et cela ferme un piege : avec l'exemple code en
+# dur, Install le deployait par-dessus un morfsystem.json reel garde a cote --
+# remplacant la description du parc par un echantillon.
+$sourceConfig = Join-Path $workspace "$monitorName\config\morfsystem.json"
+if (-not (Test-Path -LiteralPath $sourceConfig -PathType Leaf)) {
+    $sourceConfig = Join-Path $workspace "$monitorName\config\morfsystem.example.json"
+}
 
 function Assert-SourceConfig {
     if (-not (Test-Path -LiteralPath $sourceConfig -PathType Leaf)) {

@@ -50,8 +50,8 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `status` | none | Show the short Git status and branch. |
 | `commit` | message (asked when omitted) | Stage all changes and commit when needed. |
 | `push` | none | Push the manifest branch to `origin`. |
-| `shared-config` (Linux) | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared configuration read by morfMonitor and RaspberryDashboard. |
-| `shared-config.ps1` (Windows) | `-Action Status|Validate|Edit|Diff|Install` | Manage the local shared configuration used by Windows morfSystem applications. |
+| `config shared` | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared parc configuration read by morfMonitor and RaspberryDashboard. |
+| `config deploy` | project name (lists them when omitted) | Deploy a project's own configuration by delegating to its script. |
 
 For Linux and Raspberry Pi, use CMake's own vocabulary: `--preset <name>`
 (or `-p <name>`) with `build` and `upgrade`:
@@ -89,40 +89,56 @@ declare the selected preset is reported as `[SKIP]` and does not fail the run.
 redirected input) both commands list the valid values and exit with status 2
 instead of guessing.
 
-### Shared Linux configuration
+`ecosystem.json` always contains canonical production names, including `GateWayLab`; production tools use these names without modification.
 
-`morfMonitor` and `RaspberryDashboard` both read
-`/etc/morfsystem/morfsystem.json`. The editable, versioned source is
-`morfMonitor/config/morfsystem.example.json`; it is deliberately kept in the
-repository so changes can be reviewed and committed.
+## Configuration
+
+Two kinds of configuration exist, and they do not belong in the same place.
 
 ```bash
-./morfTools/shared-config.sh status
-./morfTools/shared-config.sh edit
-./morfTools/shared-config.sh diff
-./morfTools/shared-config.sh install
-./morfTools/shared-config.sh apply
+./morfTools/config.sh shared install     # the shared parc file
+./morfTools/config.sh deploy morfMonitor # one project's own file
+./morfTools/config.sh deploy             # list the projects that support it
 ```
-
-`edit` opens `$EDITOR` (or `nano`) and validates the JSON. `install`
-creates a dated backup before copying to `/etc`; `apply` additionally
-restarts both services. These two commands request sudo only for system writes.
-
-On Windows, the equivalent installed location is
-`%ProgramData%\morfSystem\morfsystem.json`. Both morfMonitor and
-RaspberryDashboard now look there by default (unless `MORFSYSTEM_CONFIG` is
-set). The PowerShell tool stays entirely local:
 
 ```powershell
-.\morfTools\shared-config.ps1 -Action Edit
-.\morfTools\shared-config.ps1 -Action Diff
-.\morfTools\shared-config.ps1 -Action Install
+.\morfTools\config.ps1 shared Install
+.\morfTools\config.ps1 deploy morfMonitor
 ```
 
-`Install` validates first, creates a dated backup when needed, then copies
-the file locally. Use `-ConfigPath` to choose a different installation path.
+**Shared** is `/etc/morfsystem/morfsystem.json` (`%ProgramData%\morfSystem\` on
+Windows). It describes *what is supervised* and is read by morfMonitor **and**
+RaspberryDashboard. No component owns it, so morfTools does — the same reasoning
+that moved the port registry into `ecosystem.json`.
 
-`ecosystem.json` always contains canonical production names, including `GateWayLab`; production tools use these names without modification.
+**Deploy** handles a project's own configuration, and **delegates** to that
+project's `deploy-config` script rather than knowing its install directory or
+service name. `morf build` delegates to each project's build system instead of
+learning CMake and PlatformIO; this is the same rule. The consequence is worth
+keeping: a project cloned on its own still deploys its configuration without
+morfTools.
+
+A project name is required rather than defaulting to "all": the command
+overwrites deployed configurations, and doing that to every project because an
+argument was forgotten is not a reasonable default.
+
+Both read the **real** configuration when the clone carries one
+(`config/morfsystem.json`, `config/morfmonitor.json`) and the `.example` file
+otherwise. Every write is preceded by a dated backup and shows a capped diff of
+what changes.
+
+`shared-config.sh` still works and points at the current entry point.
+
+### Details
+
+`config shared edit` opens `$EDITOR` (or `nano`) and validates the JSON.
+`install` creates a dated backup before copying to `/etc`; `apply` additionally
+restarts `morfmonitor` and `morfdashboard`. Only the system writes request sudo.
+
+On Windows the installed location is `%ProgramData%\morfSystem\morfsystem.json`;
+morfMonitor and RaspberryDashboard both look there unless `MORFSYSTEM_CONFIG`
+is set. Use `-ConfigPath` to install elsewhere.
+
 
 ## Ecosystem checks
 
