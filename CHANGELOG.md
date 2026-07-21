@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## [0.2.1] — 2026-07-21
+
+- **`doctor` compares the vendored `VERSION` file too.** It only compared `src`
+  and `include`, so seven copies could announce 0.2.1 while carrying the code of
+  0.4.1 and the check stayed green. The exclusion was too broad: the vendored
+  `CMakeLists.txt` is legitimately adapted to its embedding context, `VERSION`
+  is not — it is simply copied, and a copy that lies about its version is worse
+  than no version at all, because it is trusted.
+
 ## [0.2.0] — 2026-07-21
 
 - **`config` becomes the single entry point for configuration deployment**, on
