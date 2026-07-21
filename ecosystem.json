@@ -17,15 +17,18 @@
     "RaspberryDashboard",
     "SiteWatch"
   ],
-
   "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
   "ports": {
     "beaconUdp": 45454,
-
     "_comment_ranges": "8080 is a historical allocation (morfSync). The 8787-8799 block is reserved for parc services. The 8800-8899 block is free. The 8900-8999 block is reserved for templates and examples: a port from that range must never appear in production.",
-    "serviceRange": [8787, 8799],
-    "templateRange": [8900, 8999],
-
+    "serviceRange": [
+      8787,
+      8799
+    ],
+    "templateRange": [
+      8900,
+      8999
+    ],
     "allocations": [
       {
         "project": "morfSync",
@@ -78,17 +81,54 @@
       }
     ]
   },
-
   "_comment_vendored": "Shared libraries copied into their consumers (third_party/morf/<module>). The copy strategy is deliberate: it guarantees an identical build on Windows, Linux x64 and Raspberry Pi without depending on an external repository. This registry does not question that choice; it lets 'morf doctor' verify that each copy matches its canonical source, instead of relying on vigilance alone.",
   "vendored": {
     "_comment_modules": "Un module declare soit 'compare' (sous-dossiers compares recursivement), soit 'files' (fichiers precis), avec un 'sourceSubdir' optionnel quand la source amont ne vit pas a la racine du projet. L'emetteur Arduino est une SECONDE implementation du meme protocole, imposee par la frontiere de plateforme : la bibliotheque Qt ne tourne pas sur un ESP32. Le controle porte donc sur la conformite de la copie a l'amont, pas sur l'identite des deux implementations.",
     "modules": [
-      { "module": "beacon", "source": "morfBeacon", "compare": ["src", "include"],
-        "files": ["VERSION"] },
-      { "module": "update", "source": "morfUpdate", "compare": ["src", "include"],
-        "files": ["VERSION"] },
-      { "module": "beacon-arduino", "source": "morfBeacon", "sourceSubdir": "arduino",
-        "files": ["morfbeacon_emitter.h"] }
+      {
+        "module": "beacon",
+        "source": "morfBeacon",
+        "compare": [
+          "src",
+          "include"
+        ],
+        "files": [
+          "VERSION"
+        ]
+      },
+      {
+        "module": "update",
+        "source": "morfUpdate",
+        "compare": [
+          "src",
+          "include"
+        ],
+        "files": [
+          "VERSION"
+        ]
+      },
+      {
+        "module": "beacon-arduino",
+        "source": "morfBeacon",
+        "sourceSubdir": "arduino",
+        "files": [
+          "morfbeacon_emitter.h"
+        ]
+      },
+      {
+        "module": "morfdeploy",
+        "source": "morfTools",
+        "sourceSubdir": "lib/morfdeploy",
+        "compare": [
+          "backends"
+        ],
+        "files": [
+          "__init__.py",
+          "cli.py",
+          "core.py",
+          "manifest.py"
+        ]
+      }
     ],
     "consumers": [
       "ComponentHub",

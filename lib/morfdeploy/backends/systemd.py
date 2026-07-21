@@ -91,8 +91,18 @@ class SystemdBackend(ServiceBackend):
         self._systemctl("enable", "--now", manifest.service_name)
 
     def stop(self, manifest: Manifest) -> None:
-        # A service that is absent or already stopped satisfies the goal.
-        self._systemctl("stop", manifest.service_name, check=False)
+        # A service that is absent or already stopped satisfies the goal, so
+        # nothing here is an error. The unit is checked first rather than
+        # stopped unconditionally: on a first install systemd would otherwise
+        # print "Failed to stop ...: Unit not loaded" in the middle of a
+        # successful run, which reads as a failure and is not one.
+        if not self.is_installed(manifest):
+            return
+        subprocess.run(
+            ["systemctl", "stop", manifest.service_name],
+            capture_output=True,
+            check=False,
+        )
 
     def start(self, manifest: Manifest) -> None:
         self._systemctl("start", manifest.service_name)
