@@ -135,6 +135,12 @@ if [[ "$command_name" == doctor ]]; then
   echo "[ecosystem]"
   python3 "$tool_dir/scripts/ecosystem-check.py" "$root" "$manifest" || failed+=("ecosystem")
   echo
+  # Same reasoning, one platform further: a script recorded as non-executable
+  # runs perfectly on the machine that wrote it and answers "Permission denied"
+  # once cloned on the Pi. Windows has no executable permission, so the defect
+  # is created silently and cannot be observed from the machine that creates it.
+  python3 "$tool_dir/scripts/exec-bits.py" "$root" --check || failed+=("exec-bits")
+  echo
 fi
 
 while IFS= read -r project; do

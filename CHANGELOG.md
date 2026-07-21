@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+## [0.3.0] — 2026-07-21
+
+- **`exec-bits` restores the executable bit across the parc**, and `doctor` now
+  reports its absence. Forty-six tracked scripts were recorded as `100644`,
+  including all five of morfMonitor — among them the `deploy-config.sh` the
+  README tells people to run.
+
+  The defect cannot be observed from the machine that creates it. Windows has no
+  executable permission, so Git records new files as non-executable; the working
+  copy runs fine because `bash script.sh` never consults the bit. The Pi clones
+  the same repository, `./script.sh` answers `Permission denied`, and nothing in
+  that message points back at Windows.
+
+  So the fix targets the **index mode**, not the filesystem: `chmod` on Windows
+  is a no-op Git ignores, while `git update-index --chmod=+x` records 100755 in
+  the tree every other clone will see. What counts as runnable is the
+  **shebang**, not the extension — that is the author's own statement of intent,
+  and it covers `.sh` and `.py` alike without a list of extensions free to drift.
+
+- **`morfTools` gains the `.gitattributes` every other project already had.** It
+  was the only repository without one, and the only one whose scripts run on the
+  Pi. Nothing had broken yet: its seventeen `.sh` were kept LF by the local
+  Git configuration alone, which is not a property of the repository and does not
+  travel with a clone. A `.sh` stored with CRLF fails there with
+  `bad interpreter: /usr/bin/env bash^M` — the same class of defect as the
+  missing bit, invisible from the machine that introduces it.
+
+- **The three meanings of "update" are now documented.** `update` is a pure
+  alias of `pull`; `upgrade` pulls **and rebuilds**; a project's own
+  `update-service.sh` is the only one that touches an installed service. The
+  first two act on sources, so a Pi keeps serving the previous binary after an
+  `upgrade` until the project's own script runs.
+
 ## [0.2.1] — 2026-07-21
 
 - **`doctor` compares the vendored `VERSION` file too.** It only compared `src`

@@ -45,13 +45,33 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `build` | CMake preset (asked when omitted) | Build PlatformIO projects, or configure and build CMake projects. |
 | `install` | none | Install `requirements.txt` when present. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
-| `doctor` | none | Check the port registry and the vendored copies, then verify Git repositories and their `origin`; run it before `push`. |
+| `doctor` | none | Check the port registry, the vendored copies and the executable bits, then verify Git repositories and their `origin`; run it before `push`. |
+| `exec-bits` | `--check`, `--project NAME` | Restore the executable bit on every script carrying a shebang. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |
 | `commit` | message (asked when omitted) | Stage all changes and commit when needed. |
 | `push` | none | Push the manifest branch to `origin`. |
 | `config shared` | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared parc configuration read by morfMonitor and RaspberryDashboard. |
 | `config deploy` | project name (lists them when omitted) | Deploy a project's own configuration by delegating to its script. |
+
+### `update`, `upgrade`, and `update-service.sh`
+
+Three names, three different scopes. They are easy to confuse and the middle
+one is the only one that touches a running machine:
+
+| | Scope | What it does |
+| --- | --- | --- |
+| `update` | every repository | Nothing but `git pull --ff-only`. A pure alias of `pull`. |
+| `upgrade` | every repository | The same pull, **then rebuilds** the CMake projects. |
+| `<project>/scripts/linux/update-service.sh` | one installed service | Pull, rebuild, replace the installed binary, complete the configurations, restart. |
+
+The first two act on **sources** and leave anything already installed alone: a
+service keeps running its old binary until something reinstalls it. Only
+`update-service.sh` reaches the deployed copy, and it lives inside each project
+because it knows that project's unit name and paths.
+
+So `upgrade` rebuilds `build/`, and the Pi keeps serving the previous version
+until you run the project's own `update-service.sh`.
 
 For Linux and Raspberry Pi, use CMake's own vocabulary: `--preset <name>`
 (or `-p <name>`) with `build` and `upgrade`:
