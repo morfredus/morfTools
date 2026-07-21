@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **`morf.py` replaces `morf.sh` and `morf.ps1`**, which were the same algorithm
+  written twice: iterate the projects, run git, read a JSON manifest. Nothing in
+  either was platform-specific, so the duplication bought nothing and cost a
+  second implementation free to disagree with the first.
+
+  The shell version already called `python3 -c` five times to read the same
+  manifest -- one process per project -- and every call site carried a
+  `tr -d ''` to undo the CRLF that Git Bash added on the way back. That
+  workaround has no cause left and is gone rather than translated.
+
+  Output is byte-identical to `morf.sh` for `doctor` and `status`, and the exit
+  codes match. `--only <project>` is new: it restricts any command to a single
+  project.
+
+  Both shell versions stay in place until the Python one has been exercised on
+  the Pi.
+
 ## [0.3.0] — 2026-07-21
 
 - **`exec-bits` restores the executable bit across the parc**, and `doctor` now
