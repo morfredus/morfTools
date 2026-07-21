@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -25,6 +26,11 @@ MANIFEST_NAME = "service.json"
 #: drifted -- morfAnalytics carried morfMonitor's MT_APP_DIR verbatim, and
 #: morfSync had none at all, so its documented override silently did nothing.
 APP_DIR_ENV = "MORF_APP_DIR"
+
+#: Still honoured, in the order written. Each was one project's own spelling of
+#: the same idea, which is how morfAnalytics ended up reading morfMonitor's
+#: MT_APP_DIR and morfSync documented an override nothing read.
+LEGACY_APP_DIR_ENV = ("MORF_MONITOR_APP_DIR", "MT_APP_DIR", "MN_APP_DIR", "MS_APP_DIR")
 
 
 class ManifestError(RuntimeError):
@@ -41,17 +47,48 @@ class ConfigFile:
     """
 
     source: str
-    dest: str
+    dest: object          # str, or {"linux": ..., "windows": ...}
     overwrite: bool = False
 
-    def resolved_dest(self, app_dir: Path) -> Path:
-        """Absolute destinations are honoured as-is.
+    #: Places this configuration used to live. On install, the first one found
+    #: is adopted rather than replaced by the example -- a settings file
+    #: someone edited by hand outlives the directory convention it was written
+    #: under. morfSync has already been moved once, from /etc/homeserverhub to
+    #: /etc/morfsync, and that migration was hard-coded into its install script
+    #: where nothing else could see it or learn from it.
+    migrate_from: tuple = ()
 
-        The shared parc configuration lives in /etc/morfsystem and is read by
-        two different programs, so it cannot be relative to any one
-        application's directory.
+    def find_predecessor(self) -> Path | None:
+        """An earlier home of this configuration that still holds a file."""
+        for candidate in self.migrate_from:
+            path = Path(os.path.expandvars(candidate))
+            if path.is_file():
+                return path
+        return None
+
+    def resolved_dest(self, app_dir: Path) -> Path:
+        """Absolute destinations are honoured as-is; relative ones sit in app_dir.
+
+        The shared parc configuration lives outside any single application's
+        directory -- it is read by morfMonitor and by RaspberryDashboard -- so
+        it must be expressible as an absolute path.
+
+        And that path is not the same everywhere. `dest` may therefore be an
+        object keyed by platform, exactly as `app_dir` is. A single string
+        "/etc/morfsystem/morfsystem.json" would resolve on Windows to \\etc\\...
+        on whatever drive happens to be current: a real directory, silently
+        created, that nothing ever reads.
         """
-        dest = Path(os.path.expandvars(self.dest))
+        raw = self.dest
+        if isinstance(raw, dict):
+            key = {"Windows": "windows", "Darwin": "darwin"}.get(
+                platform.system(), "linux")
+            raw = raw.get(key) or raw.get("linux") or ""
+            if not raw:
+                raise ManifestError(
+                    f"Configuration destination not declared for this platform: {self.source}")
+
+        dest = Path(os.path.expandvars(raw))
         return dest if dest.is_absolute() else app_dir / dest
 
 
@@ -68,6 +105,12 @@ class Manifest:
     description: str = ""
     status_url: str = ""
 
+    #: Places an earlier convention installed this binary. Reported at install,
+    #: never deleted: removing an executable nobody asked us to remove is not a
+    #: tidy-up, and a stale copy left unmentioned is how someone ends up
+    #: debugging the version they are not running.
+    legacy_binaries: tuple = ()
+
     # -- Derived paths ----------------------------------------------------
 
     def app_dir(self) -> Path:
@@ -81,6 +124,20 @@ class Manifest:
         override = os.environ.get(APP_DIR_ENV)
         if override:
             return Path(override)
+
+        # The prefixes MORF_APP_DIR replaces are still honoured, and say so.
+        # Someone who wrote MT_APP_DIR in a note a year ago should get the
+        # directory they asked for, not silently get the default while
+        # believing otherwise -- which is what a straight rename would deliver.
+        for legacy in LEGACY_APP_DIR_ENV:
+            value = os.environ.get(legacy)
+            if value:
+                print(
+                    f"[note] {legacy} is honoured but superseded by {APP_DIR_ENV}, "
+                    f"which is the same variable for every service.",
+                    file=sys.stderr,
+                )
+                return Path(value)
 
         key = {"Windows": "windows", "Darwin": "darwin"}.get(platform.system(), "linux")
         declared = self.app_dirs.get(key)
@@ -126,6 +183,7 @@ class Manifest:
                 source=entry["source"],
                 dest=entry["dest"],
                 overwrite=bool(entry.get("overwrite", False)),
+                migrate_from=tuple(entry.get("migrate_from", ())),
             )
             for entry in raw.get("configs", [])
             if entry.get("source") and entry.get("dest")
@@ -140,4 +198,5 @@ class Manifest:
             configs=configs,
             description=raw.get("description", ""),
             status_url=raw.get("status_url", ""),
+            legacy_binaries=tuple(raw.get("legacy_binaries", ())),
         )

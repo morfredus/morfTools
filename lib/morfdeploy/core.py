@@ -116,12 +116,14 @@ class Deployer:
 
     # -- Step 3 -----------------------------------------------------------
 
-    def install_files(self, binary: Path, app_dir: Path) -> None:
+    def install_files(self, binary: Path, app_dir: Path) -> list:
+        """Place the binary and the configurations; return what was written."""
         app_dir.mkdir(parents=True, exist_ok=True)
         target = app_dir / self.manifest.binary_name()
         shutil.copy2(binary, target)
         target.chmod(0o755)
         print(f"  binary installed: {target}")
+        written = [target]
 
         for config in self.manifest.configs:
             source = self.manifest.repo_root / config.source
@@ -139,22 +141,64 @@ class Deployer:
                 print(f"  config kept:      {dest}")
                 continue
 
+            # Nothing at the new location: adopt what an earlier convention
+            # left behind, rather than installing a pristine example over a
+            # machine that was already configured. The settings survive the
+            # directory layout that happened to hold them.
+            previous = config.find_predecessor()
+            if previous is not None:
+                shutil.copy2(previous, dest)
+                dest.chmod(0o644)
+                written.append(dest)
+                print(f"  config migrated:  {previous}")
+                print(f"                 -> {dest}")
+                print(f"  the old file is left in place; remove it once satisfied")
+                continue
+
             shutil.copy2(source, dest)
             dest.chmod(0o644)
+            written.append(dest)
             print(f"  config installed: {dest}")
 
-    def chown_to_user(self, app_dir: Path) -> None:
-        """Give the directory back to the invoking user, where that means
-        something. A no-op on Windows, whose ownership model is different and
-        whose ProgramData ACLs already grant what is needed."""
+        return written
+
+    def chown_to_user(self, installed: list) -> None:
+        """Give back only the files this install actually wrote.
+
+        The shell scripts ran `chown -R` on the application directory, which is
+        harmless for a dedicated /opt/<service> and dangerous anywhere else:
+        morfSync puts its binary in /usr/local/bin, and recursing there would
+        hand the whole system directory to one user. Narrowing to the files we
+        placed removes the hazard entirely rather than guarding against it, and
+        it is what was meant in the first place.
+
+        A no-op on Windows, whose ownership model is different and whose
+        ProgramData ACLs already grant what is needed.
+        """
         if platform.system() == "Windows":
             return
         user = invoking_user()
         if user == "root":
             return
-        shutil.chown(app_dir, user=user, group=user)
-        for path in app_dir.rglob("*"):
-            shutil.chown(path, user=user, group=user)
+        for path in installed:
+            try:
+                shutil.chown(path, user=user, group=user)
+            except (OSError, LookupError) as exc:
+                print(f"  could not chown {path}: {exc}")
+
+    def report_legacy_binaries(self) -> None:
+        """Name the copies an earlier layout left behind, without touching them."""
+        stale = [Path(p) for p in self.manifest.legacy_binaries]
+        stale = [p for p in stale if p.exists()]
+        if not stale:
+            return
+        print()
+        print("An earlier layout installed this binary elsewhere. Still present:")
+        for path in stale:
+            print(f"    {path}")
+        print("Nothing runs them now -- the service unit points at the new location.")
+        print("Left in place deliberately: removing an executable you did not ask")
+        print("to remove is not tidying up. Delete them once you are satisfied.")
 
     # -- Step 4 -----------------------------------------------------------
 
@@ -174,9 +218,11 @@ class Deployer:
         self.check_privileges()
         binary = self.ensure_binary(rebuild=rebuild)
         self.stop_existing()
-        self.install_files(binary, app_dir)
-        self.chown_to_user(app_dir)
+        written = self.install_files(binary, app_dir)
+        self.chown_to_user(written)
         self.register(app_dir)
+
+        self.report_legacy_binaries()
 
         print()
         print(f"{self.manifest.display_name} installed and started.")
@@ -201,8 +247,8 @@ class Deployer:
         binary = self.ensure_binary(rebuild=True)
         self.stop_existing()
         app_dir = self.manifest.app_dir()
-        self.install_files(binary, app_dir)
-        self.chown_to_user(app_dir)
+        written = self.install_files(binary, app_dir)
+        self.chown_to_user(written)
         self.register(app_dir)
         print()
         print(f"{self.manifest.display_name} updated.")

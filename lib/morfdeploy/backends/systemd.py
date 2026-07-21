@@ -9,6 +9,7 @@ otherwise acts on the unit it read at boot.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -73,7 +74,30 @@ class SystemdBackend(ServiceBackend):
     def install(self, manifest: Manifest, app_dir: Path, run_user: str) -> None:
         template = self._unit_template(manifest)
         unit = template.read_text(encoding="utf-8")
-        unit = unit.replace("__RUN_USER__", run_user).replace("__APP_DIR__", str(app_dir))
+
+        # __RUN_HOME__ exists because a SYSTEM unit with User= is not always
+        # given $HOME by systemd, and %h would expand to /root. morfSync
+        # aborts outright when it cannot resolve its data directory, so an
+        # unsubstituted placeholder here is not cosmetic.
+        home = Path.home() if run_user == "root" else Path("/home") / run_user
+        for token, value in (
+            ("__RUN_USER__", run_user),
+            ("__APP_DIR__", str(app_dir)),
+            ("__RUN_HOME__", str(home)),
+        ):
+            unit = unit.replace(token, value)
+
+        # Anything still unsubstituted would be written into /etc/systemd as a
+        # literal. The service would start, or fail, on a path spelled
+        # __SOMETHING__, and the unit file would look deliberate. Refuse
+        # instead: an unknown placeholder means this backend does not yet know
+        # something the project is asking for.
+        leftover = sorted(set(re.findall(r"__[A-Z][A-Z0-9_]*__", unit)))
+        if leftover:
+            raise RuntimeError(
+                f"Unit template {template} uses placeholders this backend does not "
+                f"substitute: {', '.join(leftover)}"
+            )
 
         dest = self._unit_path(manifest)
         previous = dest.read_text(encoding="utf-8") if dest.is_file() else None
