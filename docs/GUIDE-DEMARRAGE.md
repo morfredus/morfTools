@@ -140,7 +140,7 @@ sudo ./service.py install
 ```
 
 C'est tout. La commande compile si nécessaire, copie le binaire dans un dossier
-fixe (`/opt/morfmonitor`), installe la configuration, enregistre le service
+fixe (`/opt/morfmonitor`), installe la configuration dans `/etc/morfmonitor`, enregistre le service
 auprès du système et le démarre.
 
 **La même commande partout** — Linux, Windows, Raspberry Pi. Seul le mécanisme
@@ -164,9 +164,20 @@ d'être dite franchement.
 
 ```
    dépôt (vous éditez)                      installé (le service lit)
-   config/morfmonitor.json    ──installe──> /opt/morfmonitor/morfmonitor.json
+   config/morfmonitor.json    ──installe──> /etc/morfmonitor/morfmonitor.json
    config/morfsystem.json     ──installe──> /etc/morfsystem/morfsystem.json
 ```
+
+**Toute configuration vit dans `/etc`**, jamais à côté du binaire. `/opt` ne
+contient que des exécutables. C'est la convention Linux — `/etc` est le premier
+endroit où l'on regarde — et ça a une conséquence pratique : effacer
+`/opt/morfmonitor` pour réinstaller proprement n'emporte pas vos réglages.
+
+| | |
+|---|---|
+| `/opt/<service>/` | le binaire, remplacé à chaque mise à jour |
+| `/etc/<service>/` | sa configuration, **jamais** écrasée |
+| `/etc/morfsystem/` | la configuration partagée, lue par plusieurs programmes |
 
 Modifier un fichier dans le dépôt **ne change rien** tant que vous n'avez pas
 relancé le déploiement. C'est la cause numéro un du « pourtant je l'ai
