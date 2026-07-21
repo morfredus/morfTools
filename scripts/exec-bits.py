@@ -34,6 +34,11 @@ import sys
 from pathlib import Path
 
 
+#: Only these are judged on their shebang. A tracked binary or a .bat has every
+#: right to be executable without one, so the question is never asked of it.
+SCRIPT_SUFFIXES = {".py", ".sh", ".bash", ".zsh"}
+
+
 def git(repo: Path, *args: str) -> str:
     """Run a git command in `repo` and return stdout, or "" on failure."""
     try:
@@ -86,6 +91,31 @@ def scan(repo: Path) -> list[str]:
     return missing
 
 
+def scan_spurious(repo: Path) -> list:
+    """Tracked files recorded as executable while carrying no shebang.
+
+    The mirror image of the defect above, and it bites differently: nothing
+    fails, but the file is checked out executable everywhere, so anyone who
+    sets the bit locally -- on a module that never needed it -- produces a mode
+    difference that git refuses to merge, and `git pull` stops on a file whose
+    content is identical. The message talks about local changes and shows none.
+
+    Reported, not fixed: a tracked file may legitimately be executable without
+    a shebang -- a helper binary, a .bat, a wrapper invoked by name. Demoting
+    those silently would break them to tidy up a listing.
+    """
+    listing = git(repo, "ls-files", "-s")
+    spurious = []
+    for line in listing.splitlines():
+        meta, _, rel = line.partition("\t")
+        if not rel or not meta.startswith("100755"):
+            continue
+        path = repo / rel
+        if path.suffix.lower() in SCRIPT_SUFFIXES and not has_shebang(path):
+            spurious.append(rel)
+    return spurious
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", type=Path, help="Directory holding the repositories")
@@ -105,9 +135,17 @@ def main() -> int:
         return 2
 
     total = 0
+    spurious_total = 0
     touched: list[str] = []
 
     for repo in repos:
+        spurious = scan_spurious(repo)
+        if spurious:
+            spurious_total += len(spurious)
+            print(f"[{repo.name}]")
+            for rel in spurious:
+                print(f"  executable without a shebang: {rel}")
+
         missing = scan(repo)
         if not missing:
             continue
@@ -136,6 +174,14 @@ def main() -> int:
         touched.append(repo.name)
 
     print()
+    if spurious_total:
+        # A warning, not a failure: nothing is broken, but this is what makes a
+        # later `git pull` stop on a file nobody edited.
+        print(f"{spurious_total} file(s) executable without a shebang.")
+        print("Harmless to run, but a local chmod on one of them will block a pull")
+        print("with 'local changes' on a file whose content is identical.")
+        print()
+
     if total == 0:
         print("All runnable scripts are executable.")
         return 0
