@@ -66,6 +66,11 @@
         "note": "Machine system state."
       },
       {
+        "http": 8791,
+        "project": "RaspberryDashboard",
+        "_note": "Annonce morfbeacon/1 + /status. Port dans config.py (BEACON_STATUS_PORT), pas de fichier JSON."
+      },
+      {
         "project": "morfAnalytics",
         "http": 8799,
         "config": "config/morfanalytics.example.json",
