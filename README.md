@@ -10,6 +10,9 @@
 - scripts at this project root: portable ecosystem administration commands.
 - `scripts/ecosystem-check.py`: shared implementation of the ecosystem-wide checks run by `doctor`.
 - sibling component directories: independent morfSystem projects.
+- [`docs/GUIDE-DEMARRAGE.md`](docs/GUIDE-DEMARRAGE.md) *(FR)*: installing and configuring
+  morfSystem from nothing, and which command to run when. **Start here** if the parc is
+  new to you.
 - `docs/ECOSYSTEM-PRINCIPLES.md`: the founding principles and the architectural invariants that apply to the **whole parc**, including the boundaries no component may cross.
 - `docs/`: workspace documentation.
 

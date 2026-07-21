@@ -149,6 +149,72 @@ n'est pas un détail d'implémentation, c'est **la** condition de sûreté du pa
 
 ---
 
+## Invariant : un seul cœur d'orchestration, des mécanismes natifs
+
+L'outillage du parc est écrit **une fois**, en Python. Ce qui est propre à un
+système d'exploitation vit derrière une interface étroite, dans un module que
+le cœur sélectionne à l'exécution.
+
+Le partage passe la frontière ou ne la passe pas, et la ligne est nette :
+
+| | |
+|---|---|
+| **Cœur, écrit une fois** | trouver ou compiler le binaire, arrêter ce qui tourne, copier binaire et configurations, remettre au gestionnaire de services |
+| **Backend, propre à l'OS** | systemd, services Windows, launchd |
+
+La règle de conception qui rend cette frontière tenable : **le cœur ne demande
+jamais sur quel système il tourne**. Un seul module fait ce test ; tout ce qui
+est en aval reçoit un backend et n'interroge plus rien. Sans cette discipline,
+`platform.system()` reconquiert l'orchestration cas particulier par cas
+particulier, et le cœur unique n'est plus qu'une étiquette sur l'ancienne
+duplication.
+
+Ce que ça a coûté d'apprendre : six services portaient chacun leur copie des
+mêmes quatre étapes, et la dérive était déjà là — `morfAnalytics` lisait le
+`MT_APP_DIR` de morfMonitor, `morfSync` documentait une surcharge que rien ne
+lisait, et `morfTemplateService` annonçait en en-tête « Installe morfSensor ».
+
+### Ce qui n'appartient pas au cœur
+
+Un mécanisme reste natif quand il *diffère par nature*, pas quand il diffère par
+habitude. Un service Windows n'est pas une unité systemd traduite : le
+gestionnaire de services attend que le programme le rappelle et annonce son état
+sous une trentaine de secondes. Un programme Qt console ne le fait pas — il
+s'enregistre sans broncher et échoue au démarrage en erreur 1053, dont le
+message ne dit rien de la poignée de main manquante. La stratégie est donc
+déclarée par le projet, et réclamer un vrai service sans enveloppe (WinSW, NSSM)
+est **refusé à l'installation** plutôt que d'enregistrer un service condamné.
+
+---
+
+## Invariant : on ne promet que ce qu'on peut éprouver
+
+| Plateforme | Statut |
+|---|---|
+| Windows x64 | supportée |
+| Linux x64 | supportée |
+| Linux ARM64 (Raspberry Pi) | supportée |
+| macOS | **architecture prévue, support non promis** |
+
+macOS a son module. Il lève une exception avec un message qui dit pourquoi, et
+ce qu'un contributeur doit écrire pour le compléter. Il ne lance pas des
+commandes plausibles dont personne n'a jamais observé les modes d'échec.
+
+C'est un choix, pas un oubli. Un backend à moitié fonctionnel est **pire**
+qu'un backend qui refuse : il échoue plus loin, sur une machine que son auteur
+ne peut pas atteindre, et la personne qui le rencontre ne peut pas distinguer sa
+propre erreur de configuration d'un code jamais éprouvé.
+
+En projet libre, cette honnêteté vaut mieux qu'une case cochée : l'architecture
+est prête, seules les plateformes qu'on peut développer *et valider* sont
+annoncées. Personne n'attend ce qui n'existe pas, et la porte reste ouverte.
+
+Le corollaire vaut pour toute plateforme future : elle devient « supportée » le
+jour où quelqu'un l'exerce sur une vraie machine, pas le jour où le code est
+écrit.
+
+---
+
 ## Ce que ces invariants ne disent pas
 
 Ils fixent des frontières, pas des solutions. Le choix des technologies, la
