@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 """Ecosystem-wide checks for the morfSystem workspace.
 
-Every other morfTools command operates project by project. Two rules escape
-that decomposition by nature, because they describe a SHARED resource:
+Every other morfTools command operates project by project. Three rules escape
+that decomposition by nature, because they describe a SHARED resource or a
+convention no single project can enforce on itself:
 
-  ports   the parc addressing plan. A collision is invisible from inside any
-          single project: each one is individually valid.
+  ports     the parc addressing plan. A collision is invisible from inside any
+            single project: each one is individually valid.
 
-  vendor  the conformance of the libraries copied into third_party/morf/. A
-          copy that drifts still compiles, and nothing reports it.
+  versions  VERSION is authoritative, but it is copied into README badges that
+            humans read. A copy drifts, and a badge that lies is worse than no
+            badge at all.
+
+  vendor    the conformance of the libraries copied into third_party/morf/. A
+            copy that drifts still compiles, and nothing reports it.
 
 Both rules previously relied on human vigilance. They are mechanised here and
 wired into `morf doctor`.
 
 Usage:
-    ecosystem-check.py <workspace-root> <manifest.json> [ports|vendor]
+    ecosystem-check.py <workspace-root> <manifest.json> [ports|versions|vendor]
 
 Exit code: 0 when everything conforms, 1 otherwise.
 """
 
 import json
 import os
+import re
 import sys
 
 OK, WARN, FAIL = "[OK]", "[WARN]", "[FAIL]"
@@ -175,6 +181,58 @@ def compare_tree(canonical, copy):
     return differences
 
 
+# --------------------------------------------------------------------------
+# versions
+# --------------------------------------------------------------------------
+
+def check_versions(root, manifest):
+    """VERSION is authoritative; every copy of it must agree.
+
+    A version written twice drifts. Seven projects were already carrying a stale
+    README badge when this check was written, two of them from before any recent
+    change: the badge is read by humans deciding which release they are looking
+    at, and it was quietly lying.
+    """
+    problems = 0
+    badge = re.compile(r"badge/[Vv]ersion-(\d+\.\d+\.\d+)")
+
+    for project in manifest.get("projects", []):
+        base = local_dir(root, project)
+        if base is None:
+            continue
+
+        version_file = os.path.join(base, "VERSION")
+        if not os.path.isfile(version_file):
+            print(f"{WARN} {project}: no VERSION file — the parc inventory cannot include it")
+            problems += 1
+            continue
+
+        with open(version_file, encoding="utf-8-sig") as handle:
+            version = handle.read().strip()
+
+        stale = []
+        for name in ("README.md", "README.fr.md"):
+            path = os.path.join(base, name)
+            if not os.path.isfile(path):
+                continue
+            try:
+                with open(path, encoding="utf-8") as handle:
+                    text = handle.read()
+            except OSError:
+                continue
+            for found in set(badge.findall(text)):
+                if found != version:
+                    stale.append(f"{name} announces {found}")
+
+        if stale:
+            print(f"{FAIL} {project}: VERSION is {version} but {', '.join(stale)}")
+            problems += 1
+        else:
+            print(f"{OK} {project}: {version}")
+
+    return problems == 0
+
+
 def check_vendor(root, manifest):
     vendored = manifest.get("vendored")
     if not vendored:
@@ -200,9 +258,13 @@ def check_vendor(root, manifest):
                 print(f"[SKIP] {consumer}/{name} (canonical source {module['source']} not cloned)")
                 continue
 
+            # The upstream files do not always live at the project root: the
+            # Arduino emitter is under morfBeacon/arduino/.
+            canonical_root = os.path.join(source, module.get("sourceSubdir", ""))
+
             differences = []
             for sub in module.get("compare", []):
-                canonical_sub, copy_sub = os.path.join(source, sub), os.path.join(copy, sub)
+                canonical_sub, copy_sub = os.path.join(canonical_root, sub), os.path.join(copy, sub)
                 if not os.path.isdir(canonical_sub):
                     differences.append(f"missing from the canonical source: {sub}/")
                 elif not os.path.isdir(copy_sub):
@@ -210,11 +272,35 @@ def check_vendor(root, manifest):
                 else:
                     differences += compare_tree(canonical_sub, copy_sub)
 
+            # `files` compares named files rather than whole trees, so a copy may
+            # legitimately carry extra ones — the vendored README explaining that
+            # the directory must not be edited has no place upstream.
+            # `filename`, not `name`: the outer loop already binds `name` to the
+            # module, and shadowing it made the report cite a file where the
+            # module was expected.
+            for filename in module.get("files", []):
+                canonical_file = os.path.join(canonical_root, filename)
+                copy_file = os.path.join(copy, filename)
+                if not os.path.isfile(canonical_file):
+                    differences.append(f"missing from the canonical source: {filename}")
+                elif not os.path.isfile(copy_file):
+                    differences.append(f"missing from the copy: {filename}")
+                elif read_normalised(canonical_file) != read_normalised(copy_file):
+                    differences.append(f"content differs: {filename}")
+
             if differences:
                 print(f"{FAIL} {consumer}/third_party/morf/{name} drifted from {module['source']}:")
                 for line in differences:
                     print(f"       {line}")
-                print(f"       resynchronise with: {consumer}/scripts/sync-morf.(sh|ps1)")
+                # Only point at the resync script when the project actually has
+                # one: sending someone to a command that does not exist wastes
+                # more time than saying nothing.
+                script = os.path.join(base, "scripts", "sync-morf.sh")
+                if os.path.isfile(script):
+                    print(f"       resynchronise with: {consumer}/scripts/sync-morf.(sh|ps1)")
+                else:
+                    print(f"       copy the canonical files from {module['source']} "
+                          f"into {consumer}/third_party/morf/{name}/")
                 problems += 1
             else:
                 print(f"{OK} {consumer}/third_party/morf/{name} matches {module['source']}")
@@ -242,6 +328,9 @@ def main(argv):
     if which in ("all", "ports"):
         print("--- addressing plan ---")
         healthy &= check_ports(root, manifest)
+    if which in ("all", "versions"):
+        print("--- versions ---")
+        healthy &= check_versions(root, manifest)
     if which in ("all", "vendor"):
         print("--- vendored copies ---")
         healthy &= check_vendor(root, manifest)

@@ -81,13 +81,18 @@
 
   "_comment_vendored": "Shared libraries copied into their consumers (third_party/morf/<module>). The copy strategy is deliberate: it guarantees an identical build on Windows, Linux x64 and Raspberry Pi without depending on an external repository. This registry does not question that choice; it lets 'morf doctor' verify that each copy matches its canonical source, instead of relying on vigilance alone.",
   "vendored": {
+    "_comment_modules": "Un module declare soit 'compare' (sous-dossiers compares recursivement), soit 'files' (fichiers precis), avec un 'sourceSubdir' optionnel quand la source amont ne vit pas a la racine du projet. L'emetteur Arduino est une SECONDE implementation du meme protocole, imposee par la frontiere de plateforme : la bibliotheque Qt ne tourne pas sur un ESP32. Le controle porte donc sur la conformite de la copie a l'amont, pas sur l'identite des deux implementations.",
     "modules": [
       { "module": "beacon", "source": "morfBeacon", "compare": ["src", "include"] },
-      { "module": "update", "source": "morfUpdate", "compare": ["src", "include"] }
+      { "module": "update", "source": "morfUpdate", "compare": ["src", "include"] },
+      { "module": "beacon-arduino", "source": "morfBeacon", "sourceSubdir": "arduino",
+        "files": ["morfbeacon_emitter.h"] }
     ],
     "consumers": [
       "ComponentHub",
       "SiteWatch",
+      "MeteoHub",
+      "GatewayLab",
       "morfAnalytics",
       "morfMonitor",
       "morfNotify",

@@ -10,6 +10,7 @@
 - scripts at this project root: portable ecosystem administration commands.
 - `scripts/ecosystem-check.py`: shared implementation of the ecosystem-wide checks run by `doctor`.
 - sibling component directories: independent morfSystem projects.
+- `docs/ECOSYSTEM-PRINCIPLES.md`: the founding principles and the architectural invariants that apply to the **whole parc**, including the boundaries no component may cross.
 - `docs/`: workspace documentation.
 
 ## Sandbox and production workspaces

@@ -17,6 +17,7 @@ propre emplacement et ne s'appuient jamais sur un chemin absolu.
 - `scripts/ecosystem-check.py` : implémentation partagée des vérifications à
   l'échelle de l'écosystème, exécutées par `doctor`.
 - dossiers voisins : les projets morfSystem, indépendants les uns des autres.
+- `docs/ECOSYSTEM-PRINCIPLES.md` : les principes fondateurs et les invariants d'architecture valables pour **tout le parc**, y compris les frontières qu'aucun composant ne doit franchir.
 - `docs/` : documentation de l'espace de travail.
 
 ## Espace bac à sable et espace de production
