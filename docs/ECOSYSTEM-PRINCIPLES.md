@@ -147,6 +147,30 @@ Ce constat ne remet pas en cause le choix — il le qualifie. La séparation des
 responsabilités est saine ; en contrepartie, la robustesse du composant d'accès
 n'est pas un détail d'implémentation, c'est **la** condition de sûreté du parc.
 
+### Statut : décision ouverte (R5)
+
+Ce qui précède fixe les **contraintes**, pas la solution. Le choix du mécanisme
+reste à arbitrer — c'est la recommandation **R5** du rapport d'architecture, le
+seul point d'architecture du parc délibérément laissé ouvert, et le **préalable
+obligatoire** à toute ligne de code d'accès distant.
+
+Rien ne doit être exposé hors du LAN avant cet arbitrage. Tant qu'il n'a pas eu
+lieu, le parc reste sur son modèle « confiance = réseau local », qui est sûr
+*parce que* rien n'est joignable de l'extérieur.
+
+Trois familles d'options sont à peser, toutes compatibles avec les contraintes
+ci-dessus (composant dédié, aucun changement dans les services) :
+
+| Option | Idée | À mettre en balance |
+| --- | --- | --- |
+| **VPN** (WireGuard…) | le distant *entre* sur le LAN, rien n'est publié | simple et robuste ; suppose un client VPN sur chaque appareil consultant |
+| **Reverse-proxy authentifiant** | une passerelle unique porte TLS + authentification devant les services | accès par simple navigateur ; c'est elle qui devient la surface critique |
+| **Composant dédié sur mesure** | un service du parc, écrit pour ce rôle | contrôle total ; le plus de travail, et sa sûreté est celle du parc |
+
+L'arbitrage doit produire : un inventaire de ce que chaque service expose
+réellement, le mécanisme retenu avec son coût, et la place exacte de la sécurité.
+Il engage la sûreté de **tout** le parc — d'où le choix de ne pas le précipiter.
+
 ---
 
 ## Invariant : un seul cœur d'orchestration, des mécanismes natifs

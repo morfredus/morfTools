@@ -461,13 +461,41 @@ journalctl -u morfmonitor -f          # Linux
 
 ---
 
-## 9. Pour aller plus loin
+## 9. La philosophie de morfSystem
+
+morfSystem repose sur quelques principes simples qui guident l'ensemble des
+projets :
+
+- chaque service a une **responsabilité unique** ;
+- chaque projet reste **autonome** et fonctionne sans dépendre du reste du parc ;
+- les services se **découvrent automatiquement** grâce à morfBeacon ;
+- les applications sont **enrichies** par l'écosystème, jamais rendues dépendantes
+  de lui ;
+- les configurations sont **déclaratives** et vivent dans des fichiers JSON,
+  jamais dans le code ;
+- morfTools centralise le développement, le déploiement et la maintenance, tandis
+  que les services restent **indépendants une fois installés**.
+
+Ces principes expliquent la plupart des choix d'architecture présentés dans ce
+guide, et permettent à l'écosystème de grandir sans remettre en cause les
+projets existants. Le **pourquoi** de chacun — et les frontières qu'ils posent —
+est détaillé dans [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md).
+
+---
+
+## 10. Pour aller plus loin
 
 | Document | Sujet |
 |---|---|
 | [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md) | Les principes et invariants, et **pourquoi** ils existent |
 | [ECOSYSTEM-CHECKS.md](ECOSYSTEM-CHECKS.md) | Ce que `morf doctor` vérifie, et ce qu'il ne peut pas vérifier |
 | `README.md` de chaque projet | Ce que fait ce service, et son API |
+
+**Et après ?** Une évolution est déjà cadrée sans être encore décidée :
+l'**accès distant** (atteindre le parc hors du réseau local). Le modèle de
+confiance à retenir — la décision R5 — est documenté dans
+[ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md), avec les options à peser. Rien
+n'est exposé hors du LAN tant qu'elle n'est pas tranchée.
 
 Une chose à retenir si vous n'en retenez qu'une : **le parc se configure par des
 fichiers JSON, jamais par du code**. Ajouter un service à superviser, un capteur,

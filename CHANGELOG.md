@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+## [0.4.0] — 2026-07-22
+### Ajouté
+
+- **`morf uninstall`** — désinstalle un service (`--only`) ou tout le parc, avec
+  `--purge` (efface aussi config et binaire) et `--backup` (copie la config
+  d'abord). Délègue au `service.py` de chaque projet.
+- **`scripts/reset-parc.sh`** — remet une machine à blanc : arrête et désinstalle
+  tous les services, retire `/opt`, `/etc` et les vestiges des migrations.
+  Empreinte explicite auditable, `--dry-run`, confirmation, ne touche jamais aux
+  dépôts.
+- **morfdeploy enrichit la config à la mise à jour** : une clé introduite par une
+  nouvelle version est ajoutée avec sa valeur par défaut, sans jamais toucher un
+  réglage existant ni supprimer de clé. Remplace le `merge-config.py` dupliqué
+  par service.
+- **`morf build`/`upgrade` sautent les applications GUI sur une machine sans
+  affichage** (Linux sans DISPLAY) ; `--gui` force. Reconnues par ce qu'elles
+  lient (Qt Widgets), pas par une liste.
+
+### Modifié
+
+- **La configuration des services vit dans `/etc/<service>`**, séparée du binaire
+  dans `/opt`. Conforme à la FHS ; migration déclarée, config adoptée jamais
+  écrasée.
+- **Les scripts shell remplacés par les entrées Python sont supprimés**
+  (`morf.sh`/`.ps1`, `config.sh`/`.ps1`, `shared-config`, et les alias). `morf.py`
+  et `config.py` sont l'interface unique, toutes plateformes.
+
+### Corrigé
+
+- **Une installation sans configuration à poser échoue désormais** au lieu
+  d'enregistrer un service qui redémarre en boucle contre un fichier absent.
+
+### Documentation
+
+- **Guide de démarrage** (`docs/GUIDE-DEMARRAGE.md`) : cycle complet installer →
+  configurer → consulter → désinstaller, applications du parc, et chapitre
+  philosophie.
+- **R5 (modèle de confiance / accès distant)** documenté comme décision ouverte
+  dans `docs/ECOSYSTEM-PRINCIPLES.md`, avec les options à peser.
+
 - **`morf.py` replaces `morf.sh` and `morf.ps1`**, which were the same algorithm
   written twice: iterate the projects, run git, read a JSON manifest. Nothing in
   either was platform-specific, so the duplication bought nothing and cost a
@@ -9,7 +49,8 @@
 
   The shell version already called `python3 -c` five times to read the same
   manifest -- one process per project -- and every call site carried a
-  `tr -d ''` to undo the CRLF that Git Bash added on the way back. That
+  `tr -d '
+'` to undo the CRLF that Git Bash added on the way back. That
   workaround has no cause left and is gone rather than translated.
 
   Output is byte-identical to `morf.sh` for `doctor` and `status`, and the exit
