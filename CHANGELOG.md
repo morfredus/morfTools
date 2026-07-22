@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## [0.4.1] — 2026-07-22
+
+### Corrigé
+
+- **Le conseil de réparation de `exec-bits` ne se sabote plus lui-même.** Sur un
+  premier clone dont les scripts ont perdu le bit d'exécution, `doctor` invitait
+  à lancer `./exec-bits.sh` — un wrapper qui a besoin du bit qu'il doit
+  justement restaurer, donc `Permission denied` : le remède renvoyait à sa
+  propre forme cassée. Le message donne désormais `python3 scripts/exec-bits.py ..`,
+  qui s'exécute quel que soit le bit (même raison que `python3 morf.py`), et
+  explique pourquoi. Le guide de démarrage documente la sortie, à l'étape
+  `doctor` et en dépannage.
+
 ## [0.4.0] — 2026-07-22
 ### Ajouté
 

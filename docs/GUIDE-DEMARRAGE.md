@@ -147,6 +147,22 @@ ne peut vérifier seul : que deux services ne se disputent pas le même port, qu
 les bibliothèques recopiées n'ont pas divergé, que les scripts sont exécutables.
 Si tout est `[OK]`, continuez.
 
+> **Sur un premier clone, `doctor` peut signaler des scripts « non-executable ».**
+> C'est fréquent : Git ne conserve pas toujours le bit d'exécution selon la
+> machine d'origine du dépôt. Un seul geste répare tout le parc, **depuis le
+> dossier `morfTools`** :
+>
+> ```bash
+> python3 scripts/exec-bits.py ..
+> ```
+>
+> **Utilisez `python3`, pas `./exec-bits.sh`.** Le wrapper `.sh` aurait besoin du
+> bit qu'il s'apprête justement à restaurer : sur un clone neuf il ne peut pas
+> démarrer (`Permission denied`). L'invoquer par `python3` ignore le bit —
+> exactement la raison pour laquelle `python3 morf.py` fonctionne toujours.
+> Une fois cette commande passée, `./exec-bits.sh`, `./service.py` et les autres
+> redeviennent lançables. Relancez `python3 morf.py doctor` : il doit être vert.
+
 ### Étape 3 — Compiler
 
 ```bash
@@ -451,6 +467,8 @@ Utilisez-le pour valider une installation complète en partant de zéro.
 | Un équipement n'apparaît jamais | Il n'annonce rien, ou l'UDP est filtré | `python3 tools/check-protocol.py` depuis morfBeacon |
 | Une application est signalée en permanence | `enabled: true` sur un programme occasionnel | Passer à `false` |
 | Le service ne redémarre pas au boot | Il n'est pas *activé* | `systemctl is-enabled <service>` |
+| `doctor` dit **non-executable**, et `./exec-bits.sh` répond `Permission denied` | Le bit d'exécution manque, y compris sur le script de réparation | `python3 scripts/exec-bits.py ..` (par `python3`, jamais `./…`) |
+| `./service.py install` répond `Permission denied` | Même cause : bit manquant sur un clone neuf | Réparer d'abord : `python3 scripts/exec-bits.py ..` depuis morfTools |
 
 Pour lire les journaux d'un service :
 

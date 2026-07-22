@@ -188,8 +188,18 @@ def main() -> int:
 
     if args.check:
         print(f"{total} script(s) recorded as non-executable.")
-        print("They will answer 'Permission denied' once cloned on Linux.")
-        print("Fix with:  ./exec-bits.sh")
+        print("They answer 'Permission denied' once cloned on Linux.")
+        print()
+        print("Fix, from the morfTools directory:")
+        print("    python3 scripts/exec-bits.py ..")
+        print()
+        # Deliberately NOT './exec-bits.sh': that wrapper needs the very bit this
+        # restores, so on a fresh clone it cannot start ("Permission denied") --
+        # the fix advising its own broken form. `python3 <script>` runs whatever
+        # the bit says, the same reason `python3 morf.py` always works. Once the
+        # command above has run, ./exec-bits.sh and ./service.py work too.
+        print("Run it with python3, not ./exec-bits.sh: the wrapper would need")
+        print("the bit it is about to restore, so it cannot start on a fresh clone.")
         return 1
 
     print(f"{total} script(s) fixed in {len(touched)} repository(ies).")
