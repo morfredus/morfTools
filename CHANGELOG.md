@@ -15,6 +15,20 @@
   explique pourquoi. Le guide de démarrage documente la sortie, à l'étape
   `doctor` et en dépannage.
 
+- **Le message post-réparation d'`exec-bits` explique comment rendre le
+  correctif durable.** Le bit restauré n'est que *mis en scène* ; sans `commit`
+  + `push`, le dépôt distant garde le fichier non-exécutable et le prochain
+  `pull` retire à nouveau le bit sous Linux. Le message donne la séquence
+  parc-wide (`morf.py commit` puis `morf.py push`) et distingue ce geste durable
+  d'un simple déstage, qui laisserait le correctif aussi fragile.
+
+- **La promotion vers la production restaure le bit d'exécution automatiquement.**
+  `sync-to-morfsystem.ps1` lance `exec-bits.py` après le robocopy : la copie
+  Windows perdait le bit à chaque report, obligeant chaque clone neuf du Pi à le
+  réparer. Le correctif est désormais à l'unique endroit où le bit se perd. Il
+  est mis en scène (fileMode-indépendant, survit au `git add -A` du commit de
+  promotion, vérifié) ; le push le rend permanent.
+
 ## [0.4.0] — 2026-07-22
 ### Ajouté
 

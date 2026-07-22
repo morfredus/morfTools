@@ -162,6 +162,20 @@ Si tout est `[OK]`, continuez.
 > exactement la raison pour laquelle `python3 morf.py` fonctionne toujours.
 > Une fois cette commande passée, `./exec-bits.sh`, `./service.py` et les autres
 > redeviennent lançables. Relancez `python3 morf.py doctor` : il doit être vert.
+>
+> **Pour que le correctif tienne** (si vous avez les droits de push sur les
+> dépôts) : `exec-bits` ne fait que *mettre en scène* le changement. Sans
+> `commit` + `push`, le dépôt distant garde les fichiers non-exécutables, et le
+> prochain `pull` qui les touche **retire à nouveau le bit**. Rendez-le durable,
+> en une fois pour tout le parc :
+>
+> ```bash
+> python3 morf.py commit -m "chore: restore executable bit on scripts"
+> python3 morf.py push
+> ```
+>
+> Si vous n'avez pas les droits de push, la réparation locale suffit à travailler ;
+> c'est au propriétaire des dépôts de la rendre définitive une bonne fois.
 
 ### Étape 3 — Compiler
 

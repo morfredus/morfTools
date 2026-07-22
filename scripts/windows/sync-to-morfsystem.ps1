@@ -100,3 +100,33 @@ foreach ($CanonicalName in $Projects) {
 }
 
 Write-Host 'Synchronization completed. Existing destination .git directories were excluded and preserved.'
+
+# --- Restore the executable bit in the promoted trees ------------------------
+# robocopy /COPY:DAT copies data, attributes and timestamps -- never the Unix
+# executable bit, which Windows does not have. Left alone, every promoted repo
+# commits its scripts as 100644, so a fresh clone on the Pi answers 'Permission
+# denied' and 'morf doctor' fails on exec-bits. The fix belongs here, at the one
+# place the bit is lost.
+#
+# exec-bits.py STAGES the mode (git update-index --chmod=+x), which is
+# fileMode-independent and survives the promotion commit's `git add -A` (verified
+# on Windows). It does not commit -- that stays your call, with the rest of the
+# promotion. Push is what makes it permanent: without it the remote keeps 100644
+# and the next pull strips the bit again.
+$ExecBits = Join-Path $ToolProjectRoot 'scripts\exec-bits.py'
+if (-not $DryRun -and (Test-Path -LiteralPath $ExecBits)) {
+    $py = (Get-Command python3 -ErrorAction SilentlyContinue) ?? (Get-Command python -ErrorAction SilentlyContinue)
+    if ($py) {
+        Write-Host ''
+        Write-Host 'Restoring the executable bit across the promoted repositories...'
+        & $py.Source $ExecBits $DestinationRoot
+        Write-Host ''
+        Write-Host 'The executable bit is STAGED in each promoted repo. It will ride your'
+        Write-Host 'promotion commit; make it permanent by pushing -- otherwise the next'
+        Write-Host 'pull on Linux strips it again. From the destination morfTools:'
+        Write-Host '    python3 morf.py commit -m "chore: promotion"'
+        Write-Host '    python3 morf.py push'
+    } else {
+        Write-Warning 'python3 not found: executable bit NOT restored. Run exec-bits.py by hand in the destination.'
+    }
+}
