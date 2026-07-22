@@ -2,8 +2,9 @@
 
 Ce guide suppose que vous ne connaissez rien à morfSystem. Il répond, dans
 l'ordre où elles se posent, aux questions : **qu'est-ce que c'est et à quoi ça
-sert**, **comment l'installer**, **comment le configurer**, et **comment le
-consulter** — avec l'ordre des commandes à chaque étape.
+sert**, **comment l'installer**, **comment le configurer**, **comment le
+consulter** et **comment le désinstaller** — avec l'ordre des commandes à chaque
+étape.
 
 ---
 
@@ -87,6 +88,15 @@ retrouve ses données sur une autre machine par morfSync, MeteoHub et GatewayLab
 deviennent visibles et surveillables depuis morfMonitor, SiteWatch signale sa
 présence au reste du réseau. **Le parc n'est pas une fin en soi : c'est ce qui
 relie et surveille vos applications.**
+
+Au fil du temps, d'autres applications compatibles viendront enrichir
+l'écosystème. Aucune n'a de dépendance obligatoire envers morfSystem : elles
+restent pleinement fonctionnelles lorsqu'il est absent. Mais dès qu'elles
+détectent les services du parc, elles peuvent activer d'elles-mêmes des
+fonctionnalités supplémentaires — supervision, synchronisation de données,
+analyses avancées, notifications. Chaque projet évolue ainsi de son côté, tout
+en profitant des capacités de l'écosystème quand il est là. Cette liste de quatre
+applications n'est donc qu'un instantané : elle grandira.
 
 ---
 
@@ -373,7 +383,65 @@ réglages que vous avez faits à la main survivent.
 
 ---
 
-## 7. Quand ça ne marche pas
+## 7. Désinstaller
+
+La désinstallation est **prudente par défaut** : elle retire le service, mais
+**garde votre configuration**. Vos réglages ne disparaissent jamais sans que
+vous l'ayez demandé.
+
+### Un service
+
+Depuis le dossier du projet :
+
+```bash
+cd ~/Codage/morfMonitor
+sudo ./service.py uninstall
+```
+
+Le service est arrêté et retiré du système ; `/etc/morfmonitor` (votre config)
+et `/opt/morfmonitor` (le binaire) restent en place. Vous pouvez réinstaller
+plus tard sans avoir rien perdu.
+
+**Pour tout effacer, y compris la configuration**, ajoutez `--purge` — et
+`--backup` pour en garder une copie avant :
+
+```bash
+sudo ./service.py uninstall --purge                       # efface aussi la config
+sudo ./service.py uninstall --purge --backup ~/sauvegarde # copie la config, puis efface
+```
+
+`--purge` retire la config, le binaire, et les emplacements que d'anciennes
+versions avaient laissés. `--backup` copie d'abord chaque fichier de config dans
+le dossier indiqué. La suppression n'est jamais destructive au point de vous
+prendre par surprise : sans `--purge`, rien de personnel n'est touché.
+
+### Depuis morfTools, plusieurs services d'un coup
+
+```bash
+cd ~/Codage/morfTools
+python3 morf.py uninstall --only morfMonitor    # un seul
+python3 morf.py uninstall                        # tous les services du parc
+python3 morf.py uninstall --purge --backup ~/sauvegarde   # tous, config sauvegardée puis effacée
+```
+
+### Repartir totalement à blanc
+
+Pour vider entièrement une machine — tous les services, toutes les configs, y
+compris les vestiges des migrations — avant une réinstallation propre :
+
+```bash
+cd ~/Codage/morfTools
+sudo ./scripts/reset-parc.sh --dry-run    # liste ce qui serait supprimé, sans rien toucher
+sudo ./scripts/reset-parc.sh              # supprime, après confirmation (tapez « yes »)
+```
+
+`reset-parc.sh` liste tout ce qu'il va retirer, demande confirmation, et
+**ne touche jamais aux dépôts clonés** — seulement à ce qui est installé.
+Utilisez-le pour valider une installation complète en partant de zéro.
+
+---
+
+## 8. Quand ça ne marche pas
 
 | Symptôme | Cause probable | Que faire |
 |---|---|---|
@@ -393,7 +461,7 @@ journalctl -u morfmonitor -f          # Linux
 
 ---
 
-## 8. Pour aller plus loin
+## 9. Pour aller plus loin
 
 | Document | Sujet |
 |---|---|
