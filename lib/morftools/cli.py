@@ -108,6 +108,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--message", "-m", default="", help="Commit message")
     parser.add_argument("--only", default="",
                         help="Restrict to one project, by canonical name")
+    parser.add_argument("--gui", action="store_true",
+                        help="build/upgrade: build desktop GUI apps even on a headless machine")
     parser.add_argument("--purge", action="store_true",
                         help="uninstall: also remove the configuration and binary")
     parser.add_argument("--backup", default="", metavar="DIR",
@@ -136,6 +138,9 @@ def main(argv: list | None = None) -> int:
 
     if (args.purge or args.backup) and args.command != "uninstall":
         print("--purge and --backup only apply to uninstall.", file=sys.stderr)
+        return 2
+    if args.gui and args.command not in ("build", "upgrade"):
+        print("--gui only applies to build and upgrade.", file=sys.stderr)
         return 2
     if args.backup and not args.purge:
         print("--backup only applies with --purge.", file=sys.stderr)
@@ -176,7 +181,7 @@ def main(argv: list | None = None) -> int:
             # Extra arguments go only to the handlers that take them, so a
             # command's signature states what it actually depends on.
             if handler.__name__ in ("cmd_build", "cmd_upgrade"):
-                handler(workspace, project, preset)
+                handler(workspace, project, preset, args.gui)
             elif handler.__name__ == "cmd_commit":
                 handler(workspace, project, message)
             elif handler.__name__ == "cmd_uninstall":

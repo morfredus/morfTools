@@ -11,6 +11,8 @@ remaining twelve untouched with nothing saying so.
 
 from __future__ import annotations
 
+import os
+import platform
 import shutil
 import subprocess
 from pathlib import Path
@@ -74,6 +76,32 @@ def cmd_commit(workspace: Workspace, project: Project, message: str = "") -> boo
 
 # -- Build ----------------------------------------------------------------
 
+def is_headless() -> bool:
+    """True on a Linux machine with no display server.
+
+    A Raspberry Pi reached over SSH has neither DISPLAY nor WAYLAND_DISPLAY,
+    which is exactly the case where a desktop GUI cannot run and need not be
+    built. Windows and macOS always have a display in this sense, so they never
+    skip.
+    """
+    if platform.system() != "Linux":
+        return False
+    return not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def skip_gui(project: Project, force_gui: bool) -> bool:
+    """Whether to skip building this project, reporting why if so.
+
+    A desktop GUI on a headless machine is effort spent on something that
+    cannot run there. `--gui` forces it -- a headless build server that
+    cross-distributes still wants the binaries.
+    """
+    if project.is_gui and is_headless() and not force_gui:
+        print("[SKIP] desktop GUI, no display on this machine (use --gui to build anyway)")
+        return True
+    return False
+
+
 def cmake_build(project: Project, preset: str = "") -> None:
     """Build, skipping a preset this project does not declare.
 
@@ -91,7 +119,10 @@ def cmake_build(project: Project, preset: str = "") -> None:
     run(["cmake", "--build", "--preset", preset], cwd=project.path)
 
 
-def cmd_build(workspace: Workspace, project: Project, preset: str = "") -> bool:
+def cmd_build(workspace: Workspace, project: Project, preset: str = "",
+              force_gui: bool = False) -> bool:
+    if skip_gui(project, force_gui):
+        return True
     if project.is_platformio:
         if preset:
             print(f"[INFO] preset ignored for PlatformIO: {preset}")
@@ -111,9 +142,13 @@ def cmd_install(workspace: Workspace, project: Project) -> bool:
     return True
 
 
-def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "") -> bool:
+def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "",
+                force_gui: bool = False) -> bool:
     cmd_pull(workspace, project)
-    if project.is_cmake:
+    # The sources are pulled regardless; only the build is skipped on a headless
+    # machine, so an upgrade still refreshes a GUI app's code without compiling
+    # what cannot run there.
+    if project.is_cmake and not skip_gui(project, force_gui):
         cmake_build(project, preset)
     return True
 

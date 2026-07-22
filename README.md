@@ -45,7 +45,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `clone` | none | Clone missing projects on the manifest branch. |
 | `fetch` | none | Fetch remotes and prune deleted references. |
 | `pull`, `update` | none | Fast-forward pull from the manifest branch. |
-| `build` | CMake preset (asked when omitted) | Build PlatformIO projects, or configure and build CMake projects. |
+| `build` | CMake preset (asked when omitted), `--gui` | Build PlatformIO projects, or configure and build CMake projects. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
 | `install` | none | Install `requirements.txt` when present. |
 | `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
@@ -84,6 +84,26 @@ because it knows that project's unit name and paths.
 
 So `upgrade` rebuilds `build/`, and the Pi keeps serving the previous version
 until you run the project's own `service.py update`.
+
+### Building on a headless machine
+
+A Raspberry Pi reached over SSH has no display, so building the desktop GUI apps
+(ComponentHub, SiteWatch, morfUpdate) there is effort spent on windows that
+cannot open. `build` and `upgrade` skip them automatically when the machine is
+headless -- Linux with neither `DISPLAY` nor `WAYLAND_DISPLAY`:
+
+```
+[ComponentHub_travail]
+[SKIP] desktop GUI, no display on this machine (use --gui to build anyway)
+```
+
+A project is recognised as a GUI app by what it **links** -- Qt Widgets or Gui
+-- read from its own `CMakeLists.txt`, so nothing has to be listed or kept in
+sync. Headless services (morfMonitor, morfSync, …) build as before, because they
+link neither.
+
+`--gui` forces them: a headless build server that cross-distributes still wants
+the binaries. On any machine with a display, everything builds, no flag needed.
 
 ### Uninstalling
 

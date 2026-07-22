@@ -1,9 +1,9 @@
 # morfSystem — guide de démarrage
 
-Ce guide suppose que vous ne connaissez rien à morfSystem. Il répond à trois
-questions, dans l'ordre où elles se posent : **qu'est-ce que c'est**, **comment
-l'installer**, **comment le configurer** — et dans quel ordre lancer les
-commandes.
+Ce guide suppose que vous ne connaissez rien à morfSystem. Il répond, dans
+l'ordre où elles se posent, aux questions : **qu'est-ce que c'est et à quoi ça
+sert**, **comment l'installer**, **comment le configurer**, et **comment le
+consulter** — avec l'ordre des commandes à chaque étape.
 
 ---
 
@@ -66,6 +66,27 @@ morfSync — il l'apprend.
 
 Commencez donc par ce dont vous avez besoin. Vous pourrez en ajouter plus tard
 sans rien reconfigurer : un nouveau service s'annonce, et il apparaît.
+
+### À quoi tout cela sert : les applications du parc
+
+Les services ci-dessus sont le **socle**. Ils prennent tout leur sens avec les
+applications qui s'appuient dessus — elles s'annoncent sur le réseau, apparaissent
+dans morfMonitor, et pour certaines synchronisent leurs données par morfSync,
+sans cloud :
+
+| Application | Ce qu'elle fait | S'appuie sur |
+|---|---|---|
+| **ComponentHub** | Mémoire technique d'un atelier d'électronique : inventaire des composants, modules, outils, stocks et emplacements | s'annonce, **synchronise** (morfSync) |
+| **SiteWatch** | Administration et supervision de sites web, application Qt multiplateforme | s'annonce (morfBeacon) |
+| **MeteoHub** | Station météo ESP32-S3 : capteurs, prévisions et journaux sur écran OLED et page web embarquée | s'annonce (morfBeacon) |
+| **GatewayLab** | Passerelle ESP32-S3 qui découvre et historise les équipements du réseau local | s'annonce (morfBeacon) |
+
+Aucune n'a **besoin** du parc pour fonctionner — c'est le principe d'autonomie,
+dans les deux sens. Mais lorsqu'il est là, il les enrichit : ComponentHub
+retrouve ses données sur une autre machine par morfSync, MeteoHub et GatewayLab
+deviennent visibles et surveillables depuis morfMonitor, SiteWatch signale sa
+présence au reste du réseau. **Le parc n'est pas une fin en soi : c'est ce qui
+relie et surveille vos applications.**
 
 ---
 
@@ -130,21 +151,47 @@ Il vous demandera un *preset* — le profil de compilation :
 | `linux-arm64` | Raspberry Pi |
 | `mingw` | Windows |
 
-### Étape 4 — Installer un service
+### Étape 4 — Installer les services
 
-**Un service à la fois**, en commençant par celui dont vous avez besoin.
+Chaque service s'installe **depuis son propre dossier**, avec la **même
+commande**. En première installation, vous ne savez pas forcément lesquels
+prendre — voici la liste complète, et par quoi commencer.
 
 ```bash
-cd ~/Codage/morfMonitor
-sudo ./service.py install
+cd ~/Codage/morfMonitor && sudo ./service.py install
 ```
 
 C'est tout. La commande compile si nécessaire, copie le binaire dans un dossier
-fixe (`/opt/morfmonitor`), installe la configuration dans `/etc/morfmonitor`, enregistre le service
-auprès du système et le démarre.
+fixe (`/opt/morfmonitor`), installe la configuration dans `/etc/morfmonitor`,
+enregistre le service auprès du système et le démarre.
 
-**La même commande partout** — Linux, Windows, Raspberry Pi. Seul le mécanisme
-sous-jacent change (systemd, services Windows), et vous n'avez pas à le savoir.
+**Les services que vous pouvez installer**, chacun avec `sudo ./service.py
+install` depuis son dossier :
+
+| Dossier | Service | Rôle | À installer ? |
+|---|---|---|---|
+| `morfMonitor` | morfmonitor | collecte et expose l'état, sert l'interface web | **oui, en premier** — c'est le cœur |
+| `morfSync` | morfsync | synchronisation de données entre machines, sans cloud | si une appli synchronise (ex. ComponentHub) |
+| `morfNotify` | morfnotify | point de diffusion des notifications | si vous voulez des alertes |
+| `morfSensor` | morfsensor | acquisition de capteurs | si vous avez des capteurs |
+| `morfAnalytics` | morfanalytics | analyses | si vous exploitez des analyses |
+| `morfTemplateService` | morftemplate | **patron** pour créer un service — **n'installez pas** en production | non |
+
+**Installez-en un seul si vous voulez** : chacun est autonome. Le minimum utile
+est **morfMonitor** — il vous donne déjà l'interface web et voit tout ce qui
+s'annonce sur le réseau. Ajoutez les autres au fur et à mesure de vos besoins,
+sans rien reconfigurer.
+
+Le **Raspberry Dashboard** (l'écran OLED) s'installe différemment, par son propre
+script, et suppose l'écran branché :
+
+```bash
+cd ~/Codage/RaspberryDashboard && sudo ./scripts/linux/install-service.sh
+```
+
+**La même commande `service.py` partout** — Linux, Windows, Raspberry Pi. Seul le
+mécanisme sous-jacent change (systemd, services Windows), et vous n'avez pas à le
+savoir.
 
 ### Étape 5 — Vérifier
 
@@ -212,7 +259,78 @@ rouge permanente pour un programme qui n'a jamais eu vocation à tourner.
 
 ---
 
-## 5. Au quotidien : quelle commande, quand
+## 5. Consulter le parc
+
+Une fois morfMonitor installé, tout se regarde **depuis un navigateur**, sur
+n'importe quelle machine du réseau local — y compris quand le Pi n'a aucun écran.
+
+### D'abord : l'adresse de VOTRE machine
+
+Dans tous les exemples ci-dessous, `<votre-machine>` désigne le Raspberry Pi (ou
+la machine qui fait tourner morfMonitor). Remplacez-le par **votre** adresse.
+Deux façons de la désigner :
+
+- **Par son nom**, si le réseau résout le mDNS : le nom de la machine suivi de
+  `.local`. Le nom se lit avec la commande `hostname`. Une machine nommée
+  `pi4fred` se joint alors par **`pi4fred.local`** — c'est l'exemple utilisé
+  dans tout ce guide, adaptez-le au vôtre. Le mDNS est fourni par Avahi (installé
+  d'origine sur Raspberry Pi OS) et reconnu par macOS et Windows récents. S'il ne
+  répond pas sur votre réseau, passez à l'adresse IP.
+- **Par son adresse IP**, toujours valable : `hostname -I` sur le Pi la donne
+  (ex. `192.168.1.55`), ou lisez-la dans l'onglet **État général** de morfMonitor.
+  L'accès devient alors `http://192.168.1.55:8790/`.
+
+Le port **8790** est celui de morfMonitor et ne change pas.
+
+### L'interface web de morfMonitor
+
+Ouvrez, depuis votre PC, votre téléphone, n'importe quel navigateur du réseau :
+
+```
+http://<votre-machine>:8790/
+```
+
+Vous y trouverez, en six onglets :
+
+| Onglet | Ce qu'il répond |
+|---|---|
+| État général | identité de la machine, uptime, santé des services, résumé des anomalies |
+| Ressources | CPU, mémoire, charge, swap, stockage, processus |
+| Réseau | interfaces, IPv4/IPv6, MAC, état des liens |
+| Services morfSystem | unités systemd et sondes réseau supervisées |
+| **Écosystème** | tous les services et applications découverts sur le réseau, avec version, dernier heartbeat, et un lien direct vers leur propre interface |
+| Diagnostic | anomalies détectées, cause du dernier redémarrage, état de la config partagée |
+
+L'onglet **Écosystème** est le cœur : c'est là qu'apparaissent ComponentHub,
+MeteoHub, SiteWatch, GatewayLab et les services, à mesure qu'ils s'annoncent. Un
+service qui déclare une interface web y affiche un lien qui **pointe directement
+vers lui** — morfMonitor observe et référence, il ne relaie rien.
+
+L'interface n'est qu'une **seconde vue** des mêmes données que l'API : tout ce
+qu'elle montre est aussi lisible en JSON, par exemple `http://<votre-machine>:8790/api/all`.
+
+> L'écran répond à « est-ce que tout va bien ? ». L'interface web répond à
+> « pourquoi ? ».
+
+Elle écoute sur toutes les interfaces réseau par défaut (`bind_address:
+0.0.0.0`). Sur une machine exposée hors du LAN, restreignez-la à l'adresse locale
+— il n'y a pas d'authentification, le modèle de confiance est le réseau local
+(voir [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md)).
+
+### L'écran du Raspberry : RaspberryDashboard
+
+Si votre Pi porte un petit écran OLED, **RaspberryDashboard** y affiche l'essentiel
+en un coup d'œil — identité, ressources, présence des services — sans clavier ni
+navigateur. Il ne collecte rien lui-même : il lit morfMonitor et l'affiche. C'est
+la réponse rapide à « est-ce que tout va bien ? », l'interface web restant là pour
+le « pourquoi ? ».
+
+Depuis la version 1.8, le Dashboard **s'annonce lui aussi** : il apparaît dans
+l'onglet Écosystème comme les autres, et sert un `http://<votre-machine>:8791/status`.
+
+---
+
+## 6. Au quotidien : quelle commande, quand
 
 | Vous voulez | Commande | Où |
 |---|---|---|
@@ -255,7 +373,7 @@ réglages que vous avez faits à la main survivent.
 
 ---
 
-## 6. Quand ça ne marche pas
+## 7. Quand ça ne marche pas
 
 | Symptôme | Cause probable | Que faire |
 |---|---|---|
@@ -275,7 +393,7 @@ journalctl -u morfmonitor -f          # Linux
 
 ---
 
-## 7. Pour aller plus loin
+## 8. Pour aller plus loin
 
 | Document | Sujet |
 |---|---|

@@ -11,10 +11,14 @@ rather than translated.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 MANIFEST_NAME = "ecosystem.json"
+
+#: A project that links Qt Widgets or Gui builds a desktop window.
+_GUI_LINK = re.compile(r"Qt6::(Widgets|Gui)|find_package\s*\(\s*Qt6[^)]*(Widgets|Gui)", re.I)
 
 
 class WorkspaceError(RuntimeError):
@@ -43,6 +47,21 @@ class Project:
     @property
     def is_platformio(self) -> bool:
         return (self.path / "platformio.ini").is_file()
+
+    @property
+    def is_gui(self) -> bool:
+        """True when the project builds a desktop GUI (links Qt Widgets or Gui).
+
+        Read from the project's own build definition, not a maintained list: a
+        project that links Qt Widgets is declaring it needs a display. Adding a
+        GUI app needs nothing kept in sync -- it is recognised by what it links.
+        """
+        cmake = self.path / "CMakeLists.txt"
+        try:
+            text = cmake.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return False
+        return _GUI_LINK.search(text) is not None
 
     def presets(self) -> list:
         """Configure presets this project declares, hidden ones excluded.
