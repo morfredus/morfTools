@@ -82,8 +82,8 @@ interrompre les projets restants.
 ## 4. Avant de proposer une modification
 
 ```bash
-./doctor.sh                  # contrôles d'écosystème + état des dépôts
-./status.sh                  # état Git de chaque projet
+python3 morf.py doctor                  # contrôles d'écosystème + état des dépôts
+python3 morf.py status                  # état Git de chaque projet
 bash -n morf.sh              # syntaxe Bash
 python3 -m py_compile scripts/*.py
 ```

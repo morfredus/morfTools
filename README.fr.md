@@ -40,8 +40,7 @@ dont le dossier ne correspond pas au nom attendu est signalé
 ## Commandes
 
 Sous PowerShell, depuis n'importe quel dossier :
-`pwsh <espace>/morfTools/morf.ps1 status`. Sous Linux ou Raspberry Pi :
-`bash <espace>/morfTools/morf.sh status`.
+Depuis n'importe quel dossier : `python3 <espace>/morfTools/morf.py status` (ou `./morf.py status`, il est exécutable). Une implémentation, toutes les plateformes.
 
 ### Arguments
 
@@ -61,8 +60,7 @@ Toutes les commandes n'opèrent que sur les projets déclarés dans
 | `status` | aucun | Affiche l'état Git court et la branche. |
 | `commit` | message (demandé si omis) | Indexe toutes les modifications et valide si nécessaire. |
 | `push` | aucun | Pousse la branche du manifeste vers `origin`. |
-| `shared-config` (Linux) | `status`, `validate`, `edit`, `diff`, `install`, `apply` | Gère la configuration partagée lue par morfMonitor et RaspberryDashboard. |
-| `shared-config.ps1` (Windows) | `-Action Status\|Validate\|Edit\|Diff\|Install` | Gère la configuration partagée locale des applications Windows. |
+| `config.py shared` | `status`, `validate`, `edit`, `diff`, `install`, `apply` | Gère la configuration partagée lue par morfMonitor et RaspberryDashboard. |
 
 Sous Linux et Raspberry Pi, on emploie le vocabulaire de CMake : `--preset <nom>`
 (ou `-p <nom>`) avec `build` et `upgrade`.
@@ -77,7 +75,7 @@ Le raccourci accepte aussi un preset en position simple, par exemple
 
 ```powershell
 .\morfTools\build.ps1 -Preset mingw
-pwsh .\morfTools\morf.ps1 upgrade -Preset linux-arm64
+python3 ./morfTools/morf.py upgrade --preset linux-arm64
 ```
 
 Le preset sélectionne le preset CMake de configuration et de compilation du
@@ -114,11 +112,11 @@ sortent en code 2 plutôt que de deviner.
 dans le dépôt pour que les changements soient relus et validés.
 
 ```bash
-./morfTools/shared-config.sh status
-./morfTools/shared-config.sh edit
-./morfTools/shared-config.sh diff
-./morfTools/shared-config.sh install
-./morfTools/shared-config.sh apply
+python3 ./morfTools/config.py shared status
+python3 ./morfTools/config.py shared edit
+python3 ./morfTools/config.py shared diff
+python3 ./morfTools/config.py shared install
+python3 ./morfTools/config.py shared apply
 ```
 
 `edit` ouvre `$EDITOR` (ou `nano`) et valide le JSON. `install` crée une
@@ -132,9 +130,9 @@ l'y cherchent par défaut (sauf si `MORFSYSTEM_CONFIG` est défini). L'outil
 PowerShell reste entièrement local :
 
 ```powershell
-.\morfTools\shared-config.ps1 -Action Edit
-.\morfTools\shared-config.ps1 -Action Diff
-.\morfTools\shared-config.ps1 -Action Install
+python3 ./morfTools/config.py shared edit
+python3 ./morfTools/config.py shared diff
+python3 ./morfTools/config.py shared install
 ```
 
 `Install` valide d'abord, crée une sauvegarde datée si nécessaire, puis copie le

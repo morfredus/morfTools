@@ -34,7 +34,7 @@ project whose directory does not match the expected name is reported as
 
 ## Commands
 
-Run PowerShell commands from any directory with `pwsh <workspace>/morfTools/morf.ps1 status`. On Linux or Raspberry Pi, use `bash <workspace>/morfTools/morf.sh status`.
+Run from any directory with `python3 <workspace>/morfTools/morf.py status` (or `./morf.py status`, it is executable). One implementation, every platform.
 
 ### Script arguments
 
@@ -58,7 +58,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `config shared` | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared parc configuration read by morfMonitor and RaspberryDashboard. |
 | `config deploy` | project name (lists them when omitted) | Deploy a project's own configuration by delegating to its script. |
 
-### `update`, `upgrade`, and `update-service.sh`
+### `update`, `upgrade`, and `service.py update`
 
 Three names, three different scopes. They are easy to confuse and the middle
 one is the only one that touches a running machine:
@@ -67,15 +67,23 @@ one is the only one that touches a running machine:
 | --- | --- | --- |
 | `update` | every repository | Nothing but `git pull --ff-only`. A pure alias of `pull`. |
 | `upgrade` | every repository | The same pull, **then rebuilds** the CMake projects. |
-| `<project>/scripts/linux/update-service.sh` | one installed service | Pull, rebuild, replace the installed binary, complete the configurations, restart. |
+| `<project>/service.py update` | one installed service | Pull, rebuild, replace the installed binary, complete the configurations, restart. |
+
+An update now guarantees three things, not two: it installs the new binary,
+**preserves your settings**, and **makes new options available** -- a key a new
+version adds to the reference configuration is merged into an existing installed
+file, with its default, without touching a value you set and without removing a
+key. Lists are never merged element-wise: a supervised service or probe is never
+switched on that you did not add yourself. This lives in morfdeploy, run by every
+`service.py update` and `install`.
 
 The first two act on **sources** and leave anything already installed alone: a
 service keeps running its old binary until something reinstalls it. Only
-`update-service.sh` reaches the deployed copy, and it lives inside each project
+`service.py update` reaches the deployed copy, and it lives inside each project
 because it knows that project's unit name and paths.
 
 So `upgrade` rebuilds `build/`, and the Pi keeps serving the previous version
-until you run the project's own `update-service.sh`.
+until you run the project's own `service.py update`.
 
 ### Uninstalling
 
@@ -145,7 +153,7 @@ instead of guessing.
 Two kinds of configuration exist, and they do not belong in the same place.
 
 ```bash
-./morfTools/config.sh shared install     # the shared parc file
+python3 ./morfTools/config.py shared install     # the shared parc file
 ./morfTools/config.sh deploy morfMonitor # one project's own file
 ./morfTools/config.sh deploy             # list the projects that support it
 ```

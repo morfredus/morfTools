@@ -215,6 +215,45 @@ jour où quelqu'un l'exerce sur une vraie machine, pas le jour où le code est
 
 ---
 
+## Invariant : morfTools est une dépendance d'administration, pas d'exécution
+
+C'est la seule dépendance commune du parc, et elle ne vaut que pendant le cycle
+de vie — **jamais à l'exécution**. Une fois installés, morfMonitor, morfSync,
+morfNotify, morfAnalytics, morfSensor ou n'importe quel service démarrent avec
+la machine, se découvrent par morfBeacon et remplissent leur mission sans que
+morfTools soit présent. **Retirer morfTools d'une machine n'arrête aucun service
+déjà installé.**
+
+morfTools n'intervient que pour l'administration :
+
+| | |
+|---|---|
+| cloner les dépôts | `morf clone` |
+| vérifier la cohérence du parc | `morf doctor` |
+| compiler | `morf build` |
+| installer, mettre à jour, désinstaller un service ou tout le parc | `morf install` / `service.py` / `morf uninstall` |
+| migrer une ancienne installation | déclaré dans les manifestes, appliqué à l'install |
+| gérer la configuration partagée | `config shared` |
+
+Le test qui tranche : **coupez morfTools, et rien de ce qui tourne ne s'arrête.**
+Comme pour l'observatoire, l'absence du composant central ne retire qu'un
+confort d'administration, jamais une fonction.
+
+La distinction dicte où vit chaque chose. Ce qui relève de l'exécution est
+**embarqué** dans le service (le binaire, sa config, sa copie vendorée de
+morfBeacon et de morfdeploy) : un clone isolé s'installe et tourne sans aucun
+voisin. Ce qui relève de l'administration est **centralisé** dans morfTools,
+pour n'exister qu'une fois plutôt qu'être recopié dans chaque projet — la
+duplication d'un `merge-config.py` par service était exactement le travers que
+cette frontière corrige.
+
+Conséquence pratique : ajouter un service ne modifie plus les outils centraux.
+Il fournit un manifeste décrivant ses besoins, morfTools l'orchestre à partir de
+cette déclaration, et le service reste autonome une fois posé. **Administration
+centralisée, exécution distribuée et autonome.**
+
+---
+
 ## Ce que ces invariants ne disent pas
 
 Ils fixent des frontières, pas des solutions. Le choix des technologies, la
