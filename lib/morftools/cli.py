@@ -9,6 +9,7 @@ mechanism anywhere in them.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -130,6 +131,28 @@ def main(argv: list | None = None) -> int:
             pass
 
     args = build_parser().parse_args(argv)
+
+    # Git must run as YOU, never under sudo. Elevated, it authenticates with
+    # root's SSH key -- which does not exist, so every repository answers
+    # 'Permission denied (publickey)' -- and the fetch it attempts first leaves
+    # root-owned files (FETCH_HEAD, objects) inside your .git, so later runs as
+    # yourself fail on your own repositories with 'cannot open .git/FETCH_HEAD'.
+    # Both happened, across thirteen repositories at once, from one sudo out of
+    # habit. Only 'uninstall' needs elevation, and it delegates to service.py.
+    # A genuine root login (no SUDO_USER) owns its clones and is left alone.
+    GIT_COMMANDS = {"clone", "fetch", "pull", "update", "push", "commit",
+                    "upgrade", "build"}
+    if (args.command in GIT_COMMANDS and hasattr(os, "geteuid")
+            and os.geteuid() == 0 and os.environ.get("SUDO_USER")):
+        print(f"Refusing to run '{args.command}' under sudo.", file=sys.stderr)
+        print("Git operations must run as your user: elevated, they use root's",
+              file=sys.stderr)
+        print("missing SSH key and leave root-owned files inside your .git.",
+              file=sys.stderr)
+        print(f"Run instead:  python3 morf.py {args.command}", file=sys.stderr)
+        print("(only 'uninstall' and each project's service.py need sudo)",
+              file=sys.stderr)
+        return 2
 
     if args.preset and args.command not in PRESET_COMMANDS:
         print(f"--preset is only supported by {', '.join(sorted(PRESET_COMMANDS))}.",

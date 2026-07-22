@@ -483,6 +483,7 @@ Utilisez-le pour valider une installation complète en partant de zéro.
 | Le service ne redémarre pas au boot | Il n'est pas *activé* | `systemctl is-enabled <service>` |
 | `doctor` dit **non-executable**, et `./exec-bits.sh` répond `Permission denied` | Le bit d'exécution manque, y compris sur le script de réparation | `python3 scripts/exec-bits.py ..` (par `python3`, jamais `./…`) |
 | `./service.py install` répond `Permission denied` | Même cause : bit manquant sur un clone neuf | Réparer d'abord : `python3 scripts/exec-bits.py ..` depuis morfTools |
+| `Permission denied (publickey)` sur **tous** les dépôts, ou `cannot open .git/FETCH_HEAD` | Un `morf.py update` a tourné **sous sudo** : clé SSH de root inexistante, et fichiers root laissés dans `.git` | `sudo chown -R $USER:$USER ~/Codage/*/.git` puis relancer **sans sudo** — `morf.py` le refuse désormais |
 
 Pour lire les journaux d'un service :
 

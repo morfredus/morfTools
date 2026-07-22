@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## [0.4.3] — 2026-07-22
+
+### Corrigé
+
+- **Les commandes git refusent de tourner sous sudo.** Élevé, git s'authentifie
+  avec la clé SSH de root — inexistante : les treize dépôts répondent
+  `Permission denied (publickey)` — et le fetch laisse des fichiers root dans
+  chaque `.git` (`FETCH_HEAD`), si bien que les exécutions suivantes, en
+  utilisateur, échouent sur leurs propres dépôts (`cannot open .git/FETCH_HEAD`).
+  Les deux sont arrivés d'un seul `sudo` par habitude. Le refus nomme la cause
+  et la commande correcte ; seul `uninstall` (et les `service.py`) exige
+  l'élévation. Un vrai login root (sans `SUDO_USER`) n'est pas concerné.
+
+
 ## [0.4.2] — 2026-07-22
 
 ### Corrigé
