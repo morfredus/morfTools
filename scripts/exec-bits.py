@@ -203,9 +203,18 @@ def main() -> int:
         return 1
 
     print(f"{total} script(s) fixed in {len(touched)} repository(ies).")
-    print("The change is STAGED, not committed -- review it, then commit:")
-    print("    git -C <project> status --short")
-    print("    git -C <project> commit -m 'chore: restore executable bit on scripts'")
+    print()
+    print("The working copy is runnable now, but the change is only STAGED. To make")
+    print("it LAST, commit and push it -- otherwise the remote still records the")
+    print("files non-executable, and the next `pull` that touches them takes the bit")
+    print("away again on Linux. From the morfTools directory:")
+    print()
+    print("    python3 morf.py commit -m 'chore: restore executable bit on scripts'")
+    print("    python3 morf.py push")
+    print()
+    print("Only stopping here (no push) leaves the fix local and fragile. Unstaging")
+    print("it (git restore --staged) would clean the status but keep it just as")
+    print("fragile -- the durable fix is on the remote, so it has to be pushed.")
     return 0
 
 
