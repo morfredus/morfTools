@@ -118,6 +118,43 @@ def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "") -> boo
     return True
 
 
+def cmd_uninstall(workspace: Workspace, project: Project,
+                  purge: bool = False, backup: str = "") -> bool:
+    """Uninstall a project's service, if it is one.
+
+    Delegates to the project's own entry point rather than reimplementing the
+    teardown here: the morfdeploy services know their config locations from
+    their manifest, and a project that keeps an old script knows its own paths.
+    A project that is not a service is skipped, not failed -- `uninstall` sweeps
+    the whole parc and most of it has nothing to remove.
+    """
+    entry = project.path / "service.py"
+    if entry.is_file():
+        args = [str(entry), "uninstall"]
+        if purge:
+            args.append("--purge")
+            if backup:
+                # One directory for the whole run; each service prefixes its
+                # own files, so a single --backup collects the entire parc.
+                args += ["--backup", backup]
+        run(["python3", *args], cwd=project.path)
+        return True
+
+    # Not yet converted to morfdeploy (RaspberryDashboard): its install script
+    # carries an --uninstall. --purge is not honoured there; say so rather than
+    # pretend it was.
+    legacy = project.path / "scripts" / "linux" / "install-service.sh"
+    if legacy.is_file():
+        if purge:
+            print("[note] --purge not supported by this project's script; "
+                  "the service is removed, its configuration is left in place")
+        run(["bash", str(legacy), "--uninstall"], cwd=project.path)
+        return True
+
+    print("[SKIP] not a service")
+    return True
+
+
 def cmd_clean(workspace: Workspace, project: Project) -> bool:
     for directory in sorted(project.path.glob("build*")):
         if directory.is_dir():
@@ -159,6 +196,7 @@ COMMANDS = {
     "commit": cmd_commit,
     "build": cmd_build,
     "install": cmd_install,
+    "uninstall": cmd_uninstall,
     "upgrade": cmd_upgrade,
     "clean": cmd_clean,
     "doctor": cmd_doctor,

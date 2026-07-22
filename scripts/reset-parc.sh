@@ -7,6 +7,11 @@
 # and migrations preserved. Run it before a clean reinstall, to start from
 # nothing.
 #
+# The normal way to uninstall is `morf.py uninstall` (one service or the whole
+# parc, with --purge and --backup), which reads each service's own manifest.
+# THIS script is the standalone fallback: hard-coded, no dependency on the
+# clones or on python, for wiping a machine whose repositories are already gone.
+#
 # It acts ONLY on the explicit footprint listed below -- read it, it is the
 # whole of what this script can touch. It does NOT touch the cloned git
 # repositories: delete those by hand if you also want a fresh clone.

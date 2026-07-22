@@ -47,6 +47,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `pull`, `update` | none | Fast-forward pull from the manifest branch. |
 | `build` | CMake preset (asked when omitted) | Build PlatformIO projects, or configure and build CMake projects. |
 | `install` | none | Install `requirements.txt` when present. |
+| `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
 | `doctor` | none | Check the port registry, the vendored copies and the executable bits, then verify Git repositories and their `origin`; run it before `push`. |
 | `exec-bits` | `--check`, `--project NAME` | Restore the executable bit on every script carrying a shebang. |
@@ -75,6 +76,31 @@ because it knows that project's unit name and paths.
 
 So `upgrade` rebuilds `build/`, and the Pi keeps serving the previous version
 until you run the project's own `update-service.sh`.
+
+### Uninstalling
+
+`uninstall` is the mirror of installing a service, and it reads the same
+manifests. By default it removes the service registration and **keeps the
+configuration** -- the settings edited by hand on the machine outlive the
+program.
+
+```bash
+./morfTools/morf.py uninstall --only morfSync        # one service, config kept
+./morfTools/morf.py uninstall                         # every service, config kept
+./morfTools/morf.py uninstall --purge                 # also remove config + binary
+./morfTools/morf.py uninstall --purge --backup ~/save # copy every config there first
+```
+
+`--purge` removes each service's configuration **and every earlier location its
+manifest declares** -- the `/opt` config left by the pre-`/etc` layout,
+morfSync's `/etc/homeserverhub` and `/usr/local/bin/morfSync`. Nothing is
+hard-coded: the teardown finds these exactly where the migration recorded them.
+With `--backup DIR`, every file is copied there first, named after its full
+source path so two configs sharing a basename cannot overwrite each other.
+
+To wipe a machine whose clones are already gone, use the standalone
+`scripts/reset-parc.sh` instead: hard-coded and dependency-free, for when no
+manifest is available to read.
 
 For Linux and Raspberry Pi, use CMake's own vocabulary: `--preset <name>`
 (or `-p <name>`) with `build` and `upgrade`:

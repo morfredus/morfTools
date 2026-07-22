@@ -108,6 +108,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--message", "-m", default="", help="Commit message")
     parser.add_argument("--only", default="",
                         help="Restrict to one project, by canonical name")
+    parser.add_argument("--purge", action="store_true",
+                        help="uninstall: also remove the configuration and binary")
+    parser.add_argument("--backup", default="", metavar="DIR",
+                        help="uninstall --purge: copy every config into DIR first")
     return parser
 
 
@@ -128,6 +132,13 @@ def main(argv: list | None = None) -> int:
     if args.preset and args.command not in PRESET_COMMANDS:
         print(f"--preset is only supported by {', '.join(sorted(PRESET_COMMANDS))}.",
               file=sys.stderr)
+        return 2
+
+    if (args.purge or args.backup) and args.command != "uninstall":
+        print("--purge and --backup only apply to uninstall.", file=sys.stderr)
+        return 2
+    if args.backup and not args.purge:
+        print("--backup only applies with --purge.", file=sys.stderr)
         return 2
 
     try:
@@ -168,6 +179,8 @@ def main(argv: list | None = None) -> int:
                 handler(workspace, project, preset)
             elif handler.__name__ == "cmd_commit":
                 handler(workspace, project, message)
+            elif handler.__name__ == "cmd_uninstall":
+                handler(workspace, project, args.purge, args.backup)
             else:
                 handler(workspace, project)
         except (RuntimeError, OSError) as exc:
