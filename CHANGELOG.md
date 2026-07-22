@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## [0.4.2] — 2026-07-22
+
+### Corrigé
+
+- **Le dossier applicatif dédié appartient de nouveau à l'utilisateur du
+  service.** Le rétrécissement du `chown` (protection de `/usr/local/bin`) avait
+  emporté l'entrée du dossier lui-même : créé sous sudo lors d'une installation
+  from-scratch, `/opt/<service>` restait à root, et un module y créant ses
+  données d'exécution (cache, sqlite) échouait — silencieusement, avec un
+  message d'interface pointant la configuration. Le `chown` couvre l'entrée du
+  dossier, jamais récursif, et seulement quand son nom est celui du service.
+
+- **`install` et `update` vérifient que l'utilisateur du service peut écrire
+  dans son dossier** (`sudo -u <user> test -w`) et avertissent avec la commande
+  de réparation. L'erreur devient bruyante au moment du geste, pour tous les
+  services, au lieu d'un symptôme lointain.
+
+
 ## [0.4.1] — 2026-07-22
 
 ### Corrigé
