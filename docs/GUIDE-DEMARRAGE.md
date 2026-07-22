@@ -16,7 +16,7 @@ tourne tout seul.
 
 ```
                      ┌────────────────────┐
-                     │ RaspberryDashboard │   affiche
+                     │   morfDashboard    │   affiche
                      └──────────┬─────────┘
                                 │  lit /api/
                      ┌──────────▼─────────┐
@@ -55,7 +55,7 @@ jamais entre vous et un service.
 | Service | Ce qu'il fait |
 |---|---|
 | **morfMonitor** | **Centralise et expose** l'état d'une machine en JSON — ce que ses propres modules mesurent, et ce que les autres services annoncent. N'affiche rien. |
-| **RaspberryDashboard** | Affiche cet état sur un écran. Ne collecte rien. |
+| **morfDashboard** | Affiche cet état sur un écran. Ne collecte rien. |
 | **morfSync** | Synchronise des données entre machines, sans cloud. |
 | **morfNotify**, **morfSensor**, **morfAnalytics** | Notifications, capteurs, analyses. |
 | **morfTemplateService** | Le patron dont on clone un nouveau service. Ne sert à rien en production. |
@@ -196,7 +196,7 @@ Le **Raspberry Dashboard** (l'écran OLED) s'installe différemment, par son pro
 script, et suppose l'écran branché :
 
 ```bash
-cd ~/Codage/RaspberryDashboard && sudo ./scripts/linux/install-service.sh
+cd ~/Codage/morfDashboard && sudo ./scripts/linux/install-service.sh
 ```
 
 **La même commande `service.py` partout** — Linux, Windows, Raspberry Pi. Seul le
@@ -245,7 +245,7 @@ corrigé ».
 | Fichier | Contient | Lu par |
 |---|---|---|
 | `morfmonitor.json` | Le **service** : port, adresse d'écoute | morfMonitor seul |
-| `morfsystem.json` | Ce qui est **supervisé** : services, sondes, applications | morfMonitor **et** RaspberryDashboard |
+| `morfsystem.json` | Ce qui est **supervisé** : services, sondes, applications | morfMonitor **et** morfDashboard |
 
 Pour ajouter quelque chose à surveiller, vous éditez `morfsystem.json`. Rien
 d'autre. Aucun code à modifier.
@@ -327,9 +327,9 @@ Elle écoute sur toutes les interfaces réseau par défaut (`bind_address:
 — il n'y a pas d'authentification, le modèle de confiance est le réseau local
 (voir [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md)).
 
-### L'écran du Raspberry : RaspberryDashboard
+### L'écran du Raspberry : morfDashboard
 
-Si votre Pi porte un petit écran OLED, **RaspberryDashboard** y affiche l'essentiel
+Si votre Pi porte un petit écran OLED, **morfDashboard** y affiche l'essentiel
 en un coup d'œil — identité, ressources, présence des services — sans clavier ni
 navigateur. Il ne collecte rien lui-même : il lit morfMonitor et l'affiche. C'est
 la réponse rapide à « est-ce que tout va bien ? », l'interface web restant là pour

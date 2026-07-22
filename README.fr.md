@@ -60,7 +60,7 @@ Toutes les commandes n'opèrent que sur les projets déclarés dans
 | `status` | aucun | Affiche l'état Git court et la branche. |
 | `commit` | message (demandé si omis) | Indexe toutes les modifications et valide si nécessaire. |
 | `push` | aucun | Pousse la branche du manifeste vers `origin`. |
-| `config.py shared` | `status`, `validate`, `edit`, `diff`, `install`, `apply` | Gère la configuration partagée lue par morfMonitor et RaspberryDashboard. |
+| `config.py shared` | `status`, `validate`, `edit`, `diff`, `install`, `apply` | Gère la configuration partagée lue par morfMonitor et morfDashboard. |
 
 Sous Linux et Raspberry Pi, on emploie le vocabulaire de CMake : `--preset <nom>`
 (ou `-p <nom>`) avec `build` et `upgrade`.
@@ -106,7 +106,7 @@ sortent en code 2 plutôt que de deviner.
 
 ### Configuration partagée sous Linux
 
-`morfMonitor` et `RaspberryDashboard` lisent tous deux
+`morfMonitor` et `morfDashboard` lisent tous deux
 `/etc/morfsystem/morfsystem.json`. La source modifiable et versionnée est
 `morfMonitor/config/morfsystem.example.json` ; elle est délibérément conservée
 dans le dépôt pour que les changements soient relus et validés.
@@ -125,7 +125,7 @@ deux services. Ces deux commandes ne demandent sudo que pour les écritures
 système.
 
 Sous Windows, l'emplacement installé équivalent est
-`%ProgramData%\morfSystem\morfsystem.json`. morfMonitor et RaspberryDashboard
+`%ProgramData%\morfSystem\morfsystem.json`. morfMonitor et morfDashboard
 l'y cherchent par défaut (sauf si `MORFSYSTEM_CONFIG` est défini). L'outil
 PowerShell reste entièrement local :
 

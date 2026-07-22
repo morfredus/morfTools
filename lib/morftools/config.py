@@ -4,7 +4,7 @@ Two things live here because the shell kept them in two scripts that only ever
 called each other -- config.sh dispatched, shared-config.sh worked.
 
   shared    /etc/morfsystem/morfsystem.json, read by morfMonitor (which
-            collects) AND RaspberryDashboard (which displays). It describes
+            collects) AND morfDashboard (which displays). It describes
             WHAT IS SUPERVISED, and it is the one file to edit to add a
             service, a probe or an application.
 

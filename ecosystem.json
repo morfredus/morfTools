@@ -14,7 +14,7 @@
     "morfSync",
     "morfTemplateService",
     "morfUpdate",
-    "RaspberryDashboard",
+    "morfDashboard",
     "SiteWatch"
   ],
   "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
@@ -67,7 +67,7 @@
       },
       {
         "http": 8791,
-        "project": "RaspberryDashboard",
+        "project": "morfDashboard",
         "_note": "Annonce morfbeacon/1 + /status. Port dans config.py (BEACON_STATUS_PORT), pas de fichier JSON."
       },
       {

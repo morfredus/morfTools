@@ -55,7 +55,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `status` | none | Show the short Git status and branch. |
 | `commit` | message (asked when omitted) | Stage all changes and commit when needed. |
 | `push` | none | Push the manifest branch to `origin`. |
-| `config shared` | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared parc configuration read by morfMonitor and RaspberryDashboard. |
+| `config shared` | `status`, `validate`, `edit`, `diff`, `install`, or `apply` | Manage the shared parc configuration read by morfMonitor and morfDashboard. |
 | `config deploy` | project name (lists them when omitted) | Deploy a project's own configuration by delegating to its script. |
 
 ### `update`, `upgrade`, and `service.py update`
@@ -185,7 +185,7 @@ python3 ./morfTools/config.py shared install     # the shared parc file
 
 **Shared** is `/etc/morfsystem/morfsystem.json` (`%ProgramData%\morfSystem\` on
 Windows). It describes *what is supervised* and is read by morfMonitor **and**
-RaspberryDashboard. No component owns it, so morfTools does — the same reasoning
+morfDashboard. No component owns it, so morfTools does — the same reasoning
 that moved the port registry into `ecosystem.json`.
 
 **Deploy** handles a project's own configuration, and **delegates** to that
@@ -213,7 +213,7 @@ what changes.
 restarts `morfmonitor` and `morfdashboard`. Only the system writes request sudo.
 
 On Windows the installed location is `%ProgramData%\morfSystem\morfsystem.json`;
-morfMonitor and RaspberryDashboard both look there unless `MORFSYSTEM_CONFIG`
+morfMonitor and morfDashboard both look there unless `MORFSYSTEM_CONFIG`
 is set. Use `-ConfigPath` to install elsewhere.
 
 

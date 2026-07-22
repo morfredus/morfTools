@@ -175,7 +175,7 @@ def cmd_uninstall(workspace: Workspace, project: Project,
         run(["python3", *args], cwd=project.path)
         return True
 
-    # Not yet converted to morfdeploy (RaspberryDashboard): its install script
+    # Not yet converted to morfdeploy (morfDashboard): its install script
     # carries an --uninstall. --purge is not honoured there; say so rather than
     # pretend it was.
     legacy = project.path / "scripts" / "linux" / "install-service.sh"
