@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## [0.4.5] — 2026-07-23
+
+### Corrigé
+
+- **L'install Windows trouve `windeployqt` toute seule, depuis n'importe quel
+  terminal.** La 0.4.4 exigeait de lancer l'install depuis le shell MSYS2 qui
+  avait compilé, faute de quoi elle s'arrêtait sur « windeployqt introuvable » —
+  y compris depuis un PowerShell ordinaire. morfdeploy lit désormais le
+  `CMakeCache.txt` du build pour localiser Qt (`Qt6_DIR` → `<qt>/bin`, le même
+  point d'ancrage que le CMake de ComponentHub) et préfixe le PATH du
+  sous-processus avec le `bin` de Qt, pour qu'`objdump` et les DLL du runtime
+  MinGW se résolvent sans dépendre du shell appelant. Testé de bout en bout :
+  15 DLL (Qt6Core, Qt6Network, libgcc, libstdc++, pcre2, icu…) et les dossiers
+  de plugins `networkinformation/` et `tls/` déployés à côté du binaire. Sous
+  Linux, toujours un no-op. Copie vendorée resynchronisée dans les six services.
+
 ## [0.4.4] — 2026-07-23
 
 ### Corrigé
