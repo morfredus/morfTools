@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Documentation
+
+- **La découverte distribuée est consignée comme éprouvée** dans
+  `docs/ECOSYSTEM-PRINCIPLES.md` : elle fonctionne sur un environnement
+  hétérogène (Windows, Linux, Raspberry Pi, ESP32) sans aucune configuration
+  manuelle, les instances de morfMonitor se découvrant mutuellement et les
+  services du Raspberry Pi apparaissant automatiquement sur Windows comme
+  l'inverse. La section « Portée : toutes les plateformes » ne décrit plus une
+  intention. L'invariant « on ne promet que ce qu'on peut éprouver » note que
+  Windows a franchi son seuil de support le 23 juillet 2026, et que les trois
+  défauts révélés ce jour-là étaient tous invisibles à la lecture du code.
+
 ## [0.4.6] — 2026-07-23
 
 ### Corrigé

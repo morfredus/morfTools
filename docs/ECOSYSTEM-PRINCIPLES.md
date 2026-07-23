@@ -110,6 +110,29 @@ dans `morfsystem.json`) sont un état transitoire, pas la cible. Le protocole
 `morfbeacon/1` est du JSON compact en UDP et n'exige aucune dépendance
 particulière : un émetteur embarqué est réaliste.
 
+#### Validation (23 juillet 2026)
+
+La découverte distribuée fonctionne sur un environnement **hétérogène**
+— Windows, Linux, Raspberry Pi et ESP32 — **sans aucune configuration
+manuelle**. Les instances de morfMonitor se découvrent mutuellement, et les
+services publiés par le Raspberry Pi apparaissent automatiquement sur Windows
+comme l'inverse.
+
+Ce n'est plus une intention : c'est un comportement constaté sur le parc réel,
+quatre plateformes simultanées, aucune adresse IP écrite nulle part. La portée
+annoncée ci-dessus est donc **éprouvée**, conformément à l'invariant « on ne
+promet que ce qu'on peut éprouver ».
+
+Deux corrections ont été nécessaires pour y parvenir, l'une et l'autre nées de
+cette confrontation au réel plutôt que d'une revue de code :
+
+- **l'identité d'instance** (`app@host`) sert de clef de découverte : indexées
+  par le seul nom, deux machines faisant tourner le même service s'écrasaient
+  l'une l'autre ;
+- **l'adresse retenue est celle du réseau local**, pas celle du dernier
+  datagramme reçu : un émetteur multi-domicilié (WSL, Hyper-V, VPN) s'annonçait
+  sur un réseau virtuel injoignable depuis les autres machines.
+
 ---
 
 ## Invariant : l'accès distant est un composant dédié
@@ -236,6 +259,15 @@ annoncées. Personne n'attend ce qui n'existe pas, et la porte reste ouverte.
 Le corollaire vaut pour toute plateforme future : elle devient « supportée » le
 jour où quelqu'un l'exerce sur une vraie machine, pas le jour où le code est
 écrit.
+
+Windows a franchi ce seuil le 23 juillet 2026 : installation d'un service par
+morfdeploy, démarrage, collecte des ressources et découverte croisée avec le
+Raspberry Pi et les ESP32, sur une machine réelle. Les trois défauts révélés ce
+jour-là — DLL Qt absentes à l'installation, ressources non collectées faute de
+`/proc`, adresse annoncée sur un réseau virtuel — illustrent exactement ce que
+cet invariant protège : aucun n'était visible à la lecture du code, tous les
+trois se sont manifestés à la première mise en service. Voir la validation de
+la découverte distribuée, plus haut.
 
 ---
 
