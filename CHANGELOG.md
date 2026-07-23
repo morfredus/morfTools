@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## [0.4.6] — 2026-07-23
+
+### Corrigé
+
+- **Les DLL tierces de Qt sont déployées sans dépendre d'un shell.** windeployqt
+  place les bibliothèques Qt et le runtime du compilateur, mais **pas** les
+  bibliothèques tierces contre lesquelles Qt6Core est lié (brotli,
+  double-conversion, ICU, pcre2…) : le service s'arrêtait sur
+  « libbrotlidec.dll introuvable », une par une. Le balayage de repli s'appuyait
+  sur `ldd` d'un shell MSYS2 — absent depuis un PowerShell ordinaire, et c'est
+  précisément là que ces DLL manquaient. Il est remplacé par `objdump` (livré
+  dans le même `bin` MinGW que windeployqt, donc présent dès que windeployqt
+  l'est, et sans shell) : la table d'imports de chaque binaire est lue, et toute
+  DLL importée présente dans le `bin` du toolchain — une bibliothèque MinGW/Qt,
+  pas une DLL système — est copiée, en suivant ses propres imports jusqu'à
+  fermeture. Testé de bout en bout : 15 DLL au total, dont les quatre qui
+  manquaient (libbrotlidec, libdouble-conversion, libicuin78, libicuuc78).
+  No-op sous Linux inchangé. Copie vendorée resynchronisée dans les six services.
+
 ## [0.4.5] — 2026-07-23
 
 ### Corrigé
