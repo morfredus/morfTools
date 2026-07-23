@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+## [0.4.11] — 2026-07-24
+
+### Corrigé
+
+- **Un `update` sans changement ne redémarre plus le service.** La séquence
+  était inconditionnelle : compiler, arrêter, recopier le binaire — fût-il
+  identique octet pour octet — ré-enregistrer, redémarrer. Le premier `upgrade`
+  réel du Pi a donc arrêté et relancé **cinq** services alors qu'aucun n'avait
+  changé. Ce n'est pas neutre : c'est une coupure de supervision, un uptime
+  remis à zéro et, pour un service au milieu d'une tâche, une interruption —
+  payés au moment précis où l'on croyait ne rien toucher.
+
+  `update` compare désormais **l'empreinte du contenu** du binaire construit et
+  de l'installé (SHA-256 ; ni la taille ni la date, qu'un `git checkout` ou une
+  recompilation réécrivent sur des octets identiques), vérifie que les
+  configurations sont en place, et s'arrête là s'il n'y a rien à déployer — en
+  le disant clairement, y compris que **le service n'a pas été redémarré**.
+  `--force` redéploie et redémarre quand c'est justement l'intention.
+
+- **Deux fonctionnalités annoncées mais jamais branchées le sont enfin.**
+  `enrich_configs` (0.4.0, enrichissement des configurations à la mise à jour)
+  et `verify_writable` (0.4.2, vérification que l'utilisateur du service peut
+  écrire dans son dossier) existaient en code mort : `git log -S` ne trouve
+  aucun commit ayant jamais contenu leur appel. Le changelog les décrivait
+  comme livrées. Elles sont désormais appelées par `install` et `update`.
+
+  L'enrichissement participe de surcroît à la décision ci-dessus : une clé
+  ajoutée dans un fichier que le processus a lu au démarrage ne change rien
+  tant qu'il ne l'a pas relu — un enrichissement effectif justifie donc le
+  redémarrage, et lui seul.
+
 ## [0.4.10] — 2026-07-24
 
 ### Corrigé
