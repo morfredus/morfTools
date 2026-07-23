@@ -66,8 +66,14 @@ one is the only one that touches a running machine:
 | | Scope | What it does |
 | --- | --- | --- |
 | `update` | every repository | Nothing but `git pull --ff-only`. A pure alias of `pull`. |
-| `upgrade` | every repository | The same pull, **then rebuilds** the CMake projects. |
+| `upgrade` | every repository **and this machine** | The same pull, **rebuilds** the CMake projects, **then updates the services actually installed here**. |
 | `<project>/service.py update` | one installed service | Pull, rebuild, replace the installed binary, complete the configurations, restart. |
+
+`upgrade` only touches services this machine actually runs: a project present in
+the clone and absent from the service manager is skipped quietly, because the
+parc is one set of repositories deployed differently on each machine. Git runs as
+you and only the deployment is elevated -- `upgrade` refuses to run under sudo,
+so it asks for rights itself, once, when it reaches the first service.
 
 An update now guarantees three things, not two: it installs the new binary,
 **preserves your settings**, and **makes new options available** -- a key a new
@@ -77,13 +83,13 @@ key. Lists are never merged element-wise: a supervised service or probe is never
 switched on that you did not add yourself. This lives in morfdeploy, run by every
 `service.py update` and `install`.
 
-The first two act on **sources** and leave anything already installed alone: a
-service keeps running its old binary until something reinstalls it. Only
-`service.py update` reaches the deployed copy, and it lives inside each project
-because it knows that project's unit name and paths.
+`update` acts on **sources** only and leaves anything installed alone: it is the
+command for looking at what changed before acting. `service.py update` remains
+the way to take a **single** service without touching the rest, and it lives
+inside each project because it knows that project's unit name and paths.
 
-So `upgrade` rebuilds `build/`, and the Pi keeps serving the previous version
-until you run the project's own `service.py update`.
+So a plain `update` rebuilds nothing and deploys nothing; `upgrade` carries the
+new code all the way to the running services.
 
 ### Building on a headless machine
 

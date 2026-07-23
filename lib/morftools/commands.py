@@ -142,6 +142,60 @@ def cmd_install(workspace: Workspace, project: Project) -> bool:
     return True
 
 
+def elevated(args: list) -> list:
+    """The same command, with elevation when the platform needs it.
+
+    Only the service deployment is elevated, never git. That separation is the
+    whole point: run as root, git authenticates with root's missing SSH key and
+    leaves root-owned files in every .git -- which is why `upgrade` itself
+    refuses to run under sudo (see cli.py). So the pull happens as you, and only
+    this last step asks for rights.
+
+    Windows has no sudo: an administrator shell is how it grants rights there,
+    and the service backend already refuses clearly when it lacks them.
+    """
+    if platform.system() == "Windows":
+        return args
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        return args                       # a genuine root login: nothing to add
+    if shutil.which("sudo"):
+        return ["sudo", *args]
+    return args
+
+
+def redeploy_service(project: Project) -> None:
+    """Push the freshly built code into this project's service, if it runs here.
+
+    Only services actually registered on THIS machine are touched: the parc is
+    one set of repositories deployed differently on each machine, so a project
+    present in the clone and absent from the service manager is the normal case,
+    not a failure. It is skipped quietly.
+
+    `is-installed` answers by exit status rather than by printing something to
+    parse -- the decision belongs to the backend that knows the platform.
+    """
+    entry = project.path / "service.py"
+    if not entry.is_file():
+        return                            # not a service at all
+
+    probe = subprocess.run(["python3", str(entry), "is-installed"],
+                           cwd=project.path, capture_output=True, check=False)
+    if probe.returncode == 2:
+        # Not the same as "no": we were not allowed to ask. Staying quiet here
+        # would report a successful upgrade while leaving the service on its
+        # old binary -- the exact silence this parc keeps being bitten by.
+        print("[WARN] cannot tell whether this service is installed "
+              "(insufficient rights to ask)")
+        print("       re-run from an elevated shell to update it")
+        return
+    if probe.returncode != 0:
+        print("[SKIP] service not installed on this machine")
+        return
+
+    print("  updating the installed service...")
+    run(elevated(["python3", str(entry), "update"]), cwd=project.path)
+
+
 def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "",
                 force_gui: bool = False) -> bool:
     cmd_pull(workspace, project)
@@ -150,6 +204,11 @@ def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "",
     # what cannot run there.
     if project.is_cmake and not skip_gui(project, force_gui):
         cmake_build(project, preset)
+    # ...and the machine actually runs the new code. Building alone left every
+    # service serving its previous binary until someone remembered to visit each
+    # project and run its own service.py -- the trap the guide had to warn about.
+    # `upgrade` now means what its name promises.
+    redeploy_service(project)
     return True
 
 

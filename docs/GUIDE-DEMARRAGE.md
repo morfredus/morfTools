@@ -375,7 +375,7 @@ l'onglet Écosystème comme les autres, et sert un `http://<votre-machine>:8791/
 | Vous voulez | Commande | Où |
 |---|---|---|
 | Récupérer le code à jour | `python3 morf.py update` | morfTools |
-| Récupérer **et** recompiler | `python3 morf.py upgrade` | morfTools |
+| **Tout mettre à jour** (code, compilation, services) | `python3 morf.py upgrade` | morfTools |
 | Vérifier la cohérence du parc | `python3 morf.py doctor` | morfTools |
 | Installer un service | `sudo ./service.py install` | le projet |
 | **Mettre à jour un service installé** | `sudo ./service.py update` | le projet |
@@ -383,29 +383,45 @@ l'onglet Écosystème comme les autres, et sert un `http://<votre-machine>:8791/
 | Voir l'état du parc | `python3 config.py shared status` | morfTools |
 | Pousser une config modifiée | `python3 config.py shared apply` | morfTools |
 
-### Le piège de `update` et `upgrade`
+### `update` et `upgrade` : lequel choisir
 
-Trois choses portent ce nom et ne font pas la même chose :
+Trois commandes portent ce nom et ne vont pas aussi loin :
 
 | | Agit sur | Effet |
 |---|---|---|
 | `morf.py update` | les **sources** | `git pull`, rien d'autre |
-| `morf.py upgrade` | les **sources** | `git pull` **et** recompile |
-| `service.py update` | le service **installé** | recompile, remplace le binaire, redémarre |
+| `morf.py upgrade` | les sources **et la machine** | `git pull`, recompile, **puis met à jour les services installés ici** |
+| `service.py update` | **un** service installé | recompile, remplace le binaire, redémarre |
 
-Les deux premiers ne touchent à **rien d'installé**. Après un `upgrade`, votre
-Raspberry Pi continue de faire tourner l'ancienne version jusqu'à ce que vous
-lanciez le `service.py update` du projet.
+`update` ne touche à rien d'installé : c'est une simple récupération de code,
+utile pour regarder ce qui a changé avant d'agir.
+
+`upgrade` va jusqu'au bout. Seuls les services **réellement installés sur cette
+machine** sont mis à jour ; ceux qui sont présents dans les dépôts sans être
+installés ici sont ignorés — un poste Windows n'a pas de morfDashboard, ce
+n'est pas une anomalie.
+
+`service.py update` reste utile pour ne reprendre **qu'un seul** service, sans
+toucher au reste.
+
+> **Le `git` reste à votre nom, seule l'installation est élevée.**
+> `upgrade` refuse de tourner sous `sudo` (git élevé s'authentifie avec la clé
+> SSH de root, inexistante, et laisse des fichiers root dans vos dépôts). Il
+> demande donc lui-même l'élévation, uniquement au moment de remplacer les
+> binaires : un seul mot de passe, au premier service.
 
 ### La séquence d'une mise à jour complète
 
 ```bash
 cd ~/Codage/morfTools
-python3 morf.py update            # 1. récupérer le code
-python3 morf.py doctor            # 2. vérifier la cohérence
+python3 morf.py upgrade           # récupère, recompile, met à jour les services
+python3 morf.py doctor            # vérifie la cohérence du parc
+```
 
-cd ~/Codage/morfMonitor
-sudo ./service.py update          # 3. recompiler et remplacer, service par service
+Pour ne mettre à jour qu'un seul projet :
+
+```bash
+python3 morf.py upgrade --only morfMonitor
 ```
 
 Vos configurations ne sont **jamais** écrasées par une mise à jour. Les

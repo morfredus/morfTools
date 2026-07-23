@@ -2,6 +2,82 @@
 
 ## Unreleased
 
+## [0.4.9] — 2026-07-24
+
+### Corrigé
+
+- **« Pas installé » n'est plus conclu de « je n'avais pas le droit de
+  demander ».** Lancé sans élévation sous Windows, `service.py update`
+  répondait « morfMonitor n'est pas installé sur cette machine. Lancez d'abord
+  install » — à propos d'un service en cours d'exécution, qui répondait sur son
+  port à la seconde près. `schtasks` renvoie « accès refusé » pour une tâche
+  enregistrée en SYSTEM, avec le code de retour de « cette tâche n'existe pas » ;
+  le message envoyait donc vers `install`, exactement le mauvais geste.
+
+  `update` et `status` interrogent désormais `can_query_installation()` avant de
+  conclure, et nomment la vraie cause avec la manière d'y remédier. Le garde-fou
+  existait depuis la 0.4.7 pour le balayage de `morf.py upgrade` ; il manquait
+  là où une personne le lit directement.
+
+  Constaté en testant sur une machine Windows réelle, service actif : aucun de
+  ces deux défauts n'était visible à la lecture du code.
+
+## [0.4.8] — 2026-07-24
+
+### Corrigé
+
+- **Sous Windows, un service est désactivé, arrêté, et son arrêt réel attendu
+  avant que ses fichiers soient remplacés.** Windows refuse d'écraser un
+  exécutable qu'un processus tient ouvert, et `schtasks /End` rend la main dès
+  la demande émise, sans attendre la sortie effective : la copie qui suivait
+  échouait sur une erreur de permission qui ne disait rien de sa cause — la
+  précédente instance encore vivante. Trois gestes remplacent l'unique arrêt :
+
+  - **désactivation d'abord** — un arrêt que quelque chose peut défaire n'en est
+    pas un : un wrapper SCM (WinSW, NSSM) relance un service qu'il croit planté,
+    et il reviendrait en tenant les fichiers qu'on s'apprête à remplacer. La
+    désactivation est toujours défaite par l'appelant (install et update
+    ré-enregistrent le service entièrement, uninstall le supprime) ;
+  - **arrêt** ;
+  - **attente de la libération réelle** du binaire, éprouvée en l'ouvrant en
+    écriture — Windows accorde la poignée à l'instant où le processus disparaît.
+    Un dépassement de délai avertit au lieu d'échouer, en nommant la cause et la
+    commande pour s'en sortir.
+
+  Linux n'a pas besoin de cette étape : `systemctl stop` ne rend la main
+  qu'une fois l'unité réellement arrêtée. Le correctif vit dans le backend
+  Windows, donc `install`, `update` et `uninstall` de **tous** les projets en
+  héritent par leur `service.py` — copie vendorée resynchronisée dans les six
+  services.
+
+## [0.4.7] — 2026-07-24
+
+### Ajouté
+
+- **`morf.py upgrade` met désormais à jour les services installés.** Il
+  s'arrêtait à la compilation : la machine continuait de faire tourner
+  l'ancien binaire jusqu'à ce qu'on pense à visiter chaque projet pour y lancer
+  son `service.py update` — un piège que le guide devait signaler plutôt que
+  l'outil l'éviter. `upgrade` tient maintenant sa promesse : `git pull`,
+  recompilation, puis remplacement des binaires **des seuls services
+  réellement installés sur cette machine**. Un projet présent dans les dépôts
+  sans y être installé est ignoré discrètement : le parc est un jeu de dépôts
+  déployé différemment sur chaque machine, pas une anomalie.
+
+  Le `git` reste exécuté en votre nom et **seul le déploiement est élevé** :
+  `upgrade` refuse toujours de tourner sous `sudo` (la garde 0.4.3), et
+  demande donc lui-même l'élévation au moment de remplacer le premier binaire.
+
+- **`service.py is-installed`** — action muette dont le **code de retour est la
+  réponse** : `0` installé, `1` absent, `2` impossible à déterminer. La
+  troisième valeur n'est pas un luxe : sous Windows, `schtasks /Query` répond
+  « accès refusé » pour une tâche enregistrée en SYSTEM, avec un code de retour
+  indiscernable de « cette tâche n'existe pas ». Sans cette distinction, un
+  balayage non élevé aurait conclu « rien n'est installé », sauté un service en
+  cours d'exécution et annoncé un succès. `upgrade` avertit désormais au lieu
+  de se taire. La sortie de `status` n'est toujours jamais analysée : une
+  décision se demande au backend qui connaît la plateforme.
+
 ### Documentation
 
 - **La découverte distribuée est consignée comme éprouvée** dans
