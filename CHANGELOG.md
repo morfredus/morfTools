@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## [0.4.4] — 2026-07-23
+
+### Corrigé
+
+- **Un service Qt installé sous Windows embarque désormais ses DLL.** Installé
+  seul, `morfmonitor.exe` démarrait sur une erreur « Qt6Core.dll introuvable »
+  que le gestionnaire de services ne rapporte que comme un échec de démarrage,
+  sans nommer un seul fichier manquant. Sous Linux, les bibliothèques
+  partagées viennent du système ; Windows n'a pas d'équivalent. morfdeploy
+  place maintenant, à l'installation comme à la mise à jour, les DLL Qt et
+  MinGW à côté du binaire, via `windeployqt` (livré avec Qt) puis un balayage
+  `ldd` de repli pour les dépendances tierces restantes. Le correctif vit dans
+  le backend Windows — la seule couche qui interroge la plateforme — donc tout
+  service du parc en bénéficie, sans toucher au CMake d'aucun projet. Sous
+  Linux, l'appel est un no-op sans coût. Copie vendorée resynchronisée dans
+  les six services concernés.
+
 ## [0.4.3] — 2026-07-22
 
 ### Corrigé
