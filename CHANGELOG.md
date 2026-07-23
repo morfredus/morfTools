@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## [0.4.10] — 2026-07-24
+
+### Corrigé
+
+- **`upgrade` ne laisse plus morfDashboard en arrière, en silence.** Le
+  redéploiement ajouté en 0.4.7 ne reconnaissait que les projets dotés d'un
+  `service.py` ; morfDashboard, seul service encore piloté par ses scripts
+  shell, sortait sur « pas un service » sans rien afficher — son nouveau code
+  était récupéré et le service continuait de tourner sur l'ancien. Exactement le
+  piège que la fonctionnalité devait fermer, resté ouvert pour un projet, et de
+  la pire manière : sans un mot. Constaté sur le premier `upgrade` réel du Pi.
+
+### Modifié
+
+- **La branche legacy de `uninstall` disparaît.** morfDashboard expose désormais
+  la même interface que les autres (morfDashboard 1.10.0), si bien que morfTools
+  s'en tient à une règle sans exception : un projet qui est un service porte un
+  `service.py`. La connaissance d'un projet cesse de vivre dans l'outil qui
+  l'administre.
+
 ## [0.4.9] — 2026-07-24
 
 ### Corrigé

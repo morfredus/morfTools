@@ -222,30 +222,26 @@ def cmd_uninstall(workspace: Workspace, project: Project,
     A project that is not a service is skipped, not failed -- `uninstall` sweeps
     the whole parc and most of it has nothing to remove.
     """
+    # One rule, no exception: a project that is a service carries a service.py.
+    # There used to be a fallback here for morfDashboard, whose deployment is an
+    # rsync of a Python tree rather than a copied binary and which therefore
+    # kept its shell scripts. That exception cost more than it saved -- `upgrade`
+    # had no such fallback, so it pulled morfDashboard's new code and left the
+    # service running the old one, silently. morfDashboard now exposes the same
+    # interface as everything else, delegating to those very scripts.
     entry = project.path / "service.py"
-    if entry.is_file():
-        args = [str(entry), "uninstall"]
-        if purge:
-            args.append("--purge")
-            if backup:
-                # One directory for the whole run; each service prefixes its
-                # own files, so a single --backup collects the entire parc.
-                args += ["--backup", backup]
-        run(["python3", *args], cwd=project.path)
+    if not entry.is_file():
+        print("[SKIP] not a service")
         return True
 
-    # Not yet converted to morfdeploy (morfDashboard): its install script
-    # carries an --uninstall. --purge is not honoured there; say so rather than
-    # pretend it was.
-    legacy = project.path / "scripts" / "linux" / "install-service.sh"
-    if legacy.is_file():
-        if purge:
-            print("[note] --purge not supported by this project's script; "
-                  "the service is removed, its configuration is left in place")
-        run(["bash", str(legacy), "--uninstall"], cwd=project.path)
-        return True
-
-    print("[SKIP] not a service")
+    args = [str(entry), "uninstall"]
+    if purge:
+        args.append("--purge")
+        if backup:
+            # One directory for the whole run; each service prefixes its own
+            # files, so a single --backup collects the entire parc.
+            args += ["--backup", backup]
+    run(["python3", *args], cwd=project.path)
     return True
 
 
