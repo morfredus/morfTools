@@ -14,6 +14,10 @@
   morfSystem from nothing, and which command to run when. **Start here** if the parc is
   new to you.
 - `docs/ECOSYSTEM-PRINCIPLES.md`: the founding principles and the architectural invariants that apply to the **whole parc**, including the boundaries no component may cross.
+- [`docs/FIRST-TEST.md`](docs/FIRST-TEST.md) *(FR)*: what to report after a **first**
+  installation. The parc has only ever been installed by the person who wrote it —
+  the one least able to see what the guide leaves out. Honest feedback wanted,
+  including "I gave up here".
 - `docs/`: workspace documentation.
 
 ## Sandbox and production workspaces

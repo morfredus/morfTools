@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+## [0.4.13] — 2026-07-24
+
+### Ajouté
+
+- **Modèle d'issue GitHub « Premier test de morfSystem »**
+  (`.github/ISSUE_TEMPLATE/premier-test.md`) : le retour demandé par
+  `docs/FIRST-TEST.md` se dépose désormais en issue, avec les six questions
+  prioritaires déjà en place. Le document pointe vers le formulaire et
+  recommande d'ouvrir l'issue **avant** de commencer, pour la compléter au fil
+  de l'eau plutôt que de tout écrire de mémoire à la fin — et d'ouvrir
+  plusieurs issues courtes plutôt qu'un seul long compte rendu, un blocage
+  précis se traitant et se clôturant, là où il se noierait dans un récit.
+
+## [0.4.12] — 2026-07-24
+
+### Ajouté
+
+- **`docs/FIRST-TEST.md`** — demande de retour après une **première**
+  installation, destinée à quelqu'un qui ne connaît pas morfSystem. C'est le
+  seul test que le parc n'a jamais subi : tout a été éprouvé par son auteur, qui
+  sait déjà ce qu'il faut faire et se trouve donc le moins capable de voir ce
+  qui manque.
+
+  Le document demande explicitement un retour **honnête plutôt qu'aimable**, et
+  pose deux règles qui font sa valeur : ne demander d'aide à personne — chaque
+  question qui surgit est notée au lieu d'être posée, car une question posée à
+  l'auteur est une information perdue — et ne pas corriger le tir mentalement,
+  ce réflexe effaçant justement le défaut.
+
+  Six questions sont marquées comme prioritaires, dont le **point d'abandon**
+  (« à quel moment auriez-vous arrêté si vous n'aviez pas accepté de rendre
+  service ? ») et l'**écart entre l'attendu et l'obtenu même quand tout
+  fonctionne** — ces moments-là ne produisent aucune erreur et n'apparaissent
+  dans aucun journal. Référencé depuis le guide de démarrage et le README.
+
 ## [0.4.11] — 2026-07-24
 
 ### Corrigé

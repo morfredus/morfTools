@@ -538,7 +538,15 @@ est détaillé dans [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md).
 |---|---|
 | [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md) | Les principes et invariants, et **pourquoi** ils existent |
 | [ECOSYSTEM-CHECKS.md](ECOSYSTEM-CHECKS.md) | Ce que `morf doctor` vérifie, et ce qu'il ne peut pas vérifier |
+| [FIRST-TEST.md](FIRST-TEST.md) | Retour demandé après une **première** installation — voir ci-dessous |
 | `README.md` de chaque projet | Ce que fait ce service, et son API |
+
+**Si c'est votre première installation :** le projet cherche des retours de
+personnes qui découvrent morfSystem. Les endroits où ce guide vous a laissé sans
+réponse ne se voient que de votre place — son auteur, qui sait déjà quoi faire,
+est le moins bien placé pour les repérer. [FIRST-TEST.md](FIRST-TEST.md) explique
+ce qui est utile à noter, et pourquoi une remarque négative vaut mieux qu'une
+remarque aimable.
 
 **Et après ?** Une évolution est déjà cadrée sans être encore décidée :
 l'**accès distant** (atteindre le parc hors du réseau local). Le modèle de
