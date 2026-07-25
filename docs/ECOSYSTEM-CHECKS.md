@@ -111,7 +111,8 @@ therefore checks every locally installed service that declares `status_url` in
 it with the project's `VERSION` file.
 
 A mismatch, an unavailable status endpoint, or a response that omits `version`
-is a failure and names the relevant `morf upgrade --only <project>` command.
+is a failure and names the relevant
+`python3 morf.py upgrade --only <project>` command.
 Services not installed on the current machine are reported as skipped. If the
 status endpoint does not answer and the current user cannot query the service
 manager, the result is an explicit warning rather than a false claim that the

@@ -333,7 +333,7 @@ def cmd_active_version(project: Project) -> bool:
         return True
 
     print(f"[FAIL] active version {active} differs from project {expected}")
-    print(f"       update with: morf upgrade --only {project.name}")
+    print(f"       update with: python3 morf.py upgrade --only {project.name}")
     return False
 
 

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## [0.4.15] — 2026-07-25
+
+### Corrigé
+
+- **Instruction de mise à niveau affichée par `doctor`.** Le diagnostic indique
+  désormais la commande exécutable depuis morfTools :
+  `python3 morf.py upgrade --only <projet>`.
+
 ## [0.4.14] — 2026-07-25
 
 ### Corrigé
@@ -10,7 +18,7 @@
   chaque service installé qui déclare un point `/status`, il compare désormais
   la version active à la version du fichier `VERSION` du projet. Un décalage,
   un service injoignable ou une réponse sans version font échouer le contrôle
-  et indiquent la commande `morf upgrade --only <projet>` à exécuter. Les
+  et indiquent la commande `python3 morf.py upgrade --only <projet>` à exécuter. Les
   services non installés sont explicitement ignorés ; si le point d'état ne
   répond pas et que le gestionnaire de services est protégé, l'absence de droits
   reste un avertissement, jamais un faux « non installé ».
