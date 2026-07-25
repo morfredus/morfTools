@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## [0.4.14] — 2026-07-25
+
+### Corrigé
+
+- **`morf doctor` ne confond plus le dépôt à jour avec le service à jour.** Pour
+  chaque service installé qui déclare un point `/status`, il compare désormais
+  la version active à la version du fichier `VERSION` du projet. Un décalage,
+  un service injoignable ou une réponse sans version font échouer le contrôle
+  et indiquent la commande `morf upgrade --only <projet>` à exécuter. Les
+  services non installés sont explicitement ignorés ; si le point d'état ne
+  répond pas et que le gestionnaire de services est protégé, l'absence de droits
+  reste un avertissement, jamais un faux « non installé ».
+
 ## [0.4.13] — 2026-07-24
 
 ### Ajouté

@@ -15,7 +15,11 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
+import json
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from .workspace import Project, Workspace
 
@@ -255,7 +259,87 @@ def cmd_clean(workspace: Workspace, project: Project) -> bool:
 
 # -- Doctor ---------------------------------------------------------------
 
+def installed_service_state(project: Project) -> int:
+    """Return the service.py is-installed exit code without parsing prose."""
+    result = subprocess.run(
+        [sys.executable, str(project.path / "service.py"), "is-installed"],
+        cwd=project.path, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode
+
+
+def active_service_version(url: str) -> tuple[str, str]:
+    """Read a running service's version from its declared status endpoint."""
+    try:
+        request = Request(url, headers={"Accept": "application/json"})
+        with urlopen(request, timeout=3) as response:
+            status = json.load(response)
+    except (HTTPError, URLError, OSError, ValueError) as exc:
+        return "", str(exc)
+
+    if not isinstance(status, dict):
+        return "", "response is not a JSON object"
+    version = status.get("version")
+    if not isinstance(version, str) or not version.strip():
+        return "", "response has no version"
+    return version.strip(), ""
+
+
+def cmd_active_version(project: Project) -> bool:
+    """Check the installed service, when any, against the project's VERSION."""
+    service = project.path / "service.py"
+    manifest_path = project.path / "service.json"
+    if not service.is_file() or not manifest_path.is_file():
+        return True
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+        status_url = manifest.get("status_url", "")
+        expected = (project.path / "VERSION").read_text(encoding="utf-8-sig").strip()
+    except (OSError, ValueError) as exc:
+        print(f"[WARN] active version check unavailable: {exc}")
+        return True
+
+    if not status_url:
+        print("[SKIP] active version check (no status_url declared)")
+        return True
+    if not expected:
+        print("[FAIL] active version check (empty VERSION file)")
+        return False
+
+    active, error = active_service_version(status_url)
+    if error:
+        # Reaching the endpoint is enough to prove a service is active, even
+        # when the system service manager is protected from this user.
+        installed = installed_service_state(project)
+        if installed == 1:
+            print("[SKIP] active version check (service not installed on this machine)")
+            return True
+        if installed == 2:
+            print(f"[WARN] active version check unavailable: {status_url} does not answer "
+                  "and the service manager cannot be queried")
+            return True
+        if installed != 0:
+            print(f"[WARN] active version check unavailable: {status_url} does not answer "
+                  f"and service probe failed ({installed})")
+            return True
+        print(f"[FAIL] active service does not answer {status_url}: {error}")
+        return False
+
+    # A leading v is a presentation convention, not a different release.
+    if active.removeprefix("v") == expected.removeprefix("v"):
+        print(f"[OK] active version {active} matches project {expected}")
+        return True
+
+    print(f"[FAIL] active version {active} differs from project {expected}")
+    print(f"       update with: morf upgrade --only {project.name}")
+    return False
+
+
 def cmd_doctor(workspace: Workspace, project: Project) -> bool:
+    healthy = cmd_active_version(project)
+
     if not (project.path / ".git").exists():
         print("[FAIL] not a git repository")
         return False
@@ -263,7 +347,7 @@ def cmd_doctor(workspace: Workspace, project: Project) -> bool:
     remote = capture(["git", "remote", "get-url", "origin"], cwd=project.path)
     if not remote:
         print("[WARN] no origin remote")
-        return True
+        return healthy
 
     # GitHub resolves repository names case-insensitively, so a spelling
     # difference alone (GatewayLab vs GateWayLab) is not a wrong origin.
@@ -271,7 +355,7 @@ def cmd_doctor(workspace: Workspace, project: Project) -> bool:
         print("[OK] remote name matches")
     else:
         print(f"[WARN] unexpected origin: {remote}")
-    return True
+    return healthy
 
 
 #: Dispatch table. Commands taking extra arguments receive them by keyword from

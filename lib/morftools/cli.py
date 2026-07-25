@@ -204,13 +204,15 @@ def main(argv: list | None = None) -> int:
             # Extra arguments go only to the handlers that take them, so a
             # command's signature states what it actually depends on.
             if handler.__name__ in ("cmd_build", "cmd_upgrade"):
-                handler(workspace, project, preset, args.gui)
+                ok = handler(workspace, project, preset, args.gui)
             elif handler.__name__ == "cmd_commit":
-                handler(workspace, project, message)
+                ok = handler(workspace, project, message)
             elif handler.__name__ == "cmd_uninstall":
-                handler(workspace, project, args.purge, args.backup)
+                ok = handler(workspace, project, args.purge, args.backup)
             else:
-                handler(workspace, project)
+                ok = handler(workspace, project)
+            if ok is False:
+                failed.append(project.local_name)
         except (RuntimeError, OSError) as exc:
             # One project failing must never stop the others: the remaining
             # ones would stay stale with nothing saying so.

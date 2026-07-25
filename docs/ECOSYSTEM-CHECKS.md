@@ -101,6 +101,22 @@ the service block. A template shipping a production-range port is a defect
 generator: every clone starts on a port that looks legitimate and may already be
 taken — which is precisely what happened with `8799`.
 
+## Active service version
+
+The project directory and the process that answers requests are two different
+things: an `update` can retrieve a new `VERSION` while the installed service is
+still running its previous binary. During its per-project pass, `morf doctor`
+therefore checks every locally installed service that declares `status_url` in
+`service.json`. It reads the `version` field returned by that URL and compares
+it with the project's `VERSION` file.
+
+A mismatch, an unavailable status endpoint, or a response that omits `version`
+is a failure and names the relevant `morf upgrade --only <project>` command.
+Services not installed on the current machine are reported as skipped. If the
+status endpoint does not answer and the current user cannot query the service
+manager, the result is an explicit warning rather than a false claim that the
+service is not installed.
+
 A port in the 8900 range cannot be mistaken for a parc allocation, so a clone
 that forgets step 1 above is visibly unfinished rather than silently
 conflicting.

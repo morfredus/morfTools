@@ -55,7 +55,7 @@ Toutes les commandes n'opèrent que sur les projets déclarés dans
 | `build` | preset CMake (demandé si omis) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
 | `install` | aucun | Installe `requirements.txt` s'il existe. |
 | `upgrade` | preset CMake (demandé si omis) | Tire puis recompile les projets CMake. |
-| `doctor` | aucun | Vérifie le registre des ports et les copies vendorées, puis les dépôts Git et leur `origin` ; à lancer avant `push`. |
+| `doctor` | aucun | Vérifie le registre des ports, les copies vendorées et la version active des services installés, puis les dépôts Git et leur `origin` ; à lancer avant `push`. |
 | `clean` | aucun | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`…). |
 | `status` | aucun | Affiche l'état Git court et la branche. |
 | `commit` | message (demandé si omis) | Indexe toutes les modifications et valide si nécessaire. |

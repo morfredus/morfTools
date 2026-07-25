@@ -53,7 +53,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `install` | none | Install `requirements.txt` when present. |
 | `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
-| `doctor` | none | Check the port registry, the vendored copies and the executable bits, then verify Git repositories and their `origin`; run it before `push`. |
+| `doctor` | none | Check the port registry, vendored copies, and active version of installed services, then verify Git repositories and their `origin`; run it before `push`. |
 | `exec-bits` | `--check`, `--project NAME` | Restore the executable bit on every script carrying a shebang. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |
