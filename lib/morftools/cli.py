@@ -16,7 +16,7 @@ import sys
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from .commands import COMMANDS, PRESET_COMMANDS, cmd_doctor
+from .commands import COMMANDS, PRESET_COMMANDS, cmd_doctor, update_status
 from .report import Reporter
 from .workspace import Workspace, WorkspaceError
 
@@ -82,14 +82,36 @@ ECOSYSTEM_PASSES = [
 ]
 
 
-def run_doctor(workspace: Workspace, projects: list, verbose: bool) -> int:
+def _progress(active: bool, done: int, total: int, name: str):
+    """Live one-line progress on stderr, so the update check is never a silent wait.
+
+    On a terminal it rewrites a single line with a carriage return; piped or
+    logged, it stays quiet rather than littering the output with spinner frames.
+    stderr is used so it never contaminates the report, which is stdout.
+    """
+    if active:
+        print(f"\r  vérification des versions… {done}/{total} {name:<24}",
+              end="", file=sys.stderr, flush=True)
+
+
+def _progress_clear(active: bool):
+    if active:
+        print("\r" + " " * 56 + "\r", end="", file=sys.stderr, flush=True)
+
+
+def run_doctor(workspace: Workspace, projects: list, verbose: bool,
+               check_updates: bool) -> int:
     """Doctor with a readable report: capture every check, summarise, advise.
 
     Nothing is lost -- `--verbose` still prints each line. What changes by
     default is that the sixty green lines collapse to a count, and the run ends
     with the failures and what to do about each.
+
+    The check for newer versions is a NETWORK step (a git fetch per clone), so it
+    is off by default: a routine `doctor` stays local and instant. `--update`
+    turns it on, with a live progress line so the wait is never a silent one.
     """
-    reporter = Reporter(verbose)
+    reporter = Reporter(verbose, updates_checked=check_updates)
     scripts = workspace.tool_dir / "scripts"
 
     def capture(cmd):
@@ -105,7 +127,11 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool) -> int:
                     str(workspace.root), "--check"])
     reporter.feed(text, group="Écosystème", name="Bits exécutables")
 
-    for project in projects:
+    branch = workspace.branch
+    live = check_updates and sys.stderr.isatty()
+    total = len(projects) + 1        # the projects, plus morfTools itself
+
+    for index, project in enumerate(projects, start=1):
         if not project.exists:
             reporter.feed("[SKIP] not cloned", group="Projets",
                           name=project.local_name)
@@ -113,8 +139,48 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool) -> int:
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             ok = cmd_doctor(workspace, project)
-        reporter.feed(buffer.getvalue(), group="Projets",
+        captured = buffer.getvalue()
+        text = captured
+        if check_updates:
+            _progress(live, index, total, project.name)
+            name = project.name
+            # The remedy follows what runs here, read from the probe cmd_doctor
+            # just did -- no second round trip:
+            #   - service answering (version reported)     -> upgrade
+            #   - installed but stopped (maybe on purpose) -> update, and only if
+            #     wanted, upgrade -- shown on two lines, with the state noted
+            #   - not installed / GUI / cannot tell        -> update
+            # Upgrading a service that is not running would rebuild and restart
+            # what this machine does not, or was deliberately stopped.
+            answering = ("matches project" in captured
+                         or "differs from project" in captured)
+            note = ""
+            if answering:
+                remedy = f"-> python3 morf.py upgrade --only {name}"
+            elif "installed but not running" in captured:
+                note = "service installé mais inactif"
+                remedy = (f"-> python3 morf.py update --only {name}\n"
+                          f"   puis, si vous le souhaitez : "
+                          f"python3 morf.py upgrade --only {name}")
+            else:
+                remedy = f"-> python3 morf.py update --only {name}"
+            text += update_status(project.path, branch, remedy, note)
+        reporter.feed(text, group="Projets",
                       name=project.local_name, forced_fail=(ok is False))
+
+    # morfTools checks ITSELF, but only when the network step is on: it is not a
+    # project in the manifest, so nothing else would ever tell you the tool is
+    # out of date. The remedy is a plain 'git pull --ff-only', with no path:
+    # every morf command is already run from this directory (that is how
+    # 'python3 morf.py ...' resolves at all), so the self-update runs from the
+    # same place. An absolute path baked into the message would be specific to
+    # one machine and break on the next, which is exactly what the rest of the
+    # tool avoids by deriving everything from its own location.
+    if check_updates:
+        _progress(live, total, total, "morfTools")
+        reporter.feed(update_status(workspace.tool_dir, branch, "-> git pull --ff-only"),
+                      group="Outil", name="morfTools")
+        _progress_clear(live)
 
     return reporter.render()
 
@@ -139,6 +205,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="uninstall --purge: copy every config into DIR first")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="doctor: print every check line instead of the summary")
+    parser.add_argument("--update", "-u", action="store_true", dest="update",
+                        help="doctor: also check each clone against origin/main for a "
+                             "newer version (a network step; adds a few seconds)")
     return parser
 
 
@@ -192,6 +261,9 @@ def main(argv: list | None = None) -> int:
     if args.verbose and args.command != "doctor":
         print("--verbose only applies to doctor.", file=sys.stderr)
         return 2
+    if args.update and args.command != "doctor":
+        print("--update only applies to doctor.", file=sys.stderr)
+        return 2
     if args.gui and args.command not in ("build", "upgrade"):
         print("--gui only applies to build and upgrade.", file=sys.stderr)
         return 2
@@ -225,7 +297,7 @@ def main(argv: list | None = None) -> int:
     # Doctor is read-only and produces a lot of output: it gets its own path,
     # which captures every check and renders a summary instead of the flood.
     if args.command == "doctor":
-        return run_doctor(workspace, projects, args.verbose)
+        return run_doctor(workspace, projects, args.verbose, args.update)
 
     failed = []
 

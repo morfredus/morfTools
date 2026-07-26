@@ -2,6 +2,130 @@
 
 ## Unreleased
 
+## [0.4.23] — 2026-07-26
+
+### Modifié
+
+- **Un service installé mais arrêté n'est plus un échec.** Il peut l'être
+  volontairement : `doctor` le présente désormais comme un **avertissement**
+  (« service installed but not running; may be intentional »), sans action
+  alarmante, et ne fait plus échouer le diagnostic. Auparavant, un service
+  simplement arrêté sortait en `[FAIL]` et donnait un code de retour 1.
+- **Remède de mise à jour adapté à l'état du service.** Pour un service installé
+  mais inactif et en retard, `--update` précise « service installé mais inactif »
+  et donne la commande **en deux lignes** : `update` (tirer la source), puis, si
+  souhaité, `upgrade` (reconstruire et redéployer). Un service actif reçoit
+  directement `upgrade` ; un projet sans service (application de bureau) ou non
+  installé ici reçoit `update`.
+- **Plus de double affichage.** Quand un service inactif est aussi en retard,
+  l'avertissement « installé mais inactif » est **replié dans l'entrée de mise à
+  jour** (qui le mentionne déjà) au lieu d'apparaître en double dans deux
+  sections. Le repli est conservé pour `--verbose`.
+
+## [0.4.22] — 2026-07-26
+
+### Modifié
+
+- **La commande proposée pour une mise à jour dépend de l'état du service.** Si
+  le service du projet est **actif** sur cette machine, le remède reste
+  `upgrade` (reconstruire et redéployer en place). S'il n'est **pas actif** —
+  non installé ici, application de bureau sans service, ou service arrêté — le
+  remède devient `update` : tirer la source, sans rien redéployer. Proposer
+  `upgrade` pour un service qui ne tourne pas reviendrait à reconstruire et
+  relancer ce que la machine n'exécute pas. L'état est lu de la sonde que
+  `doctor` vient de faire (le point d'état a-t-il répondu une version ?), sans
+  second aller-retour réseau.
+
+## [0.4.21] — 2026-07-26
+
+### Corrigé
+
+- **Le remède d'auto-mise-à-jour de morfTools ne contient plus de chemin
+  absolu.** Il affichait `git -C /home/<user>/…/morfTools_travail pull
+  --ff-only` : un chemin propre à une seule machine, qui casse sur une autre.
+  C'est désormais un simple **`git pull --ff-only`**, conforme au reste de
+  l'outil — toutes les commandes morf se lancent déjà depuis le dossier
+  morfTools (c'est ainsi que `python3 morf.py …` se résout), donc
+  l'auto-mise-à-jour part du même endroit. Aucune commande ne dépend plus d'un
+  chemin en dur.
+
+## [0.4.20] — 2026-07-26
+
+### Modifié
+
+- **Option `--updates` renommée `--update`** (alias court `-u` inchangé), pour
+  suivre la convention habituelle des drapeaux booléens au singulier
+  (`--verbose`, `--force`). Le pluriel n'aura vécu que la 0.4.19 ; l'entrée de
+  cette version a été relue en conséquence. Règle générale retenue : nommer les
+  options selon la norme des outils standard.
+
+## [0.4.19] — 2026-07-26
+
+### Modifié
+
+- **Le contrôle des nouvelles versions passe sur option.** Introduit en 0.4.18
+  comme systématique, il ajoutait un `git fetch` par dépôt — une trentaine de
+  secondes sur le parc complet, trop pour un `doctor` de routine. Il ne s'exécute
+  désormais qu'avec **`--update`**. Par défaut, `doctor` reste local et
+  instantané, et se termine par `Tout est conforme (versions non vérifiées).` en
+  rappelant la commande.
+- **Distinction « non vérifié » / « à jour ».** Le résumé n'affiche le décompte
+  des mises à jour que si le contrôle a réellement eu lieu : afficher « 0 mise à
+  jour » sans avoir vérifié laisserait croire à une vérification qui n'a pas eu
+  lieu.
+
+### Ajouté
+
+- **Indicateur de progression** pendant `--update` : une ligne réécrite en place
+  sur `stderr` (`vérification des versions… 3/14 <projet>`), pour ne pas laisser
+  l'utilisateur dans le flou le temps des `fetch`. Sur un terminal seulement ;
+  redirigé ou journalisé, le contrôle reste silencieux plutôt que d'empiler des
+  images d'animation. Comme elle vit sur `stderr`, elle ne pollue jamais le
+  rapport, qui est sur `stdout`.
+
+### Vérifié
+
+Défaut sans réseau (indication « versions non vérifiées » + rappel de la
+commande) ; `--update` effectue les `fetch`, ajoute la section « Mises à jour
+disponibles » et l'auto-vérification de morfTools ; garde `--update` refusée
+hors `doctor` ; progression rendue en place puis effacée sur un terminal,
+muette une fois redirigée.
+
+## [0.4.18] — 2026-07-26
+
+### Ajouté
+
+- **`doctor` signale les mises à jour disponibles.** À chaque exécution, il
+  compare chaque clone à `origin/main` et, s'il est en retard, l'annonce dans
+  une section **« Mises à jour disponibles »** avec les deux commandes à lancer :
+  `morf pull --only <projet>` puis `morf upgrade --only <projet>`. Le signal est
+  « le distant a des commits que je n'ai pas », et non « une release GitHub a été
+  publiée » : la moitié des dépôts ne publient aucune release, alors que tous ont
+  un distant. Il n'utilise que `git` — ni `gh`, ni jeton, rien qui puisse manquer
+  sur le Pi.
+- **morfTools s'auto-vérifie.** L'outil n'étant pas un projet du manifeste, rien
+  ne signalait qu'il était lui-même en retard. Il apparaît désormais dans le
+  rapport sous « Outil », avec pour remède un `git pull --ff-only` (depuis son dossier)
+  en place (`morf pull` agit sur les autres projets, pas sur l'outil qui le
+  lance).
+
+### Notes
+
+- Une mise à jour disponible n'est **pas un échec** : elle ne fait pas passer le
+  code de retour à 1 et n'entre ni dans les avertissements ni dans les échecs.
+  Être en retard est une information, pas une anomalie.
+- Le contrôle est un pas réseau : un `git fetch` borné (20 s, invites
+  d'identifiants désactivées) par dépôt. Hors-ligne ou distant injoignable, il se
+  dégrade en `[SKIP]` sans alarme et sans bloquer. Compter quelques dizaines de
+  secondes sur le parc complet ; il reste hors de `cmd_doctor`, qui demeure
+  utilisable sans réseau.
+
+### Vérifié
+
+Parc réel : « conforme et à jour » en ~37 s. Détection en conditions réelles en
+reculant un dépôt propre d'un commit — signalé avec les bonnes commandes, puis
+restauré. morfTools inclus dans le rapport. Hors-ligne : `[SKIP]` propre.
+
 ## [0.4.17] — 2026-07-26
 
 ### Modifié

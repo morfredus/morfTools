@@ -14,18 +14,22 @@ action, so a check that improves its own hint improves this summary for free.
 
 from __future__ import annotations
 
-OK, WARN, FAIL, SKIP = "[OK]", "[WARN]", "[FAIL]", "[SKIP]"
+OK, WARN, FAIL, SKIP, UPDATE = "[OK]", "[WARN]", "[FAIL]", "[SKIP]", "[UPDATE]"
 
 # Markers, not colours: the output is piped and logged as often as it is read,
 # and a glyph survives that where an escape code becomes noise.
-MARK = {"ok": "OK ", "warn": " ! ", "fail": " X "}
+MARK = {"ok": "OK ", "update": " ^ ", "warn": " ! ", "fail": " X "}
 
 
 class _Problem:
     def __init__(self, kind: str, message: str):
-        self.kind = kind          # "fail" | "warn"
+        self.kind = kind          # "fail" | "warn" | "update"
         self.message = message
         self.detail: list[str] = []
+        # Set when a notice is already conveyed by another entry of the same
+        # area (a stopped service noted inside its update entry): kept for
+        # --verbose, hidden from the summary so nothing is said twice.
+        self.folded = False
 
 
 class _Area:
@@ -39,12 +43,19 @@ class _Area:
         self.raw: list[str] = []
 
 
-_RANK = {"ok": 0, "warn": 1, "fail": 2}
+# An available update is not a defect: it ranks above "ok" so the project leaves
+# the conforming count, but below "warn" so it never inflates the failure or
+# warning tallies. Being behind upstream is information, not a problem.
+_RANK = {"ok": 0, "update": 1, "warn": 2, "fail": 3}
 
 
 class Reporter:
-    def __init__(self, verbose: bool):
+    def __init__(self, verbose: bool, updates_checked: bool = False):
         self.verbose = verbose
+        # Whether the remote update check ran. It distinguishes "no update found"
+        # from "not checked": showing "0 mise(s) à jour" when the network step was
+        # skipped would claim a verification that never happened.
+        self.updates_checked = updates_checked
         self.areas: list[_Area] = []
 
     def feed(self, text: str, group: str, name: str, forced_fail: bool = False):
@@ -77,6 +88,11 @@ class Reporter:
                 area.problems.append(current)
                 if _RANK[area.status] < _RANK["warn"]:
                     area.status = "warn"
+            elif stripped.startswith(UPDATE):
+                current = _Problem("update", stripped[len(UPDATE):].strip())
+                area.problems.append(current)
+                if _RANK[area.status] < _RANK["update"]:
+                    area.status = "update"
             elif stripped.startswith((OK, SKIP)):
                 current = None
             elif stripped.startswith(("---", "[")):
@@ -89,6 +105,24 @@ class Reporter:
         if forced_fail and area.status == "ok":
             area.status = "fail"
             area.problems.append(_Problem("fail", f"{name}: échec (voir --verbose)"))
+
+        # Fold "installed but not running" into the area's update entry when both
+        # are present: the update already states the service is inactive, so the
+        # standalone notice would only repeat it, in another section.
+        if any(p.kind == "update" for p in area.problems):
+            for problem in area.problems:
+                if problem.kind == "warn" and "installed but not running" in problem.message:
+                    problem.folded = True
+
+        # The verdict is the worst of the problems that still count. Recomputing
+        # here lets a folded notice stop inflating the status (a stopped service
+        # with an update reads as an update, not a warning).
+        area.status = "ok"
+        for problem in area.problems:
+            if problem.folded:
+                continue
+            if _RANK[problem.kind] > _RANK[area.status]:
+                area.status = problem.kind
 
         self.areas.append(area)
 
@@ -131,19 +165,35 @@ class Reporter:
 
     def _render_summary(self):
         ok = sum(1 for a in self.areas if a.status == "ok")
+        update = sum(1 for a in self.areas if a.status == "update")
         warn = sum(1 for a in self.areas if a.status == "warn")
         fail = sum(1 for a in self.areas if a.status == "fail")
 
-        print(f"\nRésumé  {ok} OK   {warn} avertissement(s)   {fail} échec(s)")
+        tally = f"\nRésumé  {ok} OK   "
+        if self.updates_checked:
+            tally += f"{update} mise(s) à jour   "
+        tally += f"{warn} avertissement(s)   {fail} échec(s)"
+        print(tally)
 
-        problems = [(a, p) for a in self.areas for p in a.problems]
+        problems = [(a, p) for a in self.areas for p in a.problems if not p.folded]
+        updates = [(a, p) for a, p in problems if p.kind == "update"]
         fails = [(a, p) for a, p in problems if p.kind == "fail"]
         warns = [(a, p) for a, p in problems if p.kind == "warn"]
 
-        if not fails and not warns:
-            print("Tout est conforme.")
+        if not updates and not fails and not warns:
+            # "Not checked" is not "up to date": say which it is.
+            suffix = "et à jour" if self.updates_checked else "(versions non vérifiées)"
+            print(f"Tout est conforme {suffix}.")
+            if not self.updates_checked:
+                print("Vérifier les nouvelles versions : python3 morf.py doctor --update")
             return
 
+        # Updates first: they are the routine reason to act, and unlike failures
+        # they carry a ready command rather than a diagnosis.
+        if updates:
+            print("\nMises à jour disponibles")
+            for area, problem in updates:
+                _print_problem(area, problem)
         if fails:
             print("\nÀ corriger")
             for area, problem in fails:
@@ -156,6 +206,13 @@ class Reporter:
 
 def _print_problem(area: _Area, problem: _Problem):
     print(f"  {MARK[problem.kind]} {_short(area.name)} — {problem.message}")
+    if problem.kind == "update":
+        # The update remedy is fully formed by update_status -- one or two lines
+        # already carrying their own arrows -- so it is printed verbatim rather
+        # than run through the single-line action heuristic.
+        for line in problem.detail:
+            print(f"        {line}")
+        return
     action = _action(area, problem)
     if action:
         print(f"        -> {action}")
@@ -176,13 +233,18 @@ def _action(area: _Area, problem: _Problem) -> str | None:
     """
     for line in problem.detail:
         low = line.lower()
-        if ("morf.py" in low or "sync-morf" in low or low.startswith("->")
+        if (low.startswith(("git ", "python3 ", "->"))
+                or "morf.py" in low or "sync-morf" in low
                 or "run " in low or ".sh" in low):
             return line.lstrip("-> ").strip()
 
     m = problem.message.lower()
     canonical = _short(area.name)
 
+    # A stopped service may be deliberate: state it, force no action. This must
+    # precede the "does not answer" rule below, whose wording it shares.
+    if "installed but not running" in m or "may be intentional" in m:
+        return None
     if "differs from project" in m:
         return f"python3 morf.py upgrade --only {canonical}"
     if "does not answer" in m or "active service" in m:

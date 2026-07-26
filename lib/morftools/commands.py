@@ -324,8 +324,14 @@ def cmd_active_version(project: Project) -> bool:
             print(f"[WARN] active version check unavailable: {status_url} does not answer "
                   f"and service probe failed ({installed})")
             return True
-        print(f"[FAIL] active service does not answer {status_url}: {error}")
-        return False
+        # Installed here, but the endpoint does not answer: the service is
+        # stopped. That is not necessarily wrong -- it may be stopped on purpose
+        # -- so it is a notice, not a failure, and does not fail doctor. The
+        # phrase "installed but not running" is the stable token the update
+        # remedy reads to offer 'update' (and only optionally 'upgrade').
+        print(f"[WARN] service installed but not running ({status_url} does not "
+              "answer); may be intentional")
+        return True
 
     # A leading v is a presentation convention, not a different release.
     if active.removeprefix("v") == expected.removeprefix("v"):
@@ -335,6 +341,56 @@ def cmd_active_version(project: Project) -> bool:
     print(f"[FAIL] active version {active} differs from project {expected}")
     print(f"       update with: python3 morf.py upgrade --only {project.name}")
     return False
+
+
+def update_status(path: Path, branch: str, remedy: str, note: str = "") -> str:
+    """Is the clone at `path` behind its remote? Returns tagged text for the report.
+
+    `remedy` may span several lines (an inactive service is offered `update` and,
+    only if wanted, `upgrade`); each becomes an indented continuation the report
+    prints as-is. `note` qualifies the message -- "service installé mais inactif"
+    -- so the reader sees why the remedy is what it is.
+
+    The signal is "origin/<branch> has commits I do not", not "a GitHub Release
+    was published": every repository has a remote, whereas releases are cut for
+    only some of them, so this is the check that works across the whole parc and
+    for morfTools itself. It needs nothing but git -- no gh, no token, nothing
+    that might be absent on the Pi.
+
+    A fetch that cannot reach the remote is not a defect: offline is a normal
+    state for a laptop, so it degrades to a skip rather than an alarm. Credential
+    prompts are disabled and the fetch is bounded, so doctor never hangs waiting
+    on the network.
+    """
+    if not (path / ".git").is_dir():
+        return ""
+
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        fetched = subprocess.run(
+            ["git", "fetch", "--quiet", "origin", branch],
+            cwd=path, env=env, capture_output=True, text=True, timeout=20,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return f"[SKIP] update check (origin/{branch} unreachable)\n"
+    if fetched.returncode != 0:
+        return f"[SKIP] update check (origin/{branch} unreachable)\n"
+
+    behind = capture(["git", "rev-list", "--count", f"HEAD..origin/{branch}"], cwd=path)
+    if not behind.isdigit():
+        return f"[SKIP] update check (cannot compare to origin/{branch})\n"
+    count = int(behind)
+    if count == 0:
+        return f"[OK] up to date with origin/{branch}\n"
+
+    plural = "s" if count > 1 else ""
+    message = (f"nouvelle version disponible : {count} commit{plural} "
+               f"en retard sur origin/{branch}")
+    if note:
+        message += f" — {note}"
+    lines = [f"[UPDATE] {message}"]
+    lines += [f"       {line}" for line in remedy.splitlines()]
+    return "\n".join(lines) + "\n"
 
 
 def cmd_doctor(workspace: Workspace, project: Project) -> bool:

@@ -53,7 +53,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `install` | none | Install `requirements.txt` when present. |
 | `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
-| `doctor` | none | Check the port registry, vendored copies, and active version of installed services, then verify Git repositories and their `origin`; run it before `push`. |
+| `doctor` | `--update`, `--verbose`, `--only` | Check the port registry, vendored copies, active version of installed services, and Git repositories; **`--update`** adds a comparison against `origin/main` (newer version available, morfTools included -- a network step). Run it before `push`. |
 | `exec-bits` | `--check`, `--project NAME` | Restore the executable bit on every script carrying a shebang. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |
@@ -260,6 +260,23 @@ Résumé  17 OK   0 avertissement(s)   1 échec(s)
    X  morfMonitor — active version 0.5.5 differs from project 0.5.6
         -> python3 morf.py upgrade --only morfMonitor
 ```
+
+By default `doctor` stays **local and instant**: it does not touch the network,
+and ends with `Tout est conforme (versions non vérifiées).`
+
+**`doctor --update`** adds a network step -- one `git fetch` per clone --
+comparing each against `origin/main` and reporting any newer version with the
+commands to fetch and apply it. The signal is "the remote has commits I do not",
+which holds for the whole parc (GitHub Releases are cut for only some projects)
+and needs nothing but `git`. **morfTools checks itself.** An available update is
+not a failure and does not affect the exit code; a progress line on `stderr`
+keeps the fetches from being a silent wait, and offline the check degrades to
+`[SKIP]`.
+
+The proposed command depends on what runs here: if the project's service is
+active on this machine the remedy is `upgrade` (rebuild and redeploy in place);
+if it is not -- not installed here, a desktop app with no service, or a stopped
+service -- the remedy is `update` (pull the source, nothing to redeploy).
 
 Each action reuses the remediation the check itself prints (a resync command, an
 upgrade command) when there is one, and is derived from the message otherwise.

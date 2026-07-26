@@ -55,7 +55,7 @@ Toutes les commandes n'opèrent que sur les projets déclarés dans
 | `build` | preset CMake (demandé si omis) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
 | `install` | aucun | Installe `requirements.txt` s'il existe. |
 | `upgrade` | preset CMake (demandé si omis) | Tire puis recompile les projets CMake. |
-| `doctor` | aucun | Vérifie le registre des ports, les copies vendorées et la version active des services installés, puis les dépôts Git et leur `origin` ; à lancer avant `push`. |
+| `doctor` | `--update`, `--verbose`, `--only` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git ; **`--update`** ajoute la comparaison à `origin/main` (nouvelle version disponible, morfTools compris — un pas réseau). À lancer avant `push`. |
 | `clean` | aucun | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`…). |
 | `status` | aucun | Affiche l'état Git court et la branche. |
 | `commit` | message (demandé si omis) | Indexe toutes les modifications et valide si nécessaire. |
@@ -172,6 +172,49 @@ Résumé  17 OK   0 avertissement(s)   1 échec(s)
    X  morfMonitor — active version 0.5.5 differs from project 0.5.6
         -> python3 morf.py upgrade --only morfMonitor
 ```
+
+Par défaut, `doctor` reste **local et instantané** : il ne va pas sur le réseau.
+Il termine alors par `Tout est conforme (versions non vérifiées).` et rappelle la
+commande pour aller plus loin.
+
+### Vérifier les nouvelles versions : `doctor --update`
+
+Le contrôle des versions est un pas **réseau** — un `git fetch` par clone — donc
+il ne s'exécute qu'à la demande, avec `--update` :
+
+```text
+morf doctor --update
+
+Projets
+  OK  12 conforme(s)
+   ^  ComponentHub
+
+Outil
+  OK  1 conforme(s) : morfTools
+
+Résumé  17 OK   1 mise(s) à jour   0 avertissement(s)   0 échec(s)
+
+Mises à jour disponibles
+   ^  morfMonitor — nouvelle version disponible : 1 commit en retard sur origin/main
+        -> python3 morf.py upgrade --only morfMonitor
+   ^  ComponentHub — nouvelle version disponible : 2 commits en retard sur origin/main
+        -> python3 morf.py update --only ComponentHub
+```
+
+**La commande proposée dépend de ce qui tourne ici.** Si le service du projet est
+actif sur cette machine, le remède est `upgrade` : reconstruire et redéployer le
+service en place. S'il n'est **pas actif** — non installé ici, application de
+bureau sans service, ou service arrêté — le remède est `update` : tirer la
+source, sans rien redéployer. Proposer `upgrade` pour un service qui ne tourne
+pas reviendrait à reconstruire et relancer ce que cette machine n'exécute pas.
+
+Le signal est « le distant a des commits que je n'ai pas », valable pour tout le
+parc — les releases GitHub ne sont publiées que pour certains projets — et sans
+autre dépendance que `git`, rien qui puisse manquer sur le Pi. **morfTools s'y
+vérifie lui-même** (remède : un `git pull` en place). Une mise à jour disponible
+n'est **pas un échec** : elle n'affecte pas le code de retour. Une ligne de
+progression sur `stderr` évite de laisser l'utilisateur dans le flou le temps des
+`fetch` ; hors-ligne, le contrôle se dégrade proprement en `[SKIP]`.
 
 L'action affichée réutilise le remède que la vérification imprime elle-même
 (commande de resynchronisation, de mise à niveau) quand il existe ; sinon elle
