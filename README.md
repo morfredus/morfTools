@@ -240,13 +240,30 @@ they describe a resource shared by the whole parc:
   against their canonical project. Drift is reported with the offending files
   and the resynchronisation command.
 
+The output is **a summary**, not a transcript of everything checked: healthy,
+sixty green lines would bury the one failure that matters. Passing checks are
+counted, exceptions detailed, and the run ends with what to do:
+
 ```text
-[ecosystem]
---- addressing plan ---
-[OK] morfSensor: 8788
---- vendored copies ---
-[OK] morfSensor/third_party/morf/beacon matches morfBeacon
+morf doctor
+
+Écosystème
+  OK  5 conforme(s) : Plan d'adressage, Versions, Copies vendorées, ...
+
+Projets
+  OK  12 conforme(s)
+   X  morfMonitor
+
+Résumé  17 OK   0 avertissement(s)   1 échec(s)
+
+À corriger
+   X  morfMonitor — active version 0.5.5 differs from project 0.5.6
+        -> python3 morf.py upgrade --only morfMonitor
 ```
+
+Each action reuses the remediation the check itself prints (a resync command, an
+upgrade command) when there is one, and is derived from the message otherwise.
+`doctor --verbose` restores the line-by-line output.
 
 Allocate a port in `ecosystem.json` **before** writing it into a service
 configuration; `doctor` fails while the two disagree. See

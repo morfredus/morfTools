@@ -9,12 +9,15 @@ mechanism anywhere in them.
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import subprocess
 import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 
-from .commands import COMMANDS, PRESET_COMMANDS
+from .commands import COMMANDS, PRESET_COMMANDS, cmd_doctor
+from .report import Reporter
 from .workspace import Workspace, WorkspaceError
 
 
@@ -68,34 +71,53 @@ def ask_message() -> str:
             return reply.strip()
 
 
-def ecosystem_checks(workspace: Workspace) -> list:
-    """The checks no single project can perform on itself.
+#: Ecosystem passes, each a named area in the report. Running them separately
+#: (rather than the script's default "all") lets the summary name which one
+#: failed instead of a single opaque "ecosystem".
+ECOSYSTEM_PASSES = [
+    ("ports", "Plan d'adressage"),
+    ("versions", "Versions"),
+    ("vendor", "Copies vendorées"),
+    ("manifests", "Manifestes de déploiement"),
+]
 
-    The addressing plan, the vendored copies and the executable bits describe a
-    SHARED resource: each project stays individually valid while the parc as a
-    whole is wrong, so they run once, before the per-project loop.
+
+def run_doctor(workspace: Workspace, projects: list, verbose: bool) -> int:
+    """Doctor with a readable report: capture every check, summarise, advise.
+
+    Nothing is lost -- `--verbose` still prints each line. What changes by
+    default is that the sixty green lines collapse to a count, and the run ends
+    with the failures and what to do about each.
     """
-    failed = []
+    reporter = Reporter(verbose)
     scripts = workspace.tool_dir / "scripts"
 
-    print("[ecosystem]")
-    result = subprocess.run(
-        [sys.executable, str(scripts / "ecosystem-check.py"),
-         str(workspace.root), str(workspace.manifest_path)],
-        check=False,
-    )
-    if result.returncode != 0:
-        failed.append("ecosystem")
-    print()
+    def capture(cmd):
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        return result.stdout + result.stderr
 
-    result = subprocess.run(
-        [sys.executable, str(scripts / "exec-bits.py"), str(workspace.root), "--check"],
-        check=False,
-    )
-    if result.returncode != 0:
-        failed.append("exec-bits")
-    print()
-    return failed
+    for which, label in ECOSYSTEM_PASSES:
+        text = capture([sys.executable, str(scripts / "ecosystem-check.py"),
+                        str(workspace.root), str(workspace.manifest_path), which])
+        reporter.feed(text, group="Écosystème", name=label)
+
+    text = capture([sys.executable, str(scripts / "exec-bits.py"),
+                    str(workspace.root), "--check"])
+    reporter.feed(text, group="Écosystème", name="Bits exécutables")
+
+    for project in projects:
+        if not project.exists:
+            reporter.feed("[SKIP] not cloned", group="Projets",
+                          name=project.local_name)
+            continue
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            ok = cmd_doctor(workspace, project)
+        reporter.feed(buffer.getvalue(), group="Projets",
+                      name=project.local_name, forced_fail=(ok is False))
+
+    return reporter.render()
+
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -115,6 +137,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="uninstall: also remove the configuration and binary")
     parser.add_argument("--backup", default="", metavar="DIR",
                         help="uninstall --purge: copy every config into DIR first")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="doctor: print every check line instead of the summary")
     return parser
 
 
@@ -126,7 +150,10 @@ def main(argv: list | None = None) -> int:
     # Fixing it here covers every command, including ones not yet written.
     for stream in (sys.stdout, sys.stderr):
         try:
-            stream.reconfigure(line_buffering=True)
+            # UTF-8 with replacement: the report uses accented French and box
+            # markers. A Windows console defaults to cp1252, where an unmapped
+            # character raises UnicodeEncodeError and aborts the run mid-report.
+            stream.reconfigure(line_buffering=True, encoding="utf-8", errors="replace")
         except (AttributeError, ValueError):
             pass
 
@@ -162,6 +189,9 @@ def main(argv: list | None = None) -> int:
     if (args.purge or args.backup) and args.command != "uninstall":
         print("--purge and --backup only apply to uninstall.", file=sys.stderr)
         return 2
+    if args.verbose and args.command != "doctor":
+        print("--verbose only applies to doctor.", file=sys.stderr)
+        return 2
     if args.gui and args.command not in ("build", "upgrade"):
         print("--gui only applies to build and upgrade.", file=sys.stderr)
         return 2
@@ -183,8 +213,6 @@ def main(argv: list | None = None) -> int:
     if args.command == "commit" and not message:
         message = ask_message()
 
-    failed = ecosystem_checks(workspace) if args.command == "doctor" else []
-
     handler = COMMANDS[args.command]
     projects = workspace.projects()
     if args.only:
@@ -193,6 +221,13 @@ def main(argv: list | None = None) -> int:
         if not projects:
             print(f"No project named '{args.only}' in the manifest.", file=sys.stderr)
             return 2
+
+    # Doctor is read-only and produces a lot of output: it gets its own path,
+    # which captures every check and renders a summary instead of the flood.
+    if args.command == "doctor":
+        return run_doctor(workspace, projects, args.verbose)
+
+    failed = []
 
     for project in projects:
         if args.command != "clone" and not project.exists:

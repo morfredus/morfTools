@@ -151,13 +151,31 @@ parce qu'elles portent sur une ressource partagée par tout le parc :
   sont comparées à leur projet canonique. Toute dérive est signalée avec les
   fichiers en cause et la commande de resynchronisation.
 
+La sortie est **un résumé**, pas la liste de tout ce qui a été vérifié : sain,
+une soixantaine de lignes vertes noieraient le seul échec qui compte. Les
+vérifications conformes sont comptées, les exceptions détaillées, et le rapport
+se termine par ce qu'il faut faire :
+
 ```text
-[ecosystem]
---- addressing plan ---
-[OK] morfSensor: 8788
---- vendored copies ---
-[OK] morfSensor/third_party/morf/beacon matches morfBeacon
+morf doctor
+
+Écosystème
+  OK  5 conforme(s) : Plan d'adressage, Versions, Copies vendorées, ...
+
+Projets
+  OK  12 conforme(s)
+   X  morfMonitor
+
+Résumé  17 OK   0 avertissement(s)   1 échec(s)
+
+À corriger
+   X  morfMonitor — active version 0.5.5 differs from project 0.5.6
+        -> python3 morf.py upgrade --only morfMonitor
 ```
+
+L'action affichée réutilise le remède que la vérification imprime elle-même
+(commande de resynchronisation, de mise à niveau) quand il existe ; sinon elle
+est déduite du message. `doctor --verbose` rétablit la sortie ligne par ligne.
 
 Attribuer un port se fait dans `ecosystem.json` **avant** de l'écrire dans la
 configuration d'un service ; `doctor` échoue tant que les deux divergent. Voir

@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+## [0.4.17] — 2026-07-26
+
+### Modifié
+
+- **`doctor` rend un résumé lisible au lieu d'un flot de lignes.** Sain, le
+  diagnostic imprimait une soixantaine de lignes vertes ; un vrai problème s'y
+  noyait. Par défaut, les vérifications conformes sont désormais comptées et
+  regroupées (Écosystème / Projets), seules les exceptions sont détaillées, et
+  le rapport se termine par un **résumé chiffré** puis une section **« À
+  corriger »** listant chaque échec avec l'action concrète à mener.
+- **L'action réutilise le remède que la vérification imprime déjà** (commande de
+  resynchronisation vendorée, commande de mise à niveau) quand il existe ; sinon
+  elle est déduite du message. Une vérification qui améliore son propre conseil
+  améliore ce résumé sans y toucher.
+- **Les « impossible de vérifier » ne sont plus comptés comme des
+  avertissements.** Sur un poste qui ne peut pas joindre les services (ils
+  tournent sur le Pi), le contrôle de version active répondait « unavailable » :
+  six faux avertissements par exécution. C'est une non-évaluation, traitée comme
+  telle. Un service réellement installé qui ne répond pas reste, lui, un échec.
+- **`doctor --verbose` rétablit la sortie ligne par ligne**, inchangée, pour qui
+  veut le détail complet.
+- **Sortie forcée en UTF-8** (avec remplacement) : le résumé emploie des accents
+  et des marqueurs qu'une console Windows en cp1252 refusait, interrompant le
+  rapport en cours par une `UnicodeEncodeError`.
+
+### Vérifié
+
+Parc sain : 61 lignes ramenées à 10. Cas en échec (collision de port, dérive
+vendorée, version décalée, service en panne) : chaque problème rendu avec son
+action, réutilisant le remède du producteur pour la resynchronisation et la
+mise à niveau. `--verbose` conserve les 70 lignes détaillées.
+
 ## [0.4.16] — 2026-07-26
 
 ### Corrigé
