@@ -20,7 +20,7 @@
   "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
   "ports": {
     "beaconUdp": 45454,
-    "_comment_ranges": "8080 is a historical allocation (morfSync). The 8787-8799 block is reserved for parc services. The 8800-8899 block is free. The 8900-8999 block is reserved for templates and examples: a port from that range must never appear in production.",
+    "_comment_ranges": "8080 is a historical allocation (morfSync). The 8787-8799 block is reserved for parc services; use 'ecosystem-check.py .. ecosystem.json next-port' to get the next free one. The 8900-8999 block is reserved for templates and examples and is ENFORCED: a production project declaring a port from it fails 'morf doctor', and a template-range port may only belong to an entry marked \"template\": true.",
     "serviceRange": [
       8787,
       8799
@@ -82,7 +82,8 @@
         "http": 8901,
         "config": "config/morftemplate.example.json",
         "key": "http_port",
-        "note": "TEMPLATE. Port deliberately taken outside the service block so a cloned service cannot be mistaken for a parc service. First step after cloning: reserve a port here, then write it into the new service configuration."
+        "note": "TEMPLATE. Port deliberately taken outside the service block so a cloned service cannot be mistaken for a parc service. First step after cloning: reserve a port here, then write it into the new service configuration. Marque comme template : seul un projet template peut porter un port de la plage template.",
+        "template": true
       }
     ]
   },

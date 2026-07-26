@@ -75,24 +75,51 @@ take.
    file is parsed and the value under `key` compared to `http`. A mismatch, a
    missing key, an unreadable or absent file are all failures. This is the pass
    that catches the template collision.
-3. **Configuration against registry.** Every `config/*.example.json` in every
-   cloned project is scanned for `http_port`. A port declared there but absent
-   from the registry is reported as an unmanaged allocation.
+3. **Configuration against registry, by owner.** Every `config/*.example.json`
+   in every cloned project is scanned for `http_port`, and each declared port is
+   checked against **who owns it**. A port absent from the registry is an
+   unmanaged allocation; a port owned by a *different* project is a collision.
+   Testing only "is this port registered?" is not enough — it passes a port
+   registered to somebody else, which is exactly the shape of a duplicate: a
+   freshly cloned service that kept the template's `8901` slips through, because
+   `8901` is registered (to the template). Comparing the owner catches it.
+   The template range is enforced in the same pass: a production project
+   declaring a port in `templateRange` fails, even if that port is free.
 
 Pass 3 is what keeps the registry exhaustive over time. Passes 1 and 2 only
 verify what is already registered; without pass 3, a service could quietly take
 a port and the registry would stay green while becoming incomplete — exactly how
 the previous comment-based plan decayed.
 
+The template range is guarded from both sides in pass 1: a `templateRange` port
+may only belong to an entry marked `"template": true`, and a template entry may
+only use a `templateRange` port. The boundary means nothing if either side can
+cross it.
+
 ### Allocating a port for a new service
 
-1. Add an entry to `ports.allocations` in `ecosystem.json`, choosing a free port
-   inside `serviceRange`.
-2. Write that same port into the new service's configuration.
+Ask the tool which port is free rather than reading the registry by eye — that
+reading is how two projects end up on the same number:
+
+```bash
+python3 scripts/ecosystem-check.py .. ecosystem.json next-port
+```
+
+It prints the lowest unallocated port in `serviceRange`. `new-service.sh` runs
+it for you and prints the concrete number to take. Then:
+
+1. Add an entry to `ports.allocations` in `ecosystem.json` with that port.
+2. Write the same port into the new service's configuration.
 3. Run `morf doctor`. It fails until both agree.
 
 Do this **before** writing the configuration. The registry is the decision; the
 configuration records it.
+
+A fresh clone ships `8901` (the template range). That is deliberate: it is a
+tripwire, not a default to keep. The moment the clone is added to the parc as a
+production project, pass 3 refuses the template-range port and points at this
+allocation step. A clone that forgot to take a real port cannot reach production
+silently.
 
 ### Why the template sits at 8901
 

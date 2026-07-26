@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+## [0.4.16] — 2026-07-26
+
+### Corrigé
+
+- **Le contrôle des ports laissait passer un doublon entre projets.** La
+  troisième passe de `check_ports` testait si un port déclaré *existait* dans le
+  registre, pas s'il appartenait au projet qui le déclare : un service fraîchement
+  cloné qui gardait le `8901` du gabarit passait, puisque `8901` est bien
+  enregistré — au nom du gabarit. La passe compare désormais le **propriétaire**
+  du port au projet déclarant, ce qui est la forme même d'un doublon. C'est la
+  collision qui a mis morfAnalytics à terre (8799 pris par morfMonitor) et qu'un
+  test par valeur seule ne pouvait pas voir. Reproduite sur un parc piège, puis
+  corrigée et vérifiée.
+
+### Ajouté
+
+- **Discipline de la plage template appliquée dans les deux sens.** Un port de la
+  plage `8900-8999` ne peut appartenir qu'à une allocation marquée
+  `"template": true`, et une allocation template ne peut utiliser qu'un port de
+  cette plage. En production, tout port de la plage template est refusé, même
+  libre : c'est la barrière qui garantit qu'un gabarit ne livre jamais un numéro
+  qu'un vrai service pourrait prendre. `morfTemplateService` est marqué
+  `template` dans le registre.
+- **Suggestion de port pour un nouveau projet** : `ecosystem-check.py … next-port`
+  imprime le plus petit port libre du bloc service. `new-service.sh` l'exécute et
+  affiche le numéro concret à réserver, au lieu de « choisis-en un ». Lire le
+  registre à l'œil pour trouver un trou est précisément ce qui met deux projets
+  sur le même port.
+
+### Contexte
+
+Le registre `ecosystem.json` était déjà l'autorité unique sur les ports, et
+`morf doctor` en vérifiait la cohérence. Ces changements ferment le dernier trou
+— un projet réutilisant en silence le port d'un autre — et rendent l'attribution
+d'un port à un futur projet mécanique plutôt que manuelle.
+
 ## [0.4.15] — 2026-07-25
 
 ### Corrigé

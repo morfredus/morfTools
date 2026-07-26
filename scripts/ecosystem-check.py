@@ -70,13 +70,20 @@ def check_ports(root, manifest):
         return True
 
     allocations = ports.get("allocations", [])
+    template_range = ports.get("templateRange")
     problems = 0
 
-    # 1. Internal consistency. A registry that contradicts itself cannot
-    #    arbitrate any allocation.
-    seen = {}
+    def in_template_range(port):
+        return (template_range is not None
+                and template_range[0] <= port <= template_range[1])
+
+    # 1. Internal consistency, plus the ownership map every later check needs.
+    #    A registry that contradicts itself cannot arbitrate any allocation.
+    seen = {}                    # port  -> owning project
+    alloc_by_project = {}        # project -> its allocation entry
     for entry in allocations:
         port, project = entry.get("http"), entry.get("project", "?")
+        alloc_by_project[project] = entry
         if port is None:
             continue
         if port in seen:
@@ -84,6 +91,22 @@ def check_ports(root, manifest):
             problems += 1
         else:
             seen[port] = project
+
+        # The template range (8900-8999) exists so that a template or an example
+        # never ships a port that a real service might also pick. Enforcing it
+        # both ways keeps the boundary meaningful: a template-range port may only
+        # belong to an entry marked "template", and a template entry may only use
+        # a template-range port. Without this, a cloned service that kept the
+        # template's port would collide silently -- exactly the failure that
+        # motivated this check.
+        if in_template_range(port) and not entry.get("template"):
+            print(f"{FAIL} {project}: {port} is in the template range but the entry "
+                  "is not marked \"template\": true")
+            problems += 1
+        if entry.get("template") and not in_template_range(port):
+            print(f"{FAIL} {project}: marked template but {port} is outside the "
+                  f"template range {template_range}")
+            problems += 1
 
     # 2. Does each configuration declare the port it was allocated? This is the
     #    check that would have caught the template collision.
@@ -122,10 +145,22 @@ def check_ports(root, manifest):
         else:
             print(f"{OK} {project}: {port}")
 
-    # 3. A port declared somewhere but absent from the registry is an unmanaged
-    #    allocation: the registry would stop being exhaustive, which is the
-    #    failure mode the previous comment-based plan already exhibited.
-    registered = set(seen)
+    # 3. Ownership and exhaustiveness. Check 2 verifies the projects the registry
+    #    already knows about; this pass verifies the ones it might NOT. Every
+    #    listed project that declares a port must own it in the registry.
+    #
+    #    Testing "is this port registered?" is not enough: it passes a port that
+    #    is registered to SOMEBODY ELSE. A freshly cloned service that keeps the
+    #    template's 8901 would slip through, since 8901 is registered -- to the
+    #    template. So we compare the port's OWNER to the declaring project. That
+    #    is the collision a value-only test cannot see, and the one that took a
+    #    production service down.
+    #
+    #    A project already validated against its allocation in check 2 is not
+    #    re-reported here, to keep the output about problems, not repetition.
+    validated = {(a.get("project"), a.get("http"))
+                 for a in allocations if a.get("config") and a.get("key")}
+
     for project in manifest.get("projects", []):
         base = local_dir(root, project)
         if base is None:
@@ -140,11 +175,45 @@ def check_ports(root, manifest):
                 declared = load(os.path.join(config_dir, name)).get("http_port")
             except (OSError, ValueError):
                 continue
-            if declared is not None and declared not in registered:
-                print(f"{FAIL} {project}: port {declared} declared in {name} but absent from the registry")
+            if declared is None or (project, declared) in validated:
+                continue
+
+            owner = seen.get(declared)
+            if owner is None:
+                print(f"{FAIL} {project}: port {declared} declared in {name} but "
+                      "absent from the registry (allocate it there first)")
+                problems += 1
+            elif owner != project:
+                print(f"{FAIL} {project}: port {declared} declared in {name} is "
+                      f"allocated to {owner} -- collision")
+                problems += 1
+
+            # A production project must never ship a template-range port, even a
+            # free one: the range is off-limits so that examples stay harmless.
+            if in_template_range(declared) and not alloc_by_project.get(project, {}).get("template"):
+                print(f"{FAIL} {project}: port {declared} is in the template range "
+                      f"{template_range}; production services must not use it")
                 problems += 1
 
     return problems == 0
+
+
+def next_free_port(manifest):
+    """Lowest unallocated port in the service range, or None if the range is full.
+
+    Allocating a port by hand means eyeballing the registry for a gap, which is
+    how two projects end up on the same number. Computing the next free one
+    removes that step: a new service is told which port to take.
+    """
+    ports = manifest.get("ports") or {}
+    lo, hi = (ports.get("serviceRange") or [None, None])[:2]
+    if lo is None:
+        return None
+    taken = {a.get("http") for a in ports.get("allocations", [])}
+    for candidate in range(lo, hi + 1):
+        if candidate not in taken:
+            return candidate
+    return None
 
 
 # --------------------------------------------------------------------------
@@ -400,6 +469,16 @@ def main(argv):
     except (OSError, ValueError) as error:
         print(f"{FAIL} unreadable manifest ({manifest_path}): {error}")
         return 1
+
+    # A helper, not a check: prints the next free service port and nothing else,
+    # so a clone script (or a person) can allocate without scanning the registry.
+    if which == "next-port":
+        port = next_free_port(manifest)
+        if port is None:
+            print("none", file=sys.stderr)
+            return 1
+        print(port)
+        return 0
 
     healthy = True
     if which in ("all", "ports"):
