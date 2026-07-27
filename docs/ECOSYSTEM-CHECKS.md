@@ -20,7 +20,7 @@ project can be individually valid while the ecosystem as a whole is broken:
 
 Both rules were previously enforced by attention alone. The addressing plan in
 particular lived in a `_comment_port` field inside `morfMonitor/config/morfmonitor.example.json`
-— a component with no authority over the others, holding a partial copy of a
+- a component with no authority over the others, holding a partial copy of a
 parc-wide fact. That copy had already fallen out of date, and the template
 service shipped a configuration colliding with morfAnalytics as a direct result.
 
@@ -48,15 +48,15 @@ of parc addressing; no other file may restate it.
 
 Each allocation binds a port to the file that is supposed to declare it:
 
-- `project` — canonical name, as in `projects`. The sandbox `_travail` suffix is
+- `project` - canonical name, as in `projects`. The sandbox `_travail` suffix is
   resolved at runtime, so the registry never mentions it.
-- `http` — the allocated port.
-- `config` — path, relative to the project, of the configuration expected to
+- `http` - the allocated port.
+- `config` - path, relative to the project, of the configuration expected to
   declare that port. `null` when the value does not live in a file (see
   `morfBeacon` below).
-- `key` — the JSON key holding the port inside that file. It is not always
+- `key` - the JSON key holding the port inside that file. It is not always
   `http_port`: morfSync uses `port` in a root-level `config.example.json`.
-- `note` — what the service does, so an allocation can be judged without
+- `note` - what the service does, so an allocation can be judged without
   opening the project.
 
 `morfBeacon` carries `"config": null` because `8787` is the default value of
@@ -79,7 +79,7 @@ take.
    in every cloned project is scanned for `http_port`, and each declared port is
    checked against **who owns it**. A port absent from the registry is an
    unmanaged allocation; a port owned by a *different* project is a collision.
-   Testing only "is this port registered?" is not enough — it passes a port
+   Testing only "is this port registered?" is not enough - it passes a port
    registered to somebody else, which is exactly the shape of a duplicate: a
    freshly cloned service that kept the template's `8901` slips through, because
    `8901` is registered (to the template). Comparing the owner catches it.
@@ -88,7 +88,7 @@ take.
 
 Pass 3 is what keeps the registry exhaustive over time. Passes 1 and 2 only
 verify what is already registered; without pass 3, a service could quietly take
-a port and the registry would stay green while becoming incomplete — exactly how
+a port and the registry would stay green while becoming incomplete - exactly how
 the previous comment-based plan decayed.
 
 The template range is guarded from both sides in pass 1: a `templateRange` port
@@ -98,7 +98,7 @@ cross it.
 
 ### Allocating a port for a new service
 
-Ask the tool which port is free rather than reading the registry by eye — that
+Ask the tool which port is free rather than reading the registry by eye - that
 reading is how two projects end up on the same number:
 
 ```bash
@@ -126,7 +126,7 @@ silently.
 `morfTemplateService` is allocated `8901`, inside `templateRange` and outside
 the service block. A template shipping a production-range port is a defect
 generator: every clone starts on a port that looks legitimate and may already be
-taken — which is precisely what happened with `8799`.
+taken - which is precisely what happened with `8799`.
 
 ## Active service version
 
@@ -179,7 +179,7 @@ embedding context, and comparing it would produce noise on every run.
 ### Line endings are normalised
 
 Content is compared with `\r\n` folded to `\n`. A copy converted to CRLF differs
-at the byte level while being identical at the logical level — this is already
+at the byte level while being identical at the logical level - this is already
 the case for `morfTemplateService`. Reporting that as drift would bury real
 divergences under a permanent false positive, and a check that is always red is
 a check nobody reads.
@@ -192,7 +192,7 @@ a check nobody reads.
        resynchronise with: morfSensor/scripts/sync-morf.(sh|ps1)
 ```
 
-Drift is not automatically a fault — it may be a deliberate local fix that was
+Drift is not automatically a fault - it may be a deliberate local fix that was
 never pushed upstream. The check reports; it never rewrites. Decide which side
 is right:
 
@@ -235,7 +235,7 @@ partial workspace is a normal state, not an error.
 The logic lives in one Python script called by both `morf.sh` and `morf.ps1`.
 `morf.sh` already depends on `python3` for manifest parsing, and `morf.ps1` uses
 `python` for `install`, so this introduces no new dependency. Reimplementing the
-comparison in PowerShell would create two checkers free to disagree — which is
+comparison in PowerShell would create two checkers free to disagree - which is
 the same duplication problem the `vendor` check exists to detect.
 
 ## Out of scope: the service skeleton
@@ -265,5 +265,5 @@ services toward a uniformity the architecture does not want.
 What the naming harmonisation does buy is **traceability**. Since every service
 now names its infrastructure bricks identically, their common lineage can be
 read at a glance and a genuine infrastructure defect found in one service can be
-looked for in the others — as a deliberate inspection, never as an automatic
+looked for in the others - as a deliberate inspection, never as an automatic
 propagation.

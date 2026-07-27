@@ -1,4 +1,4 @@
-# Roadmap — morfTools
+# Roadmap - morfTools
 
 morfTools administre l'écosystème morfSystem sans rien connaître de son métier.
 Il clone, compile, met à jour et diagnostique des projets déclarés dans un
@@ -10,7 +10,7 @@ aujourd'hui sur la vigilance.**
 
 ## Pistes
 
-- **`morf versions` — inventaire des versions du parc.** Les quatorze projets
+- **`morf versions` - inventaire des versions du parc.** Les quatorze projets
   portent désormais tous un fichier `VERSION` faisant autorité, y compris les
   deux projets embarqués dont la version était écrite en dur dans
   `platformio.ini`. Rien n'exploite encore cette uniformité : une commande
@@ -23,8 +23,8 @@ aujourd'hui sur la vigilance.**
   l'entrée supprimerait l'étape où l'on recopie le port du voisin.
 
 - **Tests de contrat.** C'est la lacune la plus structurante de l'écosystème.
-  Un système dont la cohésion repose sur des contrats — enveloppe de
-  synchronisation, protocole `morfbeacon/1`, schémas JSON des API — voit
+  Un système dont la cohésion repose sur des contrats - enveloppe de
+  synchronisation, protocole `morfbeacon/1`, schémas JSON des API - voit
   aujourd'hui ces contrats vérifiés par la seule exécution manuelle. Un
   datagramme de référence rejoué par les implémentations C++ et Python figerait
   le protocole ; un schéma de réponse d'API attraperait les divergences entre
@@ -36,7 +36,7 @@ aujourd'hui sur la vigilance.**
 - **Rapport de filiation du squelette.** Les cinq services partagent une
   ossature issue de `morfTemplateService`, et l'harmonisation des noms rend
   enfin la comparaison mécanique possible. Un rapport **informatif** dirait où
-  chaque service a divergé — utile pour aller chercher ailleurs un défaut
+  chaque service a divergé - utile pour aller chercher ailleurs un défaut
   d'infrastructure trouvé quelque part. Voir les non-objectifs : ce serait un
   rapport, jamais un contrôle de conformité.
 

@@ -8,6 +8,7 @@
     "MeteoHub",
     "morfAnalytics",
     "morfBeacon",
+    "morfCollector",
     "morfMonitor",
     "morfNotify",
     "morfSensor",
@@ -69,6 +70,13 @@
         "http": 8791,
         "project": "morfDashboard",
         "_note": "Annonce morfbeacon/1 + /status. Port dans config.py (BEACON_STATUS_PORT), pas de fichier JSON."
+      },
+      {
+        "project": "morfCollector",
+        "http": 8792,
+        "config": "config/morfcollector.example.json",
+        "key": "http_port",
+        "note": "Collecte et conservation locale de ressources distantes temporaires."
       },
       {
         "project": "morfAnalytics",
@@ -138,6 +146,7 @@
     ],
     "consumers": [
       "ComponentHub",
+      "morfCollector",
       "SiteWatch",
       "MeteoHub",
       "GatewayLab",

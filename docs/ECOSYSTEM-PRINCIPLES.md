@@ -1,4 +1,4 @@
-# morfSystem — principes et invariants d'architecture
+# morfSystem - principes et invariants d'architecture
 
 Ce document énonce les règles qui valent pour **tout le parc**, et non pour un
 composant en particulier.
@@ -13,7 +13,7 @@ incomplet, et personne ne pouvait le savoir. Il est désormais dans
 
 Le même raisonnement s'applique aux invariants d'architecture. morfTools est le
 seul artefact qui porte sur le parc entier ; c'est donc ici qu'ils sont
-consignés — y compris ceux qui contraignent morfTools lui-même.
+consignés - y compris ceux qui contraignent morfTools lui-même.
 
 Un invariant qui ne vit que dans une conversation n'existe pas. C'est
 précisément ainsi qu'une architecture dérive : non par une décision contraire,
@@ -65,7 +65,7 @@ manipulation échoue, l'invariant est rompu.
 ### Pourquoi « observatoire » et pas « portail »
 
 Le vocabulaire n'est pas neutre. Un portail attire progressivement les sessions,
-l'authentification, les proxys, les relais et les tableaux de bord agrégés —
+l'authentification, les proxys, les relais et les tableaux de bord agrégés -
 chacun défendable isolément. À la fin, il est un point de passage obligatoire,
 et donc un point de défaillance unique pour l'accès à tout le reste.
 
@@ -103,7 +103,7 @@ heartbeat ; les informations nécessaires à son ouverture vivent derrière
 ### Portée : toutes les plateformes
 
 L'objectif est que tout composant morfSystem soit découvert de façon homogène,
-quelle que soit sa plateforme — Linux, Windows, Raspberry Pi ou **ESP32**.
+quelle que soit sa plateforme - Linux, Windows, Raspberry Pi ou **ESP32**.
 
 Les listes statiques et la configuration spécifique (sondes réseau déclarées
 dans `morfsystem.json`) sont un état transitoire, pas la cible. Le protocole
@@ -113,7 +113,7 @@ particulière : un émetteur embarqué est réaliste.
 #### Validation (23 juillet 2026)
 
 La découverte distribuée fonctionne sur un environnement **hétérogène**
-— Windows, Linux, Raspberry Pi et ESP32 — **sans aucune configuration
+- Windows, Linux, Raspberry Pi et ESP32 - **sans aucune configuration
 manuelle**. Les instances de morfMonitor se découvrent mutuellement, et les
 services publiés par le Raspberry Pi apparaissent automatiquement sur Windows
 comme l'inverse.
@@ -141,8 +141,8 @@ L'accès depuis l'extérieur du réseau local sera traité par **un composant
 séparé**, dont c'est l'unique responsabilité (principe 1).
 
 Ce composant porte la sécurité, l'authentification et l'établissement de la
-connexion. Les services existants — morfMonitor, morfAnalytics, morfNotify,
-MeteoHub, GatewayLab et les suivants — **exposent exactement les mêmes
+connexion. Les services existants - morfMonitor, morfAnalytics, morfNotify,
+MeteoHub, GatewayLab et les suivants - **exposent exactement les mêmes
 interfaces qu'aujourd'hui** et ignorent totalement qu'ils sont consultés depuis
 Internet.
 
@@ -166,14 +166,14 @@ ne contient pas que des tableaux de bord en lecture :
 | GatewayLab | Configuration WiFi, débogage |
 | morfNotify | Émission de courriels et de messages Telegram |
 
-Ce constat ne remet pas en cause le choix — il le qualifie. La séparation des
+Ce constat ne remet pas en cause le choix - il le qualifie. La séparation des
 responsabilités est saine ; en contrepartie, la robustesse du composant d'accès
 n'est pas un détail d'implémentation, c'est **la** condition de sûreté du parc.
 
 ### Statut : décision ouverte (R5)
 
 Ce qui précède fixe les **contraintes**, pas la solution. Le choix du mécanisme
-reste à arbitrer — c'est la recommandation **R5** du rapport d'architecture, le
+reste à arbitrer - c'est la recommandation **R5** du rapport d'architecture, le
 seul point d'architecture du parc délibérément laissé ouvert, et le **préalable
 obligatoire** à toute ligne de code d'accès distant.
 
@@ -192,7 +192,7 @@ ci-dessus (composant dédié, aucun changement dans les services) :
 
 L'arbitrage doit produire : un inventaire de ce que chaque service expose
 réellement, le mécanisme retenu avec son coût, et la place exacte de la sécurité.
-Il engage la sûreté de **tout** le parc — d'où le choix de ne pas le précipiter.
+Il engage la sûreté de **tout** le parc - d'où le choix de ne pas le précipiter.
 
 ---
 
@@ -217,7 +217,7 @@ particulier, et le cœur unique n'est plus qu'une étiquette sur l'ancienne
 duplication.
 
 Ce que ça a coûté d'apprendre : six services portaient chacun leur copie des
-mêmes quatre étapes, et la dérive était déjà là — `morfAnalytics` lisait le
+mêmes quatre étapes, et la dérive était déjà là - `morfAnalytics` lisait le
 `MT_APP_DIR` de morfMonitor, `morfSync` documentait une surcharge que rien ne
 lisait, et `morfTemplateService` annonçait en en-tête « Installe morfSensor ».
 
@@ -226,7 +226,7 @@ lisait, et `morfTemplateService` annonçait en en-tête « Installe morfSensor �
 Un mécanisme reste natif quand il *diffère par nature*, pas quand il diffère par
 habitude. Un service Windows n'est pas une unité systemd traduite : le
 gestionnaire de services attend que le programme le rappelle et annonce son état
-sous une trentaine de secondes. Un programme Qt console ne le fait pas — il
+sous une trentaine de secondes. Un programme Qt console ne le fait pas - il
 s'enregistre sans broncher et échoue au démarrage en erreur 1053, dont le
 message ne dit rien de la poignée de main manquante. La stratégie est donc
 déclarée par le projet, et réclamer un vrai service sans enveloppe (WinSW, NSSM)
@@ -263,8 +263,8 @@ jour où quelqu'un l'exerce sur une vraie machine, pas le jour où le code est
 Windows a franchi ce seuil le 23 juillet 2026 : installation d'un service par
 morfdeploy, démarrage, collecte des ressources et découverte croisée avec le
 Raspberry Pi et les ESP32, sur une machine réelle. Les trois défauts révélés ce
-jour-là — DLL Qt absentes à l'installation, ressources non collectées faute de
-`/proc`, adresse annoncée sur un réseau virtuel — illustrent exactement ce que
+jour-là - DLL Qt absentes à l'installation, ressources non collectées faute de
+`/proc`, adresse annoncée sur un réseau virtuel - illustrent exactement ce que
 cet invariant protège : aucun n'était visible à la lecture du code, tous les
 trois se sont manifestés à la première mise en service. Voir la validation de
 la découverte distribuée, plus haut.
@@ -274,7 +274,7 @@ la découverte distribuée, plus haut.
 ## Invariant : morfTools est une dépendance d'administration, pas d'exécution
 
 C'est la seule dépendance commune du parc, et elle ne vaut que pendant le cycle
-de vie — **jamais à l'exécution**. Une fois installés, morfMonitor, morfSync,
+de vie - **jamais à l'exécution**. Une fois installés, morfMonitor, morfSync,
 morfNotify, morfAnalytics, morfSensor ou n'importe quel service démarrent avec
 la machine, se découvrent par morfBeacon et remplissent leur mission sans que
 morfTools soit présent. **Retirer morfTools d'une machine n'arrête aucun service
@@ -299,7 +299,7 @@ La distinction dicte où vit chaque chose. Ce qui relève de l'exécution est
 **embarqué** dans le service (le binaire, sa config, sa copie vendorée de
 morfBeacon et de morfdeploy) : un clone isolé s'installe et tourne sans aucun
 voisin. Ce qui relève de l'administration est **centralisé** dans morfTools,
-pour n'exister qu'une fois plutôt qu'être recopié dans chaque projet — la
+pour n'exister qu'une fois plutôt qu'être recopié dans chaque projet - la
 duplication d'un `merge-config.py` par service était exactement le travers que
 cette frontière corrige.
 

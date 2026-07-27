@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## [0.4.23] — 2026-07-26
+## [0.4.23] - 2026-07-26
 
 ### Modifié
 
@@ -22,21 +22,21 @@
   jour** (qui le mentionne déjà) au lieu d'apparaître en double dans deux
   sections. Le repli est conservé pour `--verbose`.
 
-## [0.4.22] — 2026-07-26
+## [0.4.22] - 2026-07-26
 
 ### Modifié
 
 - **La commande proposée pour une mise à jour dépend de l'état du service.** Si
   le service du projet est **actif** sur cette machine, le remède reste
-  `upgrade` (reconstruire et redéployer en place). S'il n'est **pas actif** —
-  non installé ici, application de bureau sans service, ou service arrêté — le
+  `upgrade` (reconstruire et redéployer en place). S'il n'est **pas actif** -
+  non installé ici, application de bureau sans service, ou service arrêté - le
   remède devient `update` : tirer la source, sans rien redéployer. Proposer
   `upgrade` pour un service qui ne tourne pas reviendrait à reconstruire et
   relancer ce que la machine n'exécute pas. L'état est lu de la sonde que
   `doctor` vient de faire (le point d'état a-t-il répondu une version ?), sans
   second aller-retour réseau.
 
-## [0.4.21] — 2026-07-26
+## [0.4.21] - 2026-07-26
 
 ### Corrigé
 
@@ -44,12 +44,12 @@
   absolu.** Il affichait `git -C /home/<user>/…/morfTools_travail pull
   --ff-only` : un chemin propre à une seule machine, qui casse sur une autre.
   C'est désormais un simple **`git pull --ff-only`**, conforme au reste de
-  l'outil — toutes les commandes morf se lancent déjà depuis le dossier
+  l'outil - toutes les commandes morf se lancent déjà depuis le dossier
   morfTools (c'est ainsi que `python3 morf.py …` se résout), donc
   l'auto-mise-à-jour part du même endroit. Aucune commande ne dépend plus d'un
   chemin en dur.
 
-## [0.4.20] — 2026-07-26
+## [0.4.20] - 2026-07-26
 
 ### Modifié
 
@@ -59,12 +59,12 @@
   cette version a été relue en conséquence. Règle générale retenue : nommer les
   options selon la norme des outils standard.
 
-## [0.4.19] — 2026-07-26
+## [0.4.19] - 2026-07-26
 
 ### Modifié
 
 - **Le contrôle des nouvelles versions passe sur option.** Introduit en 0.4.18
-  comme systématique, il ajoutait un `git fetch` par dépôt — une trentaine de
+  comme systématique, il ajoutait un `git fetch` par dépôt - une trentaine de
   secondes sur le parc complet, trop pour un `doctor` de routine. Il ne s'exécute
   désormais qu'avec **`--update`**. Par défaut, `doctor` reste local et
   instantané, et se termine par `Tout est conforme (versions non vérifiées).` en
@@ -91,7 +91,7 @@ disponibles » et l'auto-vérification de morfTools ; garde `--update` refusée
 hors `doctor` ; progression rendue en place puis effacée sur un terminal,
 muette une fois redirigée.
 
-## [0.4.18] — 2026-07-26
+## [0.4.18] - 2026-07-26
 
 ### Ajouté
 
@@ -101,7 +101,7 @@ muette une fois redirigée.
   `morf pull --only <projet>` puis `morf upgrade --only <projet>`. Le signal est
   « le distant a des commits que je n'ai pas », et non « une release GitHub a été
   publiée » : la moitié des dépôts ne publient aucune release, alors que tous ont
-  un distant. Il n'utilise que `git` — ni `gh`, ni jeton, rien qui puisse manquer
+  un distant. Il n'utilise que `git` - ni `gh`, ni jeton, rien qui puisse manquer
   sur le Pi.
 - **morfTools s'auto-vérifie.** L'outil n'étant pas un projet du manifeste, rien
   ne signalait qu'il était lui-même en retard. Il apparaît désormais dans le
@@ -123,10 +123,10 @@ muette une fois redirigée.
 ### Vérifié
 
 Parc réel : « conforme et à jour » en ~37 s. Détection en conditions réelles en
-reculant un dépôt propre d'un commit — signalé avec les bonnes commandes, puis
+reculant un dépôt propre d'un commit - signalé avec les bonnes commandes, puis
 restauré. morfTools inclus dans le rapport. Hors-ligne : `[SKIP]` propre.
 
-## [0.4.17] — 2026-07-26
+## [0.4.17] - 2026-07-26
 
 ### Modifié
 
@@ -158,7 +158,7 @@ vendorée, version décalée, service en panne) : chaque problème rendu avec so
 action, réutilisant le remède du producteur pour la resynchronisation et la
 mise à niveau. `--verbose` conserve les 70 lignes détaillées.
 
-## [0.4.16] — 2026-07-26
+## [0.4.16] - 2026-07-26
 
 ### Corrigé
 
@@ -166,7 +166,7 @@ mise à niveau. `--verbose` conserve les 70 lignes détaillées.
   troisième passe de `check_ports` testait si un port déclaré *existait* dans le
   registre, pas s'il appartenait au projet qui le déclare : un service fraîchement
   cloné qui gardait le `8901` du gabarit passait, puisque `8901` est bien
-  enregistré — au nom du gabarit. La passe compare désormais le **propriétaire**
+  enregistré - au nom du gabarit. La passe compare désormais le **propriétaire**
   du port au projet déclarant, ce qui est la forme même d'un doublon. C'est la
   collision qui a mis morfAnalytics à terre (8799 pris par morfMonitor) et qu'un
   test par valeur seule ne pouvait pas voir. Reproduite sur un parc piège, puis
@@ -191,10 +191,10 @@ mise à niveau. `--verbose` conserve les 70 lignes détaillées.
 
 Le registre `ecosystem.json` était déjà l'autorité unique sur les ports, et
 `morf doctor` en vérifiait la cohérence. Ces changements ferment le dernier trou
-— un projet réutilisant en silence le port d'un autre — et rendent l'attribution
+- un projet réutilisant en silence le port d'un autre - et rendent l'attribution
 d'un port à un futur projet mécanique plutôt que manuelle.
 
-## [0.4.15] — 2026-07-25
+## [0.4.15] - 2026-07-25
 
 ### Corrigé
 
@@ -202,7 +202,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   désormais la commande exécutable depuis morfTools :
   `python3 morf.py upgrade --only <projet>`.
 
-## [0.4.14] — 2026-07-25
+## [0.4.14] - 2026-07-25
 
 ### Corrigé
 
@@ -215,7 +215,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   répond pas et que le gestionnaire de services est protégé, l'absence de droits
   reste un avertissement, jamais un faux « non installé ».
 
-## [0.4.13] — 2026-07-24
+## [0.4.13] - 2026-07-24
 
 ### Ajouté
 
@@ -224,48 +224,48 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   `docs/FIRST-TEST.md` se dépose désormais en issue, avec les six questions
   prioritaires déjà en place. Le document pointe vers le formulaire et
   recommande d'ouvrir l'issue **avant** de commencer, pour la compléter au fil
-  de l'eau plutôt que de tout écrire de mémoire à la fin — et d'ouvrir
+  de l'eau plutôt que de tout écrire de mémoire à la fin - et d'ouvrir
   plusieurs issues courtes plutôt qu'un seul long compte rendu, un blocage
   précis se traitant et se clôturant, là où il se noierait dans un récit.
 
-## [0.4.12] — 2026-07-24
+## [0.4.12] - 2026-07-24
 
 ### Ajouté
 
-- **`docs/FIRST-TEST.md`** — demande de retour après une **première**
+- **`docs/FIRST-TEST.md`** - demande de retour après une **première**
   installation, destinée à quelqu'un qui ne connaît pas morfSystem. C'est le
   seul test que le parc n'a jamais subi : tout a été éprouvé par son auteur, qui
   sait déjà ce qu'il faut faire et se trouve donc le moins capable de voir ce
   qui manque.
 
   Le document demande explicitement un retour **honnête plutôt qu'aimable**, et
-  pose deux règles qui font sa valeur : ne demander d'aide à personne — chaque
+  pose deux règles qui font sa valeur : ne demander d'aide à personne - chaque
   question qui surgit est notée au lieu d'être posée, car une question posée à
-  l'auteur est une information perdue — et ne pas corriger le tir mentalement,
+  l'auteur est une information perdue - et ne pas corriger le tir mentalement,
   ce réflexe effaçant justement le défaut.
 
   Six questions sont marquées comme prioritaires, dont le **point d'abandon**
   (« à quel moment auriez-vous arrêté si vous n'aviez pas accepté de rendre
   service ? ») et l'**écart entre l'attendu et l'obtenu même quand tout
-  fonctionne** — ces moments-là ne produisent aucune erreur et n'apparaissent
+  fonctionne** - ces moments-là ne produisent aucune erreur et n'apparaissent
   dans aucun journal. Référencé depuis le guide de démarrage et le README.
 
-## [0.4.11] — 2026-07-24
+## [0.4.11] - 2026-07-24
 
 ### Corrigé
 
 - **Un `update` sans changement ne redémarre plus le service.** La séquence
-  était inconditionnelle : compiler, arrêter, recopier le binaire — fût-il
-  identique octet pour octet — ré-enregistrer, redémarrer. Le premier `upgrade`
+  était inconditionnelle : compiler, arrêter, recopier le binaire - fût-il
+  identique octet pour octet - ré-enregistrer, redémarrer. Le premier `upgrade`
   réel du Pi a donc arrêté et relancé **cinq** services alors qu'aucun n'avait
   changé. Ce n'est pas neutre : c'est une coupure de supervision, un uptime
-  remis à zéro et, pour un service au milieu d'une tâche, une interruption —
+  remis à zéro et, pour un service au milieu d'une tâche, une interruption -
   payés au moment précis où l'on croyait ne rien toucher.
 
   `update` compare désormais **l'empreinte du contenu** du binaire construit et
   de l'installé (SHA-256 ; ni la taille ni la date, qu'un `git checkout` ou une
   recompilation réécrivent sur des octets identiques), vérifie que les
-  configurations sont en place, et s'arrête là s'il n'y a rien à déployer — en
+  configurations sont en place, et s'arrête là s'il n'y a rien à déployer - en
   le disant clairement, y compris que **le service n'a pas été redémarré**.
   `--force` redéploie et redémarre quand c'est justement l'intention.
 
@@ -278,17 +278,17 @@ d'un port à un futur projet mécanique plutôt que manuelle.
 
   L'enrichissement participe de surcroît à la décision ci-dessus : une clé
   ajoutée dans un fichier que le processus a lu au démarrage ne change rien
-  tant qu'il ne l'a pas relu — un enrichissement effectif justifie donc le
+  tant qu'il ne l'a pas relu - un enrichissement effectif justifie donc le
   redémarrage, et lui seul.
 
-## [0.4.10] — 2026-07-24
+## [0.4.10] - 2026-07-24
 
 ### Corrigé
 
 - **`upgrade` ne laisse plus morfDashboard en arrière, en silence.** Le
   redéploiement ajouté en 0.4.7 ne reconnaissait que les projets dotés d'un
   `service.py` ; morfDashboard, seul service encore piloté par ses scripts
-  shell, sortait sur « pas un service » sans rien afficher — son nouveau code
+  shell, sortait sur « pas un service » sans rien afficher - son nouveau code
   était récupéré et le service continuait de tourner sur l'ancien. Exactement le
   piège que la fonctionnalité devait fermer, resté ouvert pour un projet, et de
   la pire manière : sans un mot. Constaté sur le premier `upgrade` réel du Pi.
@@ -301,14 +301,14 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   `service.py`. La connaissance d'un projet cesse de vivre dans l'outil qui
   l'administre.
 
-## [0.4.9] — 2026-07-24
+## [0.4.9] - 2026-07-24
 
 ### Corrigé
 
 - **« Pas installé » n'est plus conclu de « je n'avais pas le droit de
   demander ».** Lancé sans élévation sous Windows, `service.py update`
   répondait « morfMonitor n'est pas installé sur cette machine. Lancez d'abord
-  install » — à propos d'un service en cours d'exécution, qui répondait sur son
+  install » - à propos d'un service en cours d'exécution, qui répondait sur son
   port à la seconde près. `schtasks` renvoie « accès refusé » pour une tâche
   enregistrée en SYSTEM, avec le code de retour de « cette tâche n'existe pas » ;
   le message envoyait donc vers `install`, exactement le mauvais geste.
@@ -321,7 +321,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   Constaté en testant sur une machine Windows réelle, service actif : aucun de
   ces deux défauts n'était visible à la lecture du code.
 
-## [0.4.8] — 2026-07-24
+## [0.4.8] - 2026-07-24
 
 ### Corrigé
 
@@ -329,34 +329,34 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   avant que ses fichiers soient remplacés.** Windows refuse d'écraser un
   exécutable qu'un processus tient ouvert, et `schtasks /End` rend la main dès
   la demande émise, sans attendre la sortie effective : la copie qui suivait
-  échouait sur une erreur de permission qui ne disait rien de sa cause — la
+  échouait sur une erreur de permission qui ne disait rien de sa cause - la
   précédente instance encore vivante. Trois gestes remplacent l'unique arrêt :
 
-  - **désactivation d'abord** — un arrêt que quelque chose peut défaire n'en est
+  - **désactivation d'abord** - un arrêt que quelque chose peut défaire n'en est
     pas un : un wrapper SCM (WinSW, NSSM) relance un service qu'il croit planté,
     et il reviendrait en tenant les fichiers qu'on s'apprête à remplacer. La
     désactivation est toujours défaite par l'appelant (install et update
     ré-enregistrent le service entièrement, uninstall le supprime) ;
   - **arrêt** ;
   - **attente de la libération réelle** du binaire, éprouvée en l'ouvrant en
-    écriture — Windows accorde la poignée à l'instant où le processus disparaît.
+    écriture - Windows accorde la poignée à l'instant où le processus disparaît.
     Un dépassement de délai avertit au lieu d'échouer, en nommant la cause et la
     commande pour s'en sortir.
 
   Linux n'a pas besoin de cette étape : `systemctl stop` ne rend la main
   qu'une fois l'unité réellement arrêtée. Le correctif vit dans le backend
   Windows, donc `install`, `update` et `uninstall` de **tous** les projets en
-  héritent par leur `service.py` — copie vendorée resynchronisée dans les six
+  héritent par leur `service.py` - copie vendorée resynchronisée dans les six
   services.
 
-## [0.4.7] — 2026-07-24
+## [0.4.7] - 2026-07-24
 
 ### Ajouté
 
 - **`morf.py upgrade` met désormais à jour les services installés.** Il
   s'arrêtait à la compilation : la machine continuait de faire tourner
   l'ancien binaire jusqu'à ce qu'on pense à visiter chaque projet pour y lancer
-  son `service.py update` — un piège que le guide devait signaler plutôt que
+  son `service.py update` - un piège que le guide devait signaler plutôt que
   l'outil l'éviter. `upgrade` tient maintenant sa promesse : `git pull`,
   recompilation, puis remplacement des binaires **des seuls services
   réellement installés sur cette machine**. Un projet présent dans les dépôts
@@ -367,7 +367,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   `upgrade` refuse toujours de tourner sous `sudo` (la garde 0.4.3), et
   demande donc lui-même l'élévation au moment de remplacer le premier binaire.
 
-- **`service.py is-installed`** — action muette dont le **code de retour est la
+- **`service.py is-installed`** - action muette dont le **code de retour est la
   réponse** : `0` installé, `1` absent, `2` impossible à déterminer. La
   troisième valeur n'est pas un luxe : sous Windows, `schtasks /Query` répond
   « accès refusé » pour une tâche enregistrée en SYSTEM, avec un code de retour
@@ -389,7 +389,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   Windows a franchi son seuil de support le 23 juillet 2026, et que les trois
   défauts révélés ce jour-là étaient tous invisibles à la lecture du code.
 
-## [0.4.6] — 2026-07-23
+## [0.4.6] - 2026-07-23
 
 ### Corrigé
 
@@ -398,23 +398,23 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   bibliothèques tierces contre lesquelles Qt6Core est lié (brotli,
   double-conversion, ICU, pcre2…) : le service s'arrêtait sur
   « libbrotlidec.dll introuvable », une par une. Le balayage de repli s'appuyait
-  sur `ldd` d'un shell MSYS2 — absent depuis un PowerShell ordinaire, et c'est
+  sur `ldd` d'un shell MSYS2 - absent depuis un PowerShell ordinaire, et c'est
   précisément là que ces DLL manquaient. Il est remplacé par `objdump` (livré
   dans le même `bin` MinGW que windeployqt, donc présent dès que windeployqt
   l'est, et sans shell) : la table d'imports de chaque binaire est lue, et toute
-  DLL importée présente dans le `bin` du toolchain — une bibliothèque MinGW/Qt,
-  pas une DLL système — est copiée, en suivant ses propres imports jusqu'à
+  DLL importée présente dans le `bin` du toolchain - une bibliothèque MinGW/Qt,
+  pas une DLL système - est copiée, en suivant ses propres imports jusqu'à
   fermeture. Testé de bout en bout : 15 DLL au total, dont les quatre qui
   manquaient (libbrotlidec, libdouble-conversion, libicuin78, libicuuc78).
   No-op sous Linux inchangé. Copie vendorée resynchronisée dans les six services.
 
-## [0.4.5] — 2026-07-23
+## [0.4.5] - 2026-07-23
 
 ### Corrigé
 
 - **L'install Windows trouve `windeployqt` toute seule, depuis n'importe quel
   terminal.** La 0.4.4 exigeait de lancer l'install depuis le shell MSYS2 qui
-  avait compilé, faute de quoi elle s'arrêtait sur « windeployqt introuvable » —
+  avait compilé, faute de quoi elle s'arrêtait sur « windeployqt introuvable » -
   y compris depuis un PowerShell ordinaire. morfdeploy lit désormais le
   `CMakeCache.txt` du build pour localiser Qt (`Qt6_DIR` → `<qt>/bin`, le même
   point d'ancrage que le CMake de ComponentHub) et préfixe le PATH du
@@ -424,7 +424,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   de plugins `networkinformation/` et `tls/` déployés à côté du binaire. Sous
   Linux, toujours un no-op. Copie vendorée resynchronisée dans les six services.
 
-## [0.4.4] — 2026-07-23
+## [0.4.4] - 2026-07-23
 
 ### Corrigé
 
@@ -436,18 +436,18 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   place maintenant, à l'installation comme à la mise à jour, les DLL Qt et
   MinGW à côté du binaire, via `windeployqt` (livré avec Qt) puis un balayage
   `ldd` de repli pour les dépendances tierces restantes. Le correctif vit dans
-  le backend Windows — la seule couche qui interroge la plateforme — donc tout
+  le backend Windows - la seule couche qui interroge la plateforme - donc tout
   service du parc en bénéficie, sans toucher au CMake d'aucun projet. Sous
   Linux, l'appel est un no-op sans coût. Copie vendorée resynchronisée dans
   les six services concernés.
 
-## [0.4.3] — 2026-07-22
+## [0.4.3] - 2026-07-22
 
 ### Corrigé
 
 - **Les commandes git refusent de tourner sous sudo.** Élevé, git s'authentifie
-  avec la clé SSH de root — inexistante : les treize dépôts répondent
-  `Permission denied (publickey)` — et le fetch laisse des fichiers root dans
+  avec la clé SSH de root - inexistante : les treize dépôts répondent
+  `Permission denied (publickey)` - et le fetch laisse des fichiers root dans
   chaque `.git` (`FETCH_HEAD`), si bien que les exécutions suivantes, en
   utilisateur, échouent sur leurs propres dépôts (`cannot open .git/FETCH_HEAD`).
   Les deux sont arrivés d'un seul `sudo` par habitude. Le refus nomme la cause
@@ -455,7 +455,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   l'élévation. Un vrai login root (sans `SUDO_USER`) n'est pas concerné.
 
 
-## [0.4.2] — 2026-07-22
+## [0.4.2] - 2026-07-22
 
 ### Corrigé
 
@@ -463,7 +463,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   service.** Le rétrécissement du `chown` (protection de `/usr/local/bin`) avait
   emporté l'entrée du dossier lui-même : créé sous sudo lors d'une installation
   from-scratch, `/opt/<service>` restait à root, et un module y créant ses
-  données d'exécution (cache, sqlite) échouait — silencieusement, avec un
+  données d'exécution (cache, sqlite) échouait - silencieusement, avec un
   message d'interface pointant la configuration. Le `chown` couvre l'entrée du
   dossier, jamais récursif, et seulement quand son nom est celui du service.
 
@@ -473,13 +473,13 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   services, au lieu d'un symptôme lointain.
 
 
-## [0.4.1] — 2026-07-22
+## [0.4.1] - 2026-07-22
 
 ### Corrigé
 
 - **Le conseil de réparation de `exec-bits` ne se sabote plus lui-même.** Sur un
   premier clone dont les scripts ont perdu le bit d'exécution, `doctor` invitait
-  à lancer `./exec-bits.sh` — un wrapper qui a besoin du bit qu'il doit
+  à lancer `./exec-bits.sh` - un wrapper qui a besoin du bit qu'il doit
   justement restaurer, donc `Permission denied` : le remède renvoyait à sa
   propre forme cassée. Le message donne désormais `python3 scripts/exec-bits.py ..`,
   qui s'exécute quel que soit le bit (même raison que `python3 morf.py`), et
@@ -500,13 +500,13 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   est mis en scène (fileMode-indépendant, survit au `git add -A` du commit de
   promotion, vérifié) ; le push le rend permanent.
 
-## [0.4.0] — 2026-07-22
+## [0.4.0] - 2026-07-22
 ### Ajouté
 
-- **`morf uninstall`** — désinstalle un service (`--only`) ou tout le parc, avec
+- **`morf uninstall`** - désinstalle un service (`--only`) ou tout le parc, avec
   `--purge` (efface aussi config et binaire) et `--backup` (copie la config
   d'abord). Délègue au `service.py` de chaque projet.
-- **`scripts/reset-parc.sh`** — remet une machine à blanc : arrête et désinstalle
+- **`scripts/reset-parc.sh`** - remet une machine à blanc : arrête et désinstalle
   tous les services, retire `/opt`, `/etc` et les vestiges des migrations.
   Empreinte explicite auditable, `--dry-run`, confirmation, ne touche jamais aux
   dépôts.
@@ -558,11 +558,11 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   Both shell versions stay in place until the Python one has been exercised on
   the Pi.
 
-## [0.3.0] — 2026-07-21
+## [0.3.0] - 2026-07-21
 
 - **`exec-bits` restores the executable bit across the parc**, and `doctor` now
   reports its absence. Forty-six tracked scripts were recorded as `100644`,
-  including all five of morfMonitor — among them the `deploy-config.sh` the
+  including all five of morfMonitor - among them the `deploy-config.sh` the
   README tells people to run.
 
   The defect cannot be observed from the machine that creates it. Windows has no
@@ -574,7 +574,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   So the fix targets the **index mode**, not the filesystem: `chmod` on Windows
   is a no-op Git ignores, while `git update-index --chmod=+x` records 100755 in
   the tree every other clone will see. What counts as runnable is the
-  **shebang**, not the extension — that is the author's own statement of intent,
+  **shebang**, not the extension - that is the author's own statement of intent,
   and it covers `.sh` and `.py` alike without a list of extensions free to drift.
 
 - **`morfTools` gains the `.gitattributes` every other project already had.** It
@@ -582,7 +582,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   Pi. Nothing had broken yet: its seventeen `.sh` were kept LF by the local
   Git configuration alone, which is not a property of the repository and does not
   travel with a clone. A `.sh` stored with CRLF fails there with
-  `bad interpreter: /usr/bin/env bash^M` — the same class of defect as the
+  `bad interpreter: /usr/bin/env bash^M` - the same class of defect as the
   missing bit, invisible from the machine that introduces it.
 
 - **The three meanings of "update" are now documented.** `update` is a pure
@@ -591,16 +591,16 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   first two act on sources, so a Pi keeps serving the previous binary after an
   `upgrade` until the project's own script runs.
 
-## [0.2.1] — 2026-07-21
+## [0.2.1] - 2026-07-21
 
 - **`doctor` compares the vendored `VERSION` file too.** It only compared `src`
   and `include`, so seven copies could announce 0.2.1 while carrying the code of
   0.4.1 and the check stayed green. The exclusion was too broad: the vendored
   `CMakeLists.txt` is legitimately adapted to its embedding context, `VERSION`
-  is not — it is simply copied, and a copy that lies about its version is worse
+  is not - it is simply copied, and a copy that lies about its version is worse
   than no version at all, because it is trusted.
 
-## [0.2.0] — 2026-07-21
+## [0.2.0] - 2026-07-21
 
 - **`config` becomes the single entry point for configuration deployment**, on
   both platforms: `config shared <action>` for the parc file, `config deploy
@@ -608,7 +608,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
   the new name.
 
   `deploy` **delegates** to the project's own script rather than learning its
-  install directory and service name — the rule that keeps morfTools free of
+  install directory and service name - the rule that keeps morfTools free of
   business knowledge, and that `morf build` already follows by delegating to
   each project's build system. A project cloned on its own therefore still
   deploys its configuration without morfTools.
@@ -619,7 +619,7 @@ d'un port à un futur projet mécanique plutôt que manuelle.
 
 - **Fixed a trap in `shared-config`: the source was hard-coded to
   `morfsystem.example.json`.** A clone carrying a real `config/morfsystem.json`
-  beside it — which is the normal case — saw `install` silently deploy the
+  beside it - which is the normal case - saw `install` silently deploy the
   sample OVER the parc description. Both platforms now prefer the real file and
   fall back to the example, the same rule `deploy-config` already applied.
 
@@ -634,9 +634,9 @@ d'un port à un futur projet mécanique plutôt que manuelle.
 - Added the standard ecosystem documents the project was missing: `VERSION` (first published version, 0.1.0), `LICENSE` (GPL-3.0-only, identical body to every sibling project), `CONTRIBUTING.md`, `ROADMAP.md` and a French `README.fr.md`. morfTools drives the whole parc yet was the only project without a version of its own, so no inventory could include the tool performing it.
 - `CONTRIBUTING.md` records two rules that were previously only implicit and had each already been broken once: script output stays in English, and JSON logic stays in Python called by both dispatchers rather than reimplemented in Bash and PowerShell.
 
-- `ecosystem.json` now owns the **port allocation registry** (`ports`), raised to `schemaVersion` 2. The parc plan previously existed only as a `_comment_port` string inside `morfMonitor/config/morfmonitor.example.json`: a component with no authority over the others, holding a partial copy of an ecosystem-wide fact. That copy was already incomplete — it omitted 8789 (morfNotify) and 8787 (the morfBeacon status default) — so a developer consulting it to pick a free port got wrong information with no way to know it.
+- `ecosystem.json` now owns the **port allocation registry** (`ports`), raised to `schemaVersion` 2. The parc plan previously existed only as a `_comment_port` string inside `morfMonitor/config/morfmonitor.example.json`: a component with no authority over the others, holding a partial copy of an ecosystem-wide fact. That copy was already incomplete - it omitted 8789 (morfNotify) and 8787 (the morfBeacon status default) - so a developer consulting it to pick a free port got wrong information with no way to know it.
 - Fixed the resulting collision: `morfTemplateService` shipped `http_port: 8799`, the port allocated to morfAnalytics. Every service created through the documented procedure therefore started on an occupied port. The template now uses 8901, inside a `templateRange` (8900-8999) reserved for templates and examples and deliberately outside the 8787-8799 service block, so a clone that has not yet reserved its own port is visibly unfinished instead of silently conflicting.
-- `ecosystem.json` also declares the **vendored copies** (`vendored`): the shared libraries copied into `third_party/morf/`, with their canonical source project. The copy strategy itself is unchanged — it is what keeps the build reproducible across Windows, Linux x64 and Raspberry Pi without an external repository.
+- `ecosystem.json` also declares the **vendored copies** (`vendored`): the shared libraries copied into `third_party/morf/`, with their canonical source project. The copy strategy itself is unchanged - it is what keeps the build reproducible across Windows, Linux x64 and Raspberry Pi without an external repository.
 - `doctor` now runs both ecosystem-wide checks before its per-project pass, through `scripts/ecosystem-check.py`. Ports: registry self-consistency, registry against each declared configuration, and each configuration against the registry so an unmanaged allocation cannot keep the registry green while making it incomplete. Vendored copies: content comparison of `src` and `include` against the canonical project, with line endings normalised so a CRLF-converted copy is not reported as drift.
 - The check logic lives in one Python script called by both `morf.sh` and `morf.ps1`. Neither gains a dependency (`morf.sh` already parses the manifest with `python3`, `morf.ps1` already calls `python` for `install`), and a PowerShell reimplementation would let the two checkers disagree.
 - Documented the registries, the reserved ranges, the allocation procedure for a new service, and how to resolve reported drift in `docs/ECOSYSTEM-CHECKS.md`.

@@ -8,7 +8,7 @@ les autres dépôts, et les registres qui font autorité à l'échelle du parc.
 
 **morfTools ne connaît aucun métier.** Il clone, compile, met à jour et
 diagnostique des projets déclarés dans un manifeste. Une commande qui aurait
-besoin de savoir *ce que fait* un projet n'a pas sa place ici — elle appartient
+besoin de savoir *ce que fait* un projet n'a pas sa place ici - elle appartient
 au projet concerné.
 
 **Le manifeste fait autorité.** `ecosystem.json` porte la liste des projets, le
@@ -49,7 +49,7 @@ invisible depuis l'intérieur d'un projet.
 
 Cette séparation n'est pas un détail de goût. Réécrire une comparaison ou une
 fusion JSON en Bash *et* en PowerShell donnerait deux implémentations libres de
-se contredire — exactement le problème que `morf doctor` sert à détecter
+se contredire - exactement le problème que `morf doctor` sert à détecter
 ailleurs. Les scripts Python sont donc appelés tels quels par les deux
 dispatchers.
 

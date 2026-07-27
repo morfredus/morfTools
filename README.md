@@ -15,7 +15,7 @@
   new to you.
 - `docs/ECOSYSTEM-PRINCIPLES.md`: the founding principles and the architectural invariants that apply to the **whole parc**, including the boundaries no component may cross.
 - [`docs/FIRST-TEST.md`](docs/FIRST-TEST.md) *(FR)*: what to report after a **first**
-  installation. The parc has only ever been installed by the person who wrote it —
+  installation. The parc has only ever been installed by the person who wrote it -
   the one least able to see what the guide leaves out. Honest feedback wanted,
   including "I gave up here".
 - `docs/`: workspace documentation.
@@ -195,7 +195,7 @@ python3 ./morfTools/config.py shared install     # the shared parc file
 
 **Shared** is `/etc/morfsystem/morfsystem.json` (`%ProgramData%\morfSystem\` on
 Windows). It describes *what is supervised* and is read by morfMonitor **and**
-morfDashboard. No component owns it, so morfTools does — the same reasoning
+morfDashboard. No component owns it, so morfTools does - the same reasoning
 that moved the port registry into `ecosystem.json`.
 
 **Deploy** handles a project's own configuration, and **delegates** to that
@@ -257,7 +257,7 @@ Projets
 Résumé  17 OK   0 avertissement(s)   1 échec(s)
 
 À corriger
-   X  morfMonitor — active version 0.5.5 differs from project 0.5.6
+   X  morfMonitor - active version 0.5.5 differs from project 0.5.6
         -> python3 morf.py upgrade --only morfMonitor
 ```
 

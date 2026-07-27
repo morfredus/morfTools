@@ -1,9 +1,9 @@
-# morfSystem — guide de démarrage
+# morfSystem - guide de démarrage
 
 Ce guide suppose que vous ne connaissez rien à morfSystem. Il répond, dans
 l'ordre où elles se posent, aux questions : **qu'est-ce que c'est et à quoi ça
 sert**, **comment l'installer**, **comment le configurer**, **comment le
-consulter** et **comment le désinstaller** — avec l'ordre des commandes à chaque
+consulter** et **comment le désinstaller** - avec l'ordre des commandes à chaque
 étape.
 
 ---
@@ -35,17 +35,17 @@ Personne ne pilote personne.
 
 Conséquence directe, et c'est le test qui tranche : **arrêtez morfMonitor, et
 tout le reste continue de fonctionner**. Vous perdez la vue d'ensemble, pas les
-services. morfMonitor est un observatoire, pas un portail — il ne s'interpose
+services. morfMonitor est un observatoire, pas un portail - il ne s'interpose
 jamais entre vous et un service.
 
-> ### Important — chaque projet est autonome
+> ### Important - chaque projet est autonome
 >
 > Vous pouvez n'installer **que** morfMonitor. Ou **que** morfSync. Ou **que**
 > MeteoHub. Aucun ne dépend des autres pour démarrer.
 >
 > morfSystem n'est **pas une dépendance obligatoire** : c'est un ensemble de
 > services qui **enrichissent** les applications lorsqu'ils sont présents. Une
-> application qui n'entend aucune annonce fonctionne normalement — elle affiche
+> application qui n'entend aucune annonce fonctionne normalement - elle affiche
 > simplement moins de choses.
 >
 > C'est la différence principale avec la plupart des écosystèmes, où retirer une
@@ -54,7 +54,7 @@ jamais entre vous et un service.
 
 | Service | Ce qu'il fait |
 |---|---|
-| **morfMonitor** | **Centralise et expose** l'état d'une machine en JSON — ce que ses propres modules mesurent, et ce que les autres services annoncent. N'affiche rien. |
+| **morfMonitor** | **Centralise et expose** l'état d'une machine en JSON - ce que ses propres modules mesurent, et ce que les autres services annoncent. N'affiche rien. |
 | **morfDashboard** | Affiche cet état sur un écran. Ne collecte rien. |
 | **morfSync** | Synchronise des données entre machines, sans cloud. |
 | **morfNotify**, **morfSensor**, **morfAnalytics** | Notifications, capteurs, analyses. |
@@ -63,7 +63,7 @@ jamais entre vous et un service.
 Avec l'autonomie, une seconde idée explique tout le reste : **les services se
 découvrent tout seuls.** Chacun annonce sa présence sur le réseau local ; les
 autres l'entendent. Vous n'avez jamais à dire à morfMonitor où se trouve
-morfSync — il l'apprend.
+morfSync - il l'apprend.
 
 Commencez donc par ce dont vous avez besoin. Vous pourrez en ajouter plus tard
 sans rien reconfigurer : un nouveau service s'annonce, et il apparaît.
@@ -71,7 +71,7 @@ sans rien reconfigurer : un nouveau service s'annonce, et il apparaît.
 ### À quoi tout cela sert : les applications du parc
 
 Les services ci-dessus sont le **socle**. Ils prennent tout leur sens avec les
-applications qui s'appuient dessus — elles s'annoncent sur le réseau, apparaissent
+applications qui s'appuient dessus - elles s'annoncent sur le réseau, apparaissent
 dans morfMonitor, et pour certaines synchronisent leurs données par morfSync,
 sans cloud :
 
@@ -82,7 +82,7 @@ sans cloud :
 | **MeteoHub** | Station météo ESP32-S3 : capteurs, prévisions et journaux sur écran OLED et page web embarquée | s'annonce (morfBeacon) |
 | **GatewayLab** | Passerelle ESP32-S3 qui découvre et historise les équipements du réseau local | s'annonce (morfBeacon) |
 
-Aucune n'a **besoin** du parc pour fonctionner — c'est le principe d'autonomie,
+Aucune n'a **besoin** du parc pour fonctionner - c'est le principe d'autonomie,
 dans les deux sens. Mais lorsqu'il est là, il les enrichit : ComponentHub
 retrouve ses données sur une autre machine par morfSync, MeteoHub et GatewayLab
 deviennent visibles et surveillables depuis morfMonitor, SiteWatch signale sa
@@ -93,7 +93,7 @@ Au fil du temps, d'autres applications compatibles viendront enrichir
 l'écosystème. Aucune n'a de dépendance obligatoire envers morfSystem : elles
 restent pleinement fonctionnelles lorsqu'il est absent. Mais dès qu'elles
 détectent les services du parc, elles peuvent activer d'elles-mêmes des
-fonctionnalités supplémentaires — supervision, synchronisation de données,
+fonctionnalités supplémentaires - supervision, synchronisation de données,
 analyses avancées, notifications. Chaque projet évolue ainsi de son côté, tout
 en profitant des capacités de l'écosystème quand il est là. Cette liste de quatre
 applications n'est donc qu'un instantané : elle grandira.
@@ -107,14 +107,14 @@ applications n'est donc qu'un instantané : elle grandira.
 - Sur Raspberry Pi : tout est dans les dépôts Raspberry Pi OS
 
 Systèmes officiellement supportés : **Windows x64**, **Linux x64**, **Linux
-ARM64 (Raspberry Pi)**. macOS n'est pas supporté — voir
+ARM64 (Raspberry Pi)**. macOS n'est pas supporté - voir
 [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md).
 
 ---
 
 ## 3. Première installation, dans l'ordre
 
-### Étape 1 — Récupérer les projets
+### Étape 1 - Récupérer les projets
 
 Tout part de **morfTools**, l'outil qui pilote les autres.
 
@@ -136,7 +136,7 @@ les outils se cherchent les uns les autres en remontant d'un cran.
 └── ...
 ```
 
-### Étape 2 — Vérifier que tout est cohérent
+### Étape 2 - Vérifier que tout est cohérent
 
 ```bash
 python3 morf.py doctor
@@ -158,7 +158,7 @@ Si tout est `[OK]`, continuez.
 >
 > **Utilisez `python3`, pas `./exec-bits.sh`.** Le wrapper `.sh` aurait besoin du
 > bit qu'il s'apprête justement à restaurer : sur un clone neuf il ne peut pas
-> démarrer (`Permission denied`). L'invoquer par `python3` ignore le bit —
+> démarrer (`Permission denied`). L'invoquer par `python3` ignore le bit -
 > exactement la raison pour laquelle `python3 morf.py` fonctionne toujours.
 > Une fois cette commande passée, `./exec-bits.sh`, `./service.py` et les autres
 > redeviennent lançables. Relancez `python3 morf.py doctor` : il doit être vert.
@@ -177,13 +177,13 @@ Si tout est `[OK]`, continuez.
 > Si vous n'avez pas les droits de push, la réparation locale suffit à travailler ;
 > c'est au propriétaire des dépôts de la rendre définitive une bonne fois.
 
-### Étape 3 — Compiler
+### Étape 3 - Compiler
 
 ```bash
 python3 morf.py build
 ```
 
-Il vous demandera un *preset* — le profil de compilation :
+Il vous demandera un *preset* - le profil de compilation :
 
 | Preset | Quand |
 |---|---|
@@ -191,11 +191,11 @@ Il vous demandera un *preset* — le profil de compilation :
 | `linux-arm64` | Raspberry Pi |
 | `mingw` | Windows |
 
-### Étape 4 — Installer les services
+### Étape 4 - Installer les services
 
 Chaque service s'installe **depuis son propre dossier**, avec la **même
 commande**. En première installation, vous ne savez pas forcément lesquels
-prendre — voici la liste complète, et par quoi commencer.
+prendre - voici la liste complète, et par quoi commencer.
 
 ```bash
 cd ~/Codage/morfMonitor && sudo ./service.py install
@@ -210,15 +210,15 @@ install` depuis son dossier :
 
 | Dossier | Service | Rôle | À installer ? |
 |---|---|---|---|
-| `morfMonitor` | morfmonitor | collecte et expose l'état, sert l'interface web | **oui, en premier** — c'est le cœur |
+| `morfMonitor` | morfmonitor | collecte et expose l'état, sert l'interface web | **oui, en premier** - c'est le cœur |
 | `morfSync` | morfsync | synchronisation de données entre machines, sans cloud | si une appli synchronise (ex. ComponentHub) |
 | `morfNotify` | morfnotify | point de diffusion des notifications | si vous voulez des alertes |
 | `morfSensor` | morfsensor | acquisition de capteurs | si vous avez des capteurs |
 | `morfAnalytics` | morfanalytics | analyses | si vous exploitez des analyses |
-| `morfTemplateService` | morftemplate | **patron** pour créer un service — **n'installez pas** en production | non |
+| `morfTemplateService` | morftemplate | **patron** pour créer un service - **n'installez pas** en production | non |
 
 **Installez-en un seul si vous voulez** : chacun est autonome. Le minimum utile
-est **morfMonitor** — il vous donne déjà l'interface web et voit tout ce qui
+est **morfMonitor** - il vous donne déjà l'interface web et voit tout ce qui
 s'annonce sur le réseau. Ajoutez les autres au fur et à mesure de vos besoins,
 sans rien reconfigurer.
 
@@ -229,11 +229,11 @@ script, et suppose l'écran branché :
 cd ~/Codage/morfDashboard && sudo ./scripts/linux/install-service.sh
 ```
 
-**La même commande `service.py` partout** — Linux, Windows, Raspberry Pi. Seul le
+**La même commande `service.py` partout** - Linux, Windows, Raspberry Pi. Seul le
 mécanisme sous-jacent change (systemd, services Windows), et vous n'avez pas à le
 savoir.
 
-### Étape 5 — Vérifier
+### Étape 5 - Vérifier
 
 ```bash
 ./service.py status
@@ -256,8 +256,8 @@ d'être dite franchement.
 ```
 
 **Toute configuration vit dans `/etc`**, jamais à côté du binaire. `/opt` ne
-contient que des exécutables. C'est la convention Linux — `/etc` est le premier
-endroit où l'on regarde — et ça a une conséquence pratique : effacer
+contient que des exécutables. C'est la convention Linux - `/etc` est le premier
+endroit où l'on regarde - et ça a une conséquence pratique : effacer
 `/opt/morfmonitor` pour réinstaller proprement n'emporte pas vos réglages.
 
 | | |
@@ -302,7 +302,7 @@ rouge permanente pour un programme qui n'a jamais eu vocation à tourner.
 ## 5. Consulter le parc
 
 Une fois morfMonitor installé, tout se regarde **depuis un navigateur**, sur
-n'importe quelle machine du réseau local — y compris quand le Pi n'a aucun écran.
+n'importe quelle machine du réseau local - y compris quand le Pi n'a aucun écran.
 
 ### D'abord : l'adresse de VOTRE machine
 
@@ -312,7 +312,7 @@ Deux façons de la désigner :
 
 - **Par son nom**, si le réseau résout le mDNS : le nom de la machine suivi de
   `.local`. Le nom se lit avec la commande `hostname`. Une machine nommée
-  `pi4fred` se joint alors par **`pi4fred.local`** — c'est l'exemple utilisé
+  `pi4fred` se joint alors par **`pi4fred.local`** - c'est l'exemple utilisé
   dans tout ce guide, adaptez-le au vôtre. Le mDNS est fourni par Avahi (installé
   d'origine sur Raspberry Pi OS) et reconnu par macOS et Windows récents. S'il ne
   répond pas sur votre réseau, passez à l'adresse IP.
@@ -344,7 +344,7 @@ Vous y trouverez, en six onglets :
 L'onglet **Écosystème** est le cœur : c'est là qu'apparaissent ComponentHub,
 MeteoHub, SiteWatch, GatewayLab et les services, à mesure qu'ils s'annoncent. Un
 service qui déclare une interface web y affiche un lien qui **pointe directement
-vers lui** — morfMonitor observe et référence, il ne relaie rien.
+vers lui** - morfMonitor observe et référence, il ne relaie rien.
 
 L'interface n'est qu'une **seconde vue** des mêmes données que l'API : tout ce
 qu'elle montre est aussi lisible en JSON, par exemple `http://<votre-machine>:8790/api/all`.
@@ -354,13 +354,13 @@ qu'elle montre est aussi lisible en JSON, par exemple `http://<votre-machine>:87
 
 Elle écoute sur toutes les interfaces réseau par défaut (`bind_address:
 0.0.0.0`). Sur une machine exposée hors du LAN, restreignez-la à l'adresse locale
-— il n'y a pas d'authentification, le modèle de confiance est le réseau local
+- il n'y a pas d'authentification, le modèle de confiance est le réseau local
 (voir [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md)).
 
 ### L'écran du Raspberry : morfDashboard
 
 Si votre Pi porte un petit écran OLED, **morfDashboard** y affiche l'essentiel
-en un coup d'œil — identité, ressources, présence des services — sans clavier ni
+en un coup d'œil - identité, ressources, présence des services - sans clavier ni
 navigateur. Il ne collecte rien lui-même : il lit morfMonitor et l'affiche. C'est
 la réponse rapide à « est-ce que tout va bien ? », l'interface web restant là pour
 le « pourquoi ? ».
@@ -398,7 +398,7 @@ utile pour regarder ce qui a changé avant d'agir.
 
 `upgrade` va jusqu'au bout. Seuls les services **réellement installés sur cette
 machine** sont mis à jour ; ceux qui sont présents dans les dépôts sans être
-installés ici sont ignorés — un poste Windows n'a pas de morfDashboard, ce
+installés ici sont ignorés - un poste Windows n'a pas de morfDashboard, ce
 n'est pas une anomalie.
 
 `service.py update` reste utile pour ne reprendre **qu'un seul** service, sans
@@ -448,7 +448,7 @@ Le service est arrêté et retiré du système ; `/etc/morfmonitor` (votre confi
 et `/opt/morfmonitor` (le binaire) restent en place. Vous pouvez réinstaller
 plus tard sans avoir rien perdu.
 
-**Pour tout effacer, y compris la configuration**, ajoutez `--purge` — et
+**Pour tout effacer, y compris la configuration**, ajoutez `--purge` - et
 `--backup` pour en garder une copie avant :
 
 ```bash
@@ -472,8 +472,8 @@ python3 morf.py uninstall --purge --backup ~/sauvegarde   # tous, config sauvega
 
 ### Repartir totalement à blanc
 
-Pour vider entièrement une machine — tous les services, toutes les configs, y
-compris les vestiges des migrations — avant une réinstallation propre :
+Pour vider entièrement une machine - tous les services, toutes les configs, y
+compris les vestiges des migrations - avant une réinstallation propre :
 
 ```bash
 cd ~/Codage/morfTools
@@ -482,7 +482,7 @@ sudo ./scripts/reset-parc.sh              # supprime, après confirmation (tapez
 ```
 
 `reset-parc.sh` liste tout ce qu'il va retirer, demande confirmation, et
-**ne touche jamais aux dépôts clonés** — seulement à ce qui est installé.
+**ne touche jamais aux dépôts clonés** - seulement à ce qui est installé.
 Utilisez-le pour valider une installation complète en partant de zéro.
 
 ---
@@ -499,7 +499,7 @@ Utilisez-le pour valider une installation complète en partant de zéro.
 | Le service ne redémarre pas au boot | Il n'est pas *activé* | `systemctl is-enabled <service>` |
 | `doctor` dit **non-executable**, et `./exec-bits.sh` répond `Permission denied` | Le bit d'exécution manque, y compris sur le script de réparation | `python3 scripts/exec-bits.py ..` (par `python3`, jamais `./…`) |
 | `./service.py install` répond `Permission denied` | Même cause : bit manquant sur un clone neuf | Réparer d'abord : `python3 scripts/exec-bits.py ..` depuis morfTools |
-| `Permission denied (publickey)` sur **tous** les dépôts, ou `cannot open .git/FETCH_HEAD` | Un `morf.py update` a tourné **sous sudo** : clé SSH de root inexistante, et fichiers root laissés dans `.git` | `sudo chown -R $USER:$USER ~/Codage/*/.git` puis relancer **sans sudo** — `morf.py` le refuse désormais |
+| `Permission denied (publickey)` sur **tous** les dépôts, ou `cannot open .git/FETCH_HEAD` | Un `morf.py update` a tourné **sous sudo** : clé SSH de root inexistante, et fichiers root laissés dans `.git` | `sudo chown -R $USER:$USER ~/Codage/*/.git` puis relancer **sans sudo** - `morf.py` le refuse désormais |
 
 Pour lire les journaux d'un service :
 
@@ -527,7 +527,7 @@ projets :
 
 Ces principes expliquent la plupart des choix d'architecture présentés dans ce
 guide, et permettent à l'écosystème de grandir sans remettre en cause les
-projets existants. Le **pourquoi** de chacun — et les frontières qu'ils posent —
+projets existants. Le **pourquoi** de chacun - et les frontières qu'ils posent -
 est détaillé dans [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md).
 
 ---
@@ -538,19 +538,19 @@ est détaillé dans [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md).
 |---|---|
 | [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md) | Les principes et invariants, et **pourquoi** ils existent |
 | [ECOSYSTEM-CHECKS.md](ECOSYSTEM-CHECKS.md) | Ce que `morf doctor` vérifie, et ce qu'il ne peut pas vérifier |
-| [FIRST-TEST.md](FIRST-TEST.md) | Retour demandé après une **première** installation — voir ci-dessous |
+| [FIRST-TEST.md](FIRST-TEST.md) | Retour demandé après une **première** installation - voir ci-dessous |
 | `README.md` de chaque projet | Ce que fait ce service, et son API |
 
 **Si c'est votre première installation :** le projet cherche des retours de
 personnes qui découvrent morfSystem. Les endroits où ce guide vous a laissé sans
-réponse ne se voient que de votre place — son auteur, qui sait déjà quoi faire,
+réponse ne se voient que de votre place - son auteur, qui sait déjà quoi faire,
 est le moins bien placé pour les repérer. [FIRST-TEST.md](FIRST-TEST.md) explique
 ce qui est utile à noter, et pourquoi une remarque négative vaut mieux qu'une
 remarque aimable.
 
 **Et après ?** Une évolution est déjà cadrée sans être encore décidée :
 l'**accès distant** (atteindre le parc hors du réseau local). Le modèle de
-confiance à retenir — la décision R5 — est documenté dans
+confiance à retenir - la décision R5 - est documenté dans
 [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md), avec les options à peser. Rien
 n'est exposé hors du LAN tant qu'elle n'est pas tranchée.
 

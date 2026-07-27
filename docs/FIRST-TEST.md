@@ -1,11 +1,11 @@
-# Premier test de morfSystem — demande de retour
+# Premier test de morfSystem - demande de retour
 
 Ce document s'adresse à une personne qui **ne connaît pas** morfSystem et qui
 accepte d'en tenter l'installation depuis zéro, en suivant
 [GUIDE-DEMARRAGE.md](GUIDE-DEMARRAGE.md).
 
 Merci d'avance. Ce test est le seul que le projet n'a jamais subi : tout a été
-éprouvé jusqu'ici par son auteur, qui sait déjà ce qu'il faut faire — et qui est
+éprouvé jusqu'ici par son auteur, qui sait déjà ce qu'il faut faire - et qui est
 donc la personne la moins capable de voir ce qui manque.
 
 ---
@@ -37,7 +37,7 @@ est en cause.
 
 ### 1. Ne demander d'aide à personne
 
-Ni à l'auteur, ni à quelqu'un d'autre. Chercher sur internet est permis — c'est
+Ni à l'auteur, ni à quelqu'un d'autre. Chercher sur internet est permis - c'est
 ce que ferait n'importe qui.
 
 **Chaque fois qu'une question surgit, la noter au lieu de la poser.** Ces
@@ -74,33 +74,33 @@ Quelques lignes suffisent.
 
 Pour chaque étape du guide : ce qui s'est passé, et surtout ce qui a manqué.
 
-### Avant de commencer — sections 1 et 2 du guide
+### Avant de commencer - sections 1 et 2 du guide
 
 - Après lecture de la section 1, **qu'attendiez-vous d'obtenir** à la fin ?
 - La réponse était-elle claire *avant* de lancer la moindre commande ?
 - La liste des prérequis (section 2) était-elle complète ? Qu'a-t-il fallu
   installer qui n'y figurait pas ?
 
-### Étape 1 — Récupérer les projets
+### Étape 1 - Récupérer les projets
 
 - Le premier `clone` a-t-il fonctionné du premier coup ?
 - Ce qui a été téléchargé était-il compréhensible (pourquoi *tous* ces
   projets) ?
 
-### Étape 2 — Vérifier la cohérence (`doctor`)
+### Étape 2 - Vérifier la cohérence (`doctor`)
 
 - La sortie de `doctor` était-elle lisible ? Qu'a-t-elle affiché ?
 - Un avertissement a-t-il été pris pour une erreur, ou l'inverse ?
 - Le cas échéant, le message sur les **bits d'exécution** était-il suivable
   sans aide extérieure ?
 
-### Étape 3 — Compiler
+### Étape 3 - Compiler
 
 - Durée. Est-ce qu'à un moment le doute s'est installé (« est-ce que c'est
   planté ? »).
 - Des projets ont-ils été sautés ? Cela avait-il l'air normal ou inquiétant ?
 
-### Étape 4 — Installer les services
+### Étape 4 - Installer les services
 
 - **Le choix des services à installer était-il clair ?** Comment a-t-il été
   fait ?
@@ -109,13 +109,13 @@ Pour chaque étape du guide : ce qui s'est passé, et surtout ce qui a manqué.
   l'installer ?
 - Le recours à `sudo` était-il expliqué ?
 
-### Étape 5 — Vérifier
+### Étape 5 - Vérifier
 
 - Comment savoir que « ça marche » ? La réponse était-elle évidente ?
 - L'interface web a-t-elle été atteinte du premier coup ? Sinon, qu'a-t-il
   fallu chercher ?
 
-### Configuration — section 4
+### Configuration - section 4
 
 C'est la section que le guide lui-même annonce comme « le point où tout le monde
 se perd ». Est-ce le cas ?
@@ -144,7 +144,7 @@ Une seule réponse, précise. C'est la question la plus utile du document.
 > Lister les questions notées pendant le test, dans l'ordre où elles sont
 > venues.
 
-Même — surtout — celles qui semblent naïves. Une question « bête » qui vient à
+Même - surtout - celles qui semblent naïves. Une question « bête » qui vient à
 l'esprit d'un lecteur est un défaut de la documentation, jamais du lecteur.
 
 ### 3. Les mots incompris
