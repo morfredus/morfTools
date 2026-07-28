@@ -22,10 +22,14 @@
   "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
   "ports": {
     "beaconUdp": 45454,
-    "_comment_ranges": "8080 is a historical allocation (morfSync). The 8787-8799 block is reserved for parc services; use 'ecosystem-check.py .. ecosystem.json next-port' to get the next free one. The 8900-8999 block is reserved for templates and examples and is ENFORCED: a production project declaring a port from it fails 'morf doctor', and a template-range port may only belong to an entry marked \"template\": true.",
+    "_comment_ranges": "8080 is a historical allocation (morfSync). The 8787-8799 block is reserved for parc SERVICES; use 'ecosystem-check.py .. ecosystem.json next-port' to get the next free one. The 8880-8899 block is reserved for DESKTOP APPLICATIONS (SiteWatch, ComponentHub...) that announce over morfBeacon and expose /status but are not parc services: kept OUT of the service block so an application and a service can never claim the same port on one machine. The 8900-8999 block is reserved for templates and examples and is ENFORCED: a production project declaring a port from it fails 'morf doctor', and a template-range port may only belong to an entry marked \"template\": true.",
     "serviceRange": [
       8787,
       8799
+    ],
+    "appRange": [
+      8880,
+      8899
     ],
     "templateRange": [
       8900,
@@ -93,6 +97,22 @@
         "key": "http_port",
         "note": "TEMPLATE. Port deliberately taken outside the service block so a cloned service cannot be mistaken for a parc service. First step after cloning: reserve a port here, then write it into the new service configuration. Marque comme template : seul un projet template peut porter un port de la plage template.",
         "template": true
+      },
+      {
+        "project": "ComponentHub",
+        "http": 8880,
+        "config": null,
+        "key": null,
+        "app": true,
+        "note": "Application de bureau, PAS un service du parc. Annonce morfbeacon/1 et expose /status ; le port vit dans le code (src/main.cpp, beaconCfg.statusPort), sans fichier de configuration. Reserve dans l'appRange (8880-8899), hors du bloc des services, pour qu'une application et un service ne puissent jamais reclamer le meme port. Anciennement 8787 (le defaut reserve de morfBeacon) : corrige."
+      },
+      {
+        "project": "SiteWatch",
+        "http": 8881,
+        "config": null,
+        "key": null,
+        "app": true,
+        "note": "Application de bureau, PAS un service du parc. Annonce morfbeacon/1 et expose /status ; le port vit dans le code (src/ui/MainWindow.cpp, beaconCfg.statusPort), sans fichier de configuration. Reserve dans l'appRange (8880-8899). Anciennement 8788 (le port du service morfSensor) : corrige."
       }
     ]
   },
