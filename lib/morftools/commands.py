@@ -138,7 +138,45 @@ def cmd_build(workspace: Workspace, project: Project, preset: str = "",
     return True
 
 
-def cmd_install(workspace: Workspace, project: Project) -> bool:
+def is_template(project: Project) -> bool:
+    """A template service (the pattern new services are cloned from) carries a
+    service.py like any other, yet must never be deployed in production. It says
+    so declaratively in its manifest (`"template": true`), not by name, so the
+    rule survives a rename."""
+    manifest = project.path / "service.json"
+    if not manifest.is_file():
+        return False
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return bool(data.get("template"))
+
+
+def cmd_install(workspace: Workspace, project: Project,
+                deploy_service: bool = False, preset: str = "") -> bool:
+    # `--services`: bring the actual service up, through the project's own
+    # cross-platform service.py -- the same entry point `upgrade` and `uninstall`
+    # use. One command then installs the whole parc, identically on Linux, a Pi
+    # or Windows; only service.py's backend differs, and it hides that.
+    if deploy_service:
+        entry = project.path / "service.py"
+        if not entry.is_file():
+            print("[SKIP] not a service")
+            return True
+        if is_template(project):
+            print("[SKIP] template service, never installed in production")
+            return True
+        # Build as the user first -- a build tree owned by root is the very trap
+        # the git steps go to such lengths to avoid -- then elevate ONLY the
+        # deployment, exactly as `upgrade` does. service.py finds the fresh
+        # binary and installs it without rebuilding as root.
+        if project.is_cmake and not skip_gui(project, False):
+            cmake_build(project, preset)
+        run(elevated(["python3", str(entry), "install"]), cwd=project.path)
+        return True
+
+    # Default (no --services): generic per-language setup only, no service.
     if (project.path / "requirements.txt").is_file():
         run(["python3", "-m", "pip", "install", "-r", "requirements.txt"], cwd=project.path)
     else:
@@ -435,4 +473,4 @@ COMMANDS = {
 #: Commands that accept --preset. Passing it elsewhere is refused rather than
 #: ignored: silently dropping an option the person typed is how they end up
 #: believing a build used a configuration it never saw.
-PRESET_COMMANDS = {"build", "upgrade"}
+PRESET_COMMANDS = {"build", "upgrade", "install"}

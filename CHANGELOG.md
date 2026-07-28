@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0] - 2026-07-28
+
+### Ajouté
+
+- **`morf.py install --services` déploie tout le parc en une commande.** Chaque
+  service est installé via son propre `service.py` (Linux, Raspberry Pi ou
+  Windows) : compilation sous votre compte, puis élévation de la seule étape
+  d'installation, comme `upgrade`. Le patron morfTemplateService est sauté
+  (drapeau `"template": true` dans son `service.json`). Refuse de tourner sous
+  sudo (un build possédé par root est un piège).
+
 ## [0.5.0] - 2026-07-28
 
 ### Modifié

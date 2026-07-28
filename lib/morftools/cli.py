@@ -208,6 +208,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--update", "-u", action="store_true", dest="update",
                         help="doctor: also check each clone against origin/main for a "
                              "newer version (a network step; adds a few seconds)")
+    parser.add_argument("--services", action="store_true",
+                        help="install: deploy every service too, via each project's "
+                             "service.py (Linux, Raspberry Pi or Windows)")
     return parser
 
 
@@ -250,6 +253,21 @@ def main(argv: list | None = None) -> int:
               file=sys.stderr)
         return 2
 
+    # `install --services` builds as YOU, then elevates each service.py itself.
+    # Run wholesale under sudo it would build as root -- the same trap. Refuse it
+    # the same way, pointing at the form that works.
+    if (args.command == "install" and args.services and hasattr(os, "geteuid")
+            and os.geteuid() == 0 and os.environ.get("SUDO_USER")):
+        print("Refusing to run 'install --services' under sudo.", file=sys.stderr)
+        print("It builds as your user, then elevates each service.py on its own.",
+              file=sys.stderr)
+        print("Run instead:  python3 morf.py install --services", file=sys.stderr)
+        return 2
+
+    if args.services and args.command != "install":
+        print("--services only applies to install.", file=sys.stderr)
+        return 2
+
     if args.preset and args.command not in PRESET_COMMANDS:
         print(f"--preset is only supported by {', '.join(sorted(PRESET_COMMANDS))}.",
               file=sys.stderr)
@@ -278,7 +296,11 @@ def main(argv: list | None = None) -> int:
         return 2
 
     preset = args.preset
-    if args.command in PRESET_COMMANDS and not preset:
+    # A plain `install` (Python deps only) never builds, so it must not ask for a
+    # preset; `install --services` does build, and needs one like build/upgrade.
+    needs_preset = args.command in ("build", "upgrade") or (
+        args.command == "install" and args.services)
+    if needs_preset and not preset:
         preset = choose_preset(workspace)
 
     message = args.message
@@ -312,6 +334,8 @@ def main(argv: list | None = None) -> int:
             # command's signature states what it actually depends on.
             if handler.__name__ in ("cmd_build", "cmd_upgrade"):
                 ok = handler(workspace, project, preset, args.gui)
+            elif handler.__name__ == "cmd_install":
+                ok = handler(workspace, project, args.services, preset)
             elif handler.__name__ == "cmd_commit":
                 ok = handler(workspace, project, message)
             elif handler.__name__ == "cmd_uninstall":

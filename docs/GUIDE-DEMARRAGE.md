@@ -193,9 +193,24 @@ Il vous demandera un *preset* - le profil de compilation :
 
 ### Étape 4 - Installer les services
 
-Chaque service s'installe **depuis son propre dossier**, avec la **même
-commande**. En première installation, vous ne savez pas forcément lesquels
-prendre - voici la liste complète, et par quoi commencer.
+**Tout installer d'un coup** (Linux, Raspberry Pi ou Windows), depuis morfTools :
+
+```bash
+python3 morf.py install --services         # SANS sudo : voir ci-dessous
+```
+
+Cette commande déploie **tous** les services du parc via leur propre
+`service.py` : elle compile chacun (en tant que **vous**), puis élève uniquement
+l'étape d'installation. Le patron **morfTemplateService** est automatiquement
+sauté (il n'a rien à faire en production). Sur le Pi, choisir le preset
+`linux-arm64` à l'invite, ou le passer directement : `--preset linux-arm64`.
+
+> Lancez-la **sans `sudo`** : comme `build` et `upgrade`, elle compile sous votre
+> compte (un dossier de build possédé par root est un piège) et n'élève que le
+> déploiement de chaque service. Elle refuse de tourner sous `sudo`.
+
+**Ou service par service**, depuis son propre dossier, avec la **même commande** -
+utile pour n'en installer qu'un :
 
 ```bash
 cd ~/Codage/morfMonitor && sudo ./service.py install
