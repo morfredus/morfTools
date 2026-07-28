@@ -32,7 +32,7 @@ set -uo pipefail   # NOT -e: an item already absent is not a failure, and one
 # systemd units. 'dashboard' is the pre-1.6.1 name of morfdashboard, still
 # installed on any machine updated since.
 UNITS=(
-    morfmonitor morfnotify morfsensor morfanalytics
+    morfmonitor morfnotify morfsensor morfanalytics morfcollector
     morfsync morftemplate morfdashboard
     dashboard
 )
@@ -40,22 +40,25 @@ UNITS=(
 # Binaries and (before the /etc move) the configurations kept beside them.
 OPT_DIRS=(
     /opt/morfmonitor /opt/morfnotify /opt/morfsensor /opt/morfanalytics
-    /opt/morfsync /opt/morftemplate /opt/morfdashboard
+    /opt/morfcollector /opt/morfsync /opt/morftemplate /opt/morfdashboard
 )
 
-# Current configurations, plus the shared parc file read by morfMonitor and the
-# dashboard. Removing a directory takes its backups (*.bak-*) with it.
+# ALL current configurations now live under a single entry point in /etc:
+# /etc/morfsystem holds the shared parc file AND one sub-directory per service
+# (/etc/morfsystem/<service>/). Removing it takes every service config, the
+# shared file and their backups (*.bak-*) in one go.
 ETC_DIRS=(
-    /etc/morfmonitor /etc/morfnotify /etc/morfsensor /etc/morfanalytics
-    /etc/morfsync /etc/morftemplate /etc/morfdashboard
     /etc/morfsystem
 )
 
 # Locations earlier conventions used, preserved by the declared migrations and
-# never removed by an install. morfSync alone accounts for all of these.
+# never removed by an install. Includes the per-service /etc directories used
+# BEFORE configs were grouped under /etc/morfsystem/<service>.
 LEGACY=(
-    /usr/local/bin/morfSync      # its binary before the /opt convention
-    /etc/homeserverhub           # its very first config home
+    /usr/local/bin/morfSync      # morfSync binary before the /opt convention
+    /etc/homeserverhub           # morfSync's very first config home
+    /etc/morfmonitor /etc/morfnotify /etc/morfsensor /etc/morfanalytics
+    /etc/morfcollector /etc/morfsync /etc/morftemplate /etc/morfdashboard
 )
 
 DRY_RUN=0

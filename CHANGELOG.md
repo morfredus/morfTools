@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## [0.5.0] - 2026-07-28
+
+### Modifié
+
+- **morfdeploy : `uninstall --purge` retire tout le `config_dir` du service**
+  (`/etc/morfsystem/<service>`), et non plus seulement le fichier de config
+  déclaré. Les fichiers créés au runtime (coffre de secrets, état) ne survivent
+  donc plus à un purge. Le parent partagé `/etc/morfsystem` est préservé.
+- **`reset-parc.sh` : `/etc/morfsystem` est le point d'entrée unique** ; les
+  anciens `/etc/<service>` passent en emplacements hérités (nettoyés). Ajout de
+  morfcollector aux unités et dossiers `/opt`.
+
 
 ## [0.4.23] - 2026-07-26
 

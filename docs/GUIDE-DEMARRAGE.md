@@ -202,7 +202,7 @@ cd ~/Codage/morfMonitor && sudo ./service.py install
 ```
 
 C'est tout. La commande compile si nécessaire, copie le binaire dans un dossier
-fixe (`/opt/morfmonitor`), installe la configuration dans `/etc/morfmonitor`,
+fixe (`/opt/morfmonitor`), installe la configuration dans `/etc/morfsystem/morfmonitor`,
 enregistre le service auprès du système et le démarre.
 
 **Les services que vous pouvez installer**, chacun avec `sudo ./service.py
@@ -251,7 +251,7 @@ d'être dite franchement.
 
 ```
    dépôt (vous éditez)                      installé (le service lit)
-   config/morfmonitor.json    ──installe──> /etc/morfmonitor/morfmonitor.json
+   config/morfmonitor.json    ──installe──> /etc/morfsystem/morfmonitor/morfmonitor.json
    config/morfsystem.json     ──installe──> /etc/morfsystem/morfsystem.json
 ```
 
@@ -444,7 +444,7 @@ cd ~/Codage/morfMonitor
 sudo ./service.py uninstall
 ```
 
-Le service est arrêté et retiré du système ; `/etc/morfmonitor` (votre config)
+Le service est arrêté et retiré du système ; `/etc/morfsystem/morfmonitor` (votre config)
 et `/opt/morfmonitor` (le binaire) restent en place. Vous pouvez réinstaller
 plus tard sans avoir rien perdu.
 
