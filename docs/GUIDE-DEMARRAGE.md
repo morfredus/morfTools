@@ -230,6 +230,7 @@ install` depuis son dossier :
 | `morfNotify` | morfnotify | point de diffusion des notifications | si vous voulez des alertes |
 | `morfSensor` | morfsensor | acquisition de capteurs | si vous avez des capteurs |
 | `morfAnalytics` | morfanalytics | analyses | si vous exploitez des analyses |
+| `morfCollector` | morfcollector | collecte et conserve des ressources distantes temporaires (ex. journaux o2switch de SiteWatch) | si une appli lui confie une collecte (ex. SiteWatch) |
 | `morfTemplateService` | morftemplate | **patron** pour créer un service - **n'installez pas** en production | non |
 
 **Installez-en un seul si vous voulez** : chacun est autonome. Le minimum utile

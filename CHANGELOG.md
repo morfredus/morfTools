@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.7.0] - 2026-07-28
+
+### Documentation
+
+- **`install --services` documenté dans la table des commandes** (README.md et
+  README.fr.md) : la commande qui déploie tout le parc en une fois n'y figurait
+  pas (la ligne `install` ne mentionnait que `requirements.txt`). Ajout aussi de
+  la ligne `uninstall` manquante dans le README français. Le guide de démarrage
+  gagne morfCollector dans la table des services installables.
+
+### Ajouté
+
+- **Séparateur franc entre chaque projet** dans la sortie des commandes qui
+  parcourent le parc (`install`, `update`, `upgrade`, `build`, `clone`, `pull`,
+  `status`...). Chaque projet est introduit par une règle pleine largeur et son
+  nom, au lieu d'une simple ligne `[nom]` : un déploiement complet se lit
+  désormais comme des blocs distincts dans le terminal. ASCII uniquement (rendu
+  identique sous Windows, Linux et Raspberry Pi). `doctor` conserve son rapport
+  condensé.
+- **Prise en charge de l'état persistant `/var/lib` dans le déploiement**
+  (doctrine `morfTemplateService/docs/fr/FILESYSTEM.md`). Le manifeste
+  `service.json` peut déclarer un bloc `state_dir` (par plateforme) ;
+  `morfdeploy` expose `manifest.state_dir()`, substitue `__STATE_DIR__` dans les
+  unités systemd et affiche le chemin d'état à l'installation. Se combine avec la
+  directive `StateDirectory=` des unités, qui laisse systemd créer le dossier
+  possédé par l'utilisateur du service.
+
 ## [0.6.0] - 2026-07-28
 
 ### Ajouté

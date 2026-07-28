@@ -94,6 +94,22 @@ def _progress(active: bool, done: int, total: int, name: str):
               end="", file=sys.stderr, flush=True)
 
 
+def _project_banner(name: str) -> None:
+    """A hard separator before each project processed.
+
+    A run over the whole parc (install, update, upgrade, build...) is otherwise
+    one continuous wall of output where the boundary between two services is a
+    single faint `[name]` line. A full-width rule turns it into distinct blocks
+    the eye can scan in the terminal. ASCII only, so it renders the same on the
+    Windows console, Linux and the Raspberry Pi.
+    """
+    bar = "=" * 72
+    print()
+    print(bar)
+    print(f"  {name}")
+    print(bar)
+
+
 def _progress_clear(active: bool):
     if active:
         print("\r" + " " * 56 + "\r", end="", file=sys.stderr, flush=True)
@@ -324,11 +340,14 @@ def main(argv: list | None = None) -> int:
     failed = []
 
     for project in projects:
+        # Banner first, so every project reads as its own block -- including the
+        # ones skipped below, which otherwise blur into the previous project's
+        # output.
+        _project_banner(project.local_name)
         if args.command != "clone" and not project.exists:
             print(f"[SKIP] {project.local_name} (not cloned)")
             continue
 
-        print(f"[{project.local_name}]")
         try:
             # Extra arguments go only to the handlers that take them, so a
             # command's signature states what it actually depends on.

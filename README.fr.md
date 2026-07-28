@@ -55,8 +55,9 @@ Toutes les commandes n'opèrent que sur les projets déclarés dans
 | `fetch` | aucun | Récupère les dépôts distants et purge les références supprimées. |
 | `pull`, `update` | aucun | Tire en avance rapide depuis la branche du manifeste. |
 | `build` | preset CMake (demandé si omis) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
-| `install` | aucun | Installe `requirements.txt` s'il existe. |
-| `upgrade` | preset CMake (demandé si omis) | Tire puis recompile les projets CMake. |
+| `install` | `--services`, `--only NAME`, `--preset` | Sans `--services` : installe seulement `requirements.txt` s'il existe. **`install --services` déploie TOUS les services du parc en une commande** (compile sous votre compte, puis élève la seule étape d'installation ; le patron morfTemplateService est sauté). À lancer **sans `sudo`**. Restreindre à un service avec `--only`. |
+| `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Désinstalle un service (un seul avec `--only`, sinon tous). Par défaut conserve la configuration ; **`--purge`** retire aussi la configuration et le binaire ; **`--backup DIR`** copie d'abord chaque configuration dans `DIR`. |
+| `upgrade` | preset CMake (demandé si omis) | Tire puis recompile les projets CMake, **puis met à jour les services installés ici**. |
 | `doctor` | `--update`, `--verbose`, `--only` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git ; **`--update`** ajoute la comparaison à `origin/main` (nouvelle version disponible, morfTools compris - un pas réseau). À lancer avant `push`. |
 | `clean` | aucun | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`…). |
 | `status` | aucun | Affiche l'état Git court et la branche. |

@@ -52,7 +52,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `fetch` | none | Fetch remotes and prune deleted references. |
 | `pull`, `update` | none | Fast-forward pull from the manifest branch. |
 | `build` | CMake preset (asked when omitted), `--gui` | Build PlatformIO projects, or configure and build CMake projects. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
-| `install` | none | Install `requirements.txt` when present. |
+| `install` | `--services`, `--only NAME`, `--preset` | Without `--services`: install `requirements.txt` when present. **`install --services` deploys EVERY parc service in one command** (builds as you, then elevates only the install step; the morfTemplateService pattern is skipped). Run it **without `sudo`**. Restrict to one with `--only`. |
 | `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
 | `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
 | `doctor` | `--update`, `--verbose`, `--only` | Check the port registry, vendored copies, active version of installed services, and Git repositories; **`--update`** adds a comparison against `origin/main` (newer version available, morfTools included -- a network step). Run it before `push`. |
