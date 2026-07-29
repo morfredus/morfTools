@@ -15,6 +15,9 @@
 - [`docs/GUIDE-DEMARRAGE.md`](docs/GUIDE-DEMARRAGE.md) *(FR)*: installing and configuring
   morfSystem from nothing, and which command to run when. **Start here** if the parc is
   new to you.
+- [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) *(FR)*: every script (options, action, when to
+  use it) and the essential Linux/Windows commands for day-to-day monitoring and maintenance
+  (`systemctl`, `journalctl`, `schtasks`, restart, logs). The operations reference.
 - `docs/ECOSYSTEM-PRINCIPLES.md`: the founding principles and the architectural invariants that apply to the **whole parc**, including the boundaries no component may cross.
 - [`docs/FIRST-TEST.md`](docs/FIRST-TEST.md) *(FR)*: what to report after a **first**
   installation. The parc has only ever been installed by the person who wrote it -
@@ -88,6 +91,21 @@ file, with its default, without touching a value you set and without removing a
 key. Lists are never merged element-wise: a supervised service or probe is never
 switched on that you did not add yourself. This lives in morfdeploy, run by every
 `service.py update` and `install`.
+
+That last rule -- lists kept whole -- means a new option **inside** a module (a
+module's own parameter, matched in the `modules` list) does not reach an existing
+installation on its own. `<project>/service.py config` closes that gap without a
+reinstall:
+
+| | What it does |
+| --- | --- |
+| `service.py config` (merge, default) | Deep-enrich the deployed config: add this version's new keys **including inside a module you already have** (matched by `id`), keep every value you set, add no list entry. A timestamped `.bak` is written first. Restarts only if something changed. |
+| `service.py config push --force` | Replace the deployed config with the repository's copy (backup first). The deliberate "start from the shipped config again". |
+
+Editing `/etc/morfsystem/<service>/<service>.json` by hand and restarting works
+too; `config` is the scripted, repeatable form, run from the repo like `update`.
+(Not to be confused with `morf config shared`, which manages the *shared* parc
+file, not a single service's.)
 
 `update` acts on **sources** only and leaves anything installed alone: it is the
 command for looking at what changed before acting. `service.py update` remains

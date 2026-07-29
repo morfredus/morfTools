@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.8.0] - 2026-07-29
+
+### Ajouté
+
+- **`service.py config` (morfdeploy) : mettre à jour la config d'un service
+  installé sans réinstaller.** L'`update` n'ajoute que les clés de PREMIER NIVEAU
+  (les listes restent entières, règle du parc : on n'ajoute jamais une entrée de
+  liste). Un nouveau paramètre à l'INTÉRIEUR d'un module (ex. `morfsync_url` de
+  morfAnalytics) ne se propageait donc pas tout seul. La nouvelle commande comble
+  le trou, en deux modes, non destructifs (sauvegarde horodatée `.bak` avant toute
+  écriture) :
+  - `service.py config` (**merge**, défaut) : fusion PROFONDE. Ajoute les clés
+    manquantes de l'exemple **y compris dans un module déjà présent** (apparié par
+    `id`), préserve toutes les valeurs réglées, n'ajoute jamais d'entrée de liste.
+    Redémarre le service seulement si quelque chose a changé.
+  - `service.py config push --force` : remplace la config déployée par celle du
+    dépôt (sauvegarde d'abord).
+  - Rappels : éditer `/etc/morfsystem/<service>/<service>.json` puis
+    `systemctl restart` marche aussi ; le binaire ne lit jamais le
+    `.example.json`. Implémenté dans `morfdeploy` (`configmerge` gagne un mode
+    `deep_lists`, `core` la commande `config`, `cli` l'action), donc **à
+    re-vendorer dans chaque service** (`scripts/sync-morf.sh` ; `morf doctor`
+    signale la dérive).
+
+### Documentation
+
+- **`docs/EXPLOITATION.md`** : référence d'exploitation du parc. Détaille chaque
+  script (`morf.py`, `service.py`, `config.py shared`, `sync-morf.sh`,
+  `reset-parc.sh`) avec ses options, son action et le moment où l'utiliser, plus
+  les commandes système indispensables au suivi et à la maintenance sous Linux
+  (`systemctl`, `journalctl`) et Windows (`schtasks`, `sc.exe`), une table des
+  unités et ports, et des recettes courantes. Indexé dans les deux README.
+
 ## [0.7.0] - 2026-07-28
 
 ### Documentation
