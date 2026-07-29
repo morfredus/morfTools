@@ -170,29 +170,31 @@ Ce constat ne remet pas en cause le choix - il le qualifie. La séparation des
 responsabilités est saine ; en contrepartie, la robustesse du composant d'accès
 n'est pas un détail d'implémentation, c'est **la** condition de sûreté du parc.
 
-### Statut : décision ouverte (R5)
+### Statut : décision prise (R5) - VPN WireGuard
 
-Ce qui précède fixe les **contraintes**, pas la solution. Le choix du mécanisme
-reste à arbitrer - c'est la recommandation **R5** du rapport d'architecture, le
-seul point d'architecture du parc délibérément laissé ouvert, et le **préalable
-obligatoire** à toute ligne de code d'accès distant.
+**Tranché le 2026-07-28 : l'accès distant est un VPN WireGuard hébergé sur le
+Raspberry Pi.** C'est exactement le « composant dédié » décrit ci-dessus : le
+tunnel arbitre la confiance à sa frontière (la clé WireGuard), le distant *entre*
+sur le LAN, rien n'est publié sur Internet, et les services gardent leur interface
+locale inchangée sans savoir qu'ils sont consultés de l'extérieur. Opérationnel et
+testé (accès à morfMonitor, morfAnalytics… depuis l'extérieur).
 
-Rien ne doit être exposé hors du LAN avant cet arbitrage. Tant qu'il n'a pas eu
-lieu, le parc reste sur son modèle « confiance = réseau local », qui est sûr
-*parce que* rien n'est joignable de l'extérieur.
+Parmi les trois familles d'options pesées, le VPN a été retenu pour sa simplicité
+et sa robustesse - au prix d'un client WireGuard sur chaque appareil consultant,
+ce qui convient à un usage personnel :
 
-Trois familles d'options sont à peser, toutes compatibles avec les contraintes
-ci-dessus (composant dédié, aucun changement dans les services) :
-
-| Option | Idée | À mettre en balance |
+| Option | Idée | Bilan |
 | --- | --- | --- |
-| **VPN** (WireGuard…) | le distant *entre* sur le LAN, rien n'est publié | simple et robuste ; suppose un client VPN sur chaque appareil consultant |
-| **Reverse-proxy authentifiant** | une passerelle unique porte TLS + authentification devant les services | accès par simple navigateur ; c'est elle qui devient la surface critique |
-| **Composant dédié sur mesure** | un service du parc, écrit pour ce rôle | contrôle total ; le plus de travail, et sa sûreté est celle du parc |
+| **VPN** (WireGuard) - **retenu** | le distant *entre* sur le LAN, rien n'est publié | simple et robuste ; un client VPN par appareil consultant, acceptable ici |
+| Reverse-proxy authentifiant | une passerelle unique porte TLS + authentification devant les services | accès par simple navigateur ; c'est elle qui devient la surface critique |
+| Composant dédié sur mesure | un service du parc, écrit pour ce rôle | contrôle total ; le plus de travail, et sa sûreté est celle du parc |
 
-L'arbitrage doit produire : un inventaire de ce que chaque service expose
-réellement, le mécanisme retenu avec son coût, et la place exacte de la sécurité.
-Il engage la sûreté de **tout** le parc - d'où le choix de ne pas le précipiter.
+**Ce qui reste ouvert, et n'est PAS R5.** Exposer les surfaces
+d'**administration** (journaux journald, OTA, configuration) - même à travers le
+VPN - suppose une **authentification du serveur HTTP** de chaque service. C'est un
+sujet distinct de l'accès distant, encore à arbitrer. Tant qu'il ne l'est pas, on
+ne sert ni les journaux ni les commandes : le VPN donne accès aux mêmes interfaces
+de **lecture** qu'en local, ni plus ni moins.
 
 ---
 
