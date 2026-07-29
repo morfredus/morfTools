@@ -205,7 +205,7 @@ def elevated(args: list) -> list:
     return args
 
 
-def redeploy_service(project: Project) -> None:
+def redeploy_service(project: Project, force: bool = False) -> None:
     """Push the freshly built code into this project's service, if it runs here.
 
     Only services actually registered on THIS machine are touched: the parc is
@@ -235,11 +235,15 @@ def redeploy_service(project: Project) -> None:
         return
 
     print("  updating the installed service...")
-    run(elevated(["python3", str(entry), "update"]), cwd=project.path)
+    # `--force` is passed through to service.py update: redeploy and restart even
+    # when nothing changed. Useful to bounce a service on demand, since the
+    # unchanged-binary case is otherwise a deliberate no-op.
+    cmd = ["python3", str(entry), "update"] + (["--force"] if force else [])
+    run(elevated(cmd), cwd=project.path)
 
 
 def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "",
-                force_gui: bool = False) -> bool:
+                force_gui: bool = False, force: bool = False) -> bool:
     cmd_pull(workspace, project)
     # The sources are pulled regardless; only the build is skipped on a headless
     # machine, so an upgrade still refreshes a GUI app's code without compiling
@@ -250,7 +254,7 @@ def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "",
     # service serving its previous binary until someone remembered to visit each
     # project and run its own service.py -- the trap the guide had to warn about.
     # `upgrade` now means what its name promises.
-    redeploy_service(project)
+    redeploy_service(project, force=force)
     return True
 
 

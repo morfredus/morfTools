@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.1] - 2026-07-29
+
+### Ajouté
+
+- **`morf upgrade --force`** : transmet `--force` à chaque `service.py update`,
+  pour redéployer et redémarrer les services **même quand rien n'a changé**.
+  Jusqu'ici seul le `service.py update --force` d'un service pris isolément le
+  permettait ; `upgrade` rejetait l'option (`unrecognized arguments`). Utile pour
+  faire rebondir les services à la demande, le cas « binaire inchangé » étant
+  sinon un no-op délibéré. `--force` ne s'applique qu'à `upgrade` (garde-fou).
+
+### Corrigé
+
+- **Badge de version de morfTools aligné sur `VERSION`** (0.8.1) dans les deux
+  README : il était resté à 0.6.0 après les montées 0.7.0 et 0.8.0. `morf doctor`
+  vérifie cette cohérence pour les projets du parc.
+
 ## [0.8.0] - 2026-07-29
 
 ### Ajouté

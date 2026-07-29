@@ -215,6 +215,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Restrict to one project, by canonical name")
     parser.add_argument("--gui", action="store_true",
                         help="build/upgrade: build desktop GUI apps even on a headless machine")
+    parser.add_argument("--force", action="store_true",
+                        help="upgrade: redeploy and restart each service even when "
+                             "nothing changed (passed to service.py update)")
     parser.add_argument("--purge", action="store_true",
                         help="uninstall: also remove the configuration and binary")
     parser.add_argument("--backup", default="", metavar="DIR",
@@ -301,6 +304,11 @@ def main(argv: list | None = None) -> int:
     if args.gui and args.command not in ("build", "upgrade"):
         print("--gui only applies to build and upgrade.", file=sys.stderr)
         return 2
+    if args.force and args.command != "upgrade":
+        print("--force only applies to upgrade "
+              "(a single service: <project>/service.py update --force).",
+              file=sys.stderr)
+        return 2
     if args.backup and not args.purge:
         print("--backup only applies with --purge.", file=sys.stderr)
         return 2
@@ -351,7 +359,9 @@ def main(argv: list | None = None) -> int:
         try:
             # Extra arguments go only to the handlers that take them, so a
             # command's signature states what it actually depends on.
-            if handler.__name__ in ("cmd_build", "cmd_upgrade"):
+            if handler.__name__ == "cmd_upgrade":
+                ok = handler(workspace, project, preset, args.gui, args.force)
+            elif handler.__name__ == "cmd_build":
                 ok = handler(workspace, project, preset, args.gui)
             elif handler.__name__ == "cmd_install":
                 ok = handler(workspace, project, args.services, preset)

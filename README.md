@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.6.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.1-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -57,7 +57,7 @@ All commands operate only on projects declared in `ecosystem.json`.
 | `build` | CMake preset (asked when omitted), `--gui` | Build PlatformIO projects, or configure and build CMake projects. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
 | `install` | `--services`, `--only NAME`, `--preset` | Without `--services`: install `requirements.txt` when present. **`install --services` deploys EVERY parc service in one command** (builds as you, then elevates only the install step; the morfTemplateService pattern is skipped). Run it **without `sudo`**. Restrict to one with `--only`. |
 | `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
-| `upgrade` | CMake preset (asked when omitted) | Pull then rebuild CMake projects. |
+| `upgrade` | CMake preset (asked when omitted), `--gui`, `--force` | Pull, rebuild CMake projects, then update the services installed here. `--force` redeploys and restarts each service even when nothing changed (passed to `service.py update`). |
 | `doctor` | `--update`, `--verbose`, `--only` | Check the port registry, vendored copies, active version of installed services, and Git repositories; **`--update`** adds a comparison against `origin/main` (newer version available, morfTools included -- a network step). Run it before `push`. |
 | `exec-bits` | `--check`, `--project NAME` | Restore the executable bit on every script carrying a shebang. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
@@ -82,7 +82,10 @@ one is the only one that touches a running machine:
 the clone and absent from the service manager is skipped quietly, because the
 parc is one set of repositories deployed differently on each machine. Git runs as
 you and only the deployment is elevated -- `upgrade` refuses to run under sudo,
-so it asks for rights itself, once, when it reaches the first service.
+so it asks for rights itself, once, when it reaches the first service. When a
+service's binary is unchanged, `service.py update` deliberately deploys nothing
+and does not restart it; `upgrade --force` passes `--force` through to redeploy
+and restart every service anyway, for when bouncing them IS the intention.
 
 An update now guarantees three things, not two: it installs the new binary,
 **preserves your settings**, and **makes new options available** -- a key a new
