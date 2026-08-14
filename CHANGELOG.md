@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.1] - 2026-08-14
+
+### Corrigé
+
+- `install` (mode générique, sans `--services`) n'exécute plus `pip` pour un
+  `requirements.txt` **vide ou réduit à des commentaires**. Sur un système Python
+  « externally managed » (PEP 668, Raspberry Pi OS / Debian Bookworm+), pip
+  échouait (`error: externally-managed-environment`) alors qu'il n'y avait rien à
+  installer. Un tel fichier est désormais traité comme « no generic install
+  definition », comme s'il était absent.
+
 ## [0.9.0] - 2026-08-14
 
 ### Ajouté

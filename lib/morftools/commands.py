@@ -177,11 +177,32 @@ def cmd_install(workspace: Workspace, project: Project,
         return True
 
     # Default (no --services): generic per-language setup only, no service.
-    if (project.path / "requirements.txt").is_file():
+    # An EMPTY (or comment-only) requirements.txt must not trigger pip: on an
+    # externally-managed system (PEP 668, Raspberry Pi OS / Debian Bookworm+),
+    # pip refuses to touch the system Python and fails -- even with nothing to
+    # install. Such a file is treated as "no generic install definition".
+    req = project.path / "requirements.txt"
+    if req.is_file() and _requirements_has_packages(req):
         run(["python3", "-m", "pip", "install", "-r", "requirements.txt"], cwd=project.path)
     else:
         print("[SKIP] no generic install definition")
     return True
+
+
+def _requirements_has_packages(path: Path) -> bool:
+    """True when requirements.txt lists at least one real package.
+
+    A blank or comment-only file lists nothing to install; running pip on it
+    only produces a spurious externally-managed failure (see cmd_install).
+    """
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                return True
+    except OSError:
+        return False
+    return False
 
 
 def elevated(args: list) -> list:
