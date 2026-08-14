@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.8.1-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -21,7 +21,31 @@ propre emplacement et ne s'appuient jamais sur un chemin absolu.
 - dossiers voisins : les projets morfSystem, indépendants les uns des autres.
 - [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) : chaque script (options, action, quand l'utiliser) et les commandes Linux/Windows indispensables au suivi et à la maintenance au quotidien (`systemctl`, `journalctl`, `schtasks`, redémarrage, journaux). La référence d'exploitation.
 - `docs/ECOSYSTEM-PRINCIPLES.md` : les principes fondateurs et les invariants d'architecture valables pour **tout le parc**, y compris les frontières qu'aucun composant ne doit franchir.
+- [`docs/ACTIVATE-CLI.md`](docs/ACTIVATE-CLI.md) : exposer les commandes du parc (`morf`, `screenctl`, …) dans `~/.local/bin` via `activate-cli.sh`, sans déplacer les scripts hors de leur projet.
 - `docs/` : documentation de l'espace de travail.
+
+## Activation des commandes CLI (`activate-cli.sh`)
+
+Pour appeler les commandes du parc (`morf`, `screenctl`, …) depuis **n'importe
+quel dossier**, `morfTools/activate-cli.sh` les expose dans `~/.local/bin` sans
+déplacer ni copier les scripts hors de leur projet :
+
+```bash
+cd ~/01-Travail/morfTools    # ou ~/morfSystem/morfTools
+./activate-cli.sh            # active l'espace de CETTE copie de morfTools
+./activate-cli.sh --status   # espace actif + commandes gérées
+./activate-cli.sh --dry-run  # aperçu sans rien modifier
+```
+
+L'espace activé est le dossier **parent** de cette copie de morfTools : une
+activation ne mélange jamais deux racines (`01-Travail` vs `morfSystem`). C'est
+une action **volontaire**, indépendante de `install`/`update`, qui ne touche que
+`~/.local/bin` (aucun service, rien sous `/opt`, `/etc`, `/var/lib`). Chaque
+projet déclare ses vraies commandes dans un `cli.manifest` à sa racine : mode
+`direct` (lien symbolique, pour un script indépendant du répertoire courant) ou
+`project` (lanceur qui entre dans le projet avant d'exécuter). Le mode est
+déclaré, jamais deviné. Guide complet :
+[`docs/ACTIVATE-CLI.md`](docs/ACTIVATE-CLI.md).
 
 ## Espace bac à sable et espace de production
 

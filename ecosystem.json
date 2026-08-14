@@ -9,14 +9,17 @@
     "morfAnalytics",
     "morfBeacon",
     "morfCollector",
+    "morfDeploy",
     "morfMonitor",
     "morfNotify",
+    "morfPhoto",
     "morfSensor",
     "morfSync",
     "morfSystem",
     "morfTemplateService",
     "morfUpdate",
     "morfDashboard",
+    "PhotoHub",
     "SiteWatch"
   ],
   "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
@@ -82,6 +85,13 @@
         "config": "config/morfcollector.example.json",
         "key": "http_port",
         "note": "Collecte et conservation locale de ressources distantes temporaires."
+      },
+      {
+        "project": "morfPhoto",
+        "http": 8793,
+        "config": "config/morfphoto.example.json",
+        "key": "http_port",
+        "note": "Indexation d'une phototheque locale : source de verite des metadonnees photo (EXIF via ExifTool, base SQLite), capacite morfBeacon 'photo_index'."
       },
       {
         "project": "morfAnalytics",
@@ -168,12 +178,14 @@
     "consumers": [
       "ComponentHub",
       "morfCollector",
+      "PhotoHub",
       "SiteWatch",
       "MeteoHub",
       "GatewayLab",
       "morfAnalytics",
       "morfMonitor",
       "morfNotify",
+      "morfPhoto",
       "morfSensor",
       "morfTemplateService",
       "morfSync"

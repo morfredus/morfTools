@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.9.0] - 2026-08-14
+
+### Ajouté
+
+- **`activate-cli.sh` : exposition des commandes du parc dans `~/.local/bin`.**
+  Les vraies commandes utilisateur (`morf`, `screenctl`, …) deviennent appelables
+  depuis n'importe quel dossier, sans jamais déplacer ni copier les scripts hors
+  de leur projet. Chaque projet déclare ses commandes dans un `cli.manifest` à sa
+  racine, avec un mode explicite : `direct` (lien symbolique, pour un script
+  indépendant du répertoire courant) ou `project` (petit lanceur qui entre dans
+  le projet avant d'exécuter). Le mode est déclaré, jamais deviné.
+- Propriétés garanties : activation **volontaire** (jamais déclenchée par
+  `install`/`update` ; ne touche ni service, ni `/opt`, `/etc`, `/var/lib`),
+  **cohérente** (un seul espace de travail à la fois, déterminé par le dossier
+  parent de cette copie de morfTools - `01-Travail` ou `morfSystem`), et **sûre**
+  (ne remplace jamais un fichier étranger de `~/.local/bin` ; un registre suit les
+  commandes gérées pour les réorienter ou les retirer à la bascule d'espace).
+  Options `--status`, `--dry-run`, `--deactivate`. morfTools déclare `morf`.
+- Guide dédié [`docs/ACTIVATE-CLI.md`](docs/ACTIVATE-CLI.md) et section dans les
+  README.
+
+## [0.8.4] - 2026-08-11
+
+### Ajouté
+
+- **PhotoHub declare comme consommateur vendore** (`vendored.consumers`). Il embarque
+  morfUpdate (verification des mises a jour) dans `third_party/morf/update` ; `morf
+  doctor` verifie desormais que cette copie ne derive pas de la source.
+
+## [0.8.3] - 2026-08-11
+
+### Ajouté
+
+- **PhotoHub inscrit au registre `ecosystem.json`** (`projects`). Application desktop
+  du domaine photo, client pur de morfPhoto : pas de serveur, donc aucune allocation
+  de port. Complète le trio du domaine photo (morfPhoto, PhotoHub, spécialisation
+  Photo de morfAnalytics).
+
+## [0.8.2] - 2026-08-11
+
+### Ajouté
+
+- **morfPhoto entre au registre `ecosystem.json`.** Nouveau service d'indexation
+  d'une photothèque locale : ajouté à `projects`, à la table des consommateurs du
+  socle vendoré `morf`, et doté de son allocation de port dans `ports.allocations`
+  (**http 8793**, premier libre du bloc de service 8787-8799, `config/morfphoto.example.json`
+  clé `http_port`). Le registre reste l'autorité unique sur les ports ; `morf doctor`
+  vérifie que la configuration du service déclare bien 8793.
+- **morfDeploy promu en dépôt autonome** et inscrit dans `projects`. Le cœur de
+  déploiement quitte son statut de sous-dossier `lib/morfdeploy` de morfTools pour
+  devenir une bibliothèque à part entière (dépôt, VERSION, README, CHANGELOG,
+  LICENSE), sur le modèle de morfBeacon. `lib/morfdeploy` reste en place comme
+  repli transitoire tant que tous les projets n'ont pas basculé leur `sync-morf`
+  vers le nouveau dépôt (migration à venir).
+
 ## [0.8.1] - 2026-07-29
 
 ### Ajouté

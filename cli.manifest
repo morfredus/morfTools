@@ -1,0 +1,15 @@
+# Commandes CLI publiques de morfTools, exposees dans ~/.local/bin par
+# morfTools/activate-cli.sh. Ce fichier declare les VRAIES commandes destinees a
+# l'utilisateur ; il ne s'agit pas d'exposer tout script executable du projet.
+#
+# Format, une commande par ligne (colonnes separees par des espaces) :
+#     <nom-public>   <mode>   <script-relatif-au-projet>
+#
+#   mode = direct   -> lien symbolique vers le script (comportement independant
+#                      du repertoire courant : morf.py trouve sa lib via __file__
+#                      et sa racine de travail via l'emplacement de morfTools).
+#   mode = project  -> lanceur qui entre dans le projet avant d'executer.
+#
+# Le mode est declare, jamais devine : si un script devient dependant de son
+# repertoire, passer explicitement sa ligne de direct a project.
+morf   direct   morf.py

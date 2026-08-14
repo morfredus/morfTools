@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.8.1-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -23,7 +23,30 @@
   installation. The parc has only ever been installed by the person who wrote it -
   the one least able to see what the guide leaves out. Honest feedback wanted,
   including "I gave up here".
+- [`docs/ACTIVATE-CLI.md`](docs/ACTIVATE-CLI.md): expose the parc commands (`morf`, `screenctl`, …) in `~/.local/bin` via `activate-cli.sh`, without moving scripts out of their project.
 - `docs/`: workspace documentation.
+
+## CLI activation (`activate-cli.sh`)
+
+To call the parc commands (`morf`, `screenctl`, …) from **any directory**,
+`morfTools/activate-cli.sh` exposes them in `~/.local/bin` without moving or
+copying the scripts out of their owning project:
+
+```bash
+cd ~/01-Travail/morfTools    # or ~/morfSystem/morfTools
+./activate-cli.sh            # activate the workspace of THIS copy of morfTools
+./activate-cli.sh --status   # active workspace + managed commands
+./activate-cli.sh --dry-run  # preview without changing anything
+```
+
+The activated workspace is the **parent** directory of this copy of morfTools: an
+activation never mixes two roots (`01-Travail` vs `morfSystem`). It is a
+**deliberate** action, independent of `install`/`update`, touching only
+`~/.local/bin` (no service, nothing under `/opt`, `/etc`, `/var/lib`). Each
+project declares its real commands in a `cli.manifest` at its root: mode `direct`
+(symlink, for a script independent of the current directory) or `project`
+(launcher that enters the project first). The mode is declared, never guessed.
+Full guide: [`docs/ACTIVATE-CLI.md`](docs/ACTIVATE-CLI.md).
 
 ## Sandbox and production workspaces
 
