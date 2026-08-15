@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.3] - 2026-08-16
+
+### Ajouté
+
+- **Émetteur d'événements de compilation (morfDeploy → morfAnalytics Monitor).** Le
+  build (`build_as_user`, backends systemd et Windows) signale désormais chaque
+  compilation au domaine Monitor de morfAnalytics : projet, machine, début/fin,
+  résultat (succès/échec), preset. morfDeploy sait ce qu'il compile — c'est la source
+  exacte des événements, sans rien faire deviner. **Best-effort et sans dépendance** :
+  émis seulement si `MORFANALYTICS_ACTIVITY_URL` est défini (ex.
+  `http://pi4fred:8799/api/monitor/activity`), jamais bloquant si morfAnalytics est
+  injoignable — une télémétrie muette ne doit pas faire échouer un build. Nouveau
+  module `lib/morfdeploy/activity.py`. À re-vendorer dans les projets (chantier suivant).
+
 ## [0.9.2] - 2026-08-15
 
 ### Ajouté
