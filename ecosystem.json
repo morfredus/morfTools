@@ -123,6 +123,14 @@
         "key": null,
         "app": true,
         "note": "Application de bureau, PAS un service du parc. Annonce morfbeacon/1 et expose /status ; le port vit dans le code (src/ui/MainWindow.cpp, beaconCfg.statusPort), sans fichier de configuration. Reserve dans l'appRange (8880-8899). Anciennement 8788 (le port du service morfSensor) : corrige."
+      },
+      {
+        "project": "PhotoHub",
+        "http": 8882,
+        "config": null,
+        "key": null,
+        "app": true,
+        "note": "Application de bureau, PAS un service du parc. Client de morfPhoto : decouvre le service par capacite et dialogue avec son API. Annonce desormais sa presence morfbeacon/1 et expose /status comme ComponentHub et SiteWatch ; le port vit dans le code (src/main.cpp, beaconCfg.statusPort), sans fichier de configuration. Reserve dans l'appRange (8880-8899)."
       }
     ]
   },

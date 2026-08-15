@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.2] - 2026-08-15
+
+### Ajouté
+
+- **Port 8882 réservé à PhotoHub** dans `ecosystem.json` (bloc `appRange` des
+  applications de bureau, 8880-8899). PhotoHub s'annonce désormais sur morfBeacon et
+  expose `/status`, comme ComponentHub (8880) et SiteWatch (8881) ; le port vit dans
+  son code (`src/main.cpp`, `beaconCfg.statusPort`), sans fichier de configuration.
+
 ## [0.9.1] - 2026-08-14
 
 ### Corrigé
