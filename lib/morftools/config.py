@@ -228,7 +228,15 @@ def deploy(workspace: Workspace, target: str, extra: list) -> int:
             return 1
         print(f"[{project.name}] {script}")
         if script.suffix == ".py":
-            return subprocess.run([sys.executable, str(script), *extra],
+            # Voie unifiee : le coeur de deploiement (morfdeploy, via service.py)
+            # sait remplacer la config deployee depuis le depot, sur toute
+            # plateforme et avec une sauvegarde horodatee -- ce que faisaient les
+            # anciens scripts bash deploy-config.sh, un par projet. On invoque
+            # l'action `config` : par defaut `push --force` (ecrasement) ; `extra`
+            # fournit sinon le mode/flags (p. ex. `-- merge` pour n'ajouter que les
+            # cles nouvelles sans ecraser).
+            config_args = ["config", *extra] if extra else ["config", "push", "--force"]
+            return subprocess.run([sys.executable, str(script), *config_args],
                                   check=False).returncode
         return subprocess.run(["bash", str(script), *extra], check=False).returncode
 

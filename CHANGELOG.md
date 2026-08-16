@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.5] - 2026-08-16
+
+### Modifié
+
+- **`morf config deploy <projet>` unifié sur morfdeploy.** Il préférait déjà
+  `service.py` au script bash, mais l'appelait sans action (il tombait sur `status`).
+  Il invoque désormais `service.py config push --force` : le cœur de déploiement
+  (vendoré dans chaque projet) remplace la config déployée depuis le dépôt, avec
+  sauvegarde horodatée et redémarrage si changé, **sur toute plateforme** (Linux et
+  Windows). Résultat : la capacité existe pour **tous** les services à config
+  (morfCollector, morfNotify, morfSensor inclus) et le cas partagé de morfMonitor, sans
+  script bash par projet. `-- <mode>` permet de nuancer (`merge` au lieu de `push`).
+  Les `scripts/linux/deploy-config.sh` par projet deviennent redondants (à retirer au
+  fil du dev).
+
 ## [0.9.4] - 2026-08-16
 
 ### Modifié
