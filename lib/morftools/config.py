@@ -18,6 +18,7 @@ in this module asks.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import platform
@@ -103,6 +104,49 @@ def validate(path: Path) -> bool:
     return True
 
 
+def merge_defaults(source: dict, target: dict,
+                   prefix: str = "", added=None, obsolete=None):
+    """Merge SOURCE (the clone: schema and defaults) into TARGET (the deployed
+    /etc file: the local truth), NON destructively.
+
+    Principe : `clone = valeurs par defaut, /etc = verite locale`. Une mise a
+    niveau du logiciel doit apporter le nouveau *contrat* de configuration (les
+    cles inedites) sans jamais toucher aux *choix d'exploitation* de la machine.
+    Donc :
+      - une cle absente de TARGET est ajoutee (copie de la valeur du clone) ;
+      - une cle deja presente n'est JAMAIS modifiee -- sa valeur locale gagne ;
+      - deux objets se fondent recursivement (p. ex. le sous-objet « beacon »
+        gagne « archive_after_days » sans perdre « offline_after_s » local) ;
+      - une LISTE deja presente est conservee telle quelle : les services, sondes
+        et applications declares ou decouverts localement ne sont pas ecrases par
+        la liste du depot.
+
+    Renvoie (added, obsolete) : les chemins des cles ajoutees, et ceux des cles
+    presentes localement mais absentes du clone (potentiellement obsoletes -- on
+    les SIGNALE, on ne les supprime jamais : ce peut etre un reglage local voulu).
+    """
+    if added is None:
+        added = []
+    if obsolete is None:
+        obsolete = []
+
+    for key, sval in source.items():
+        if key not in target:
+            target[key] = copy.deepcopy(sval)
+            added.append(prefix + key)
+        elif isinstance(sval, dict) and isinstance(target[key], dict):
+            merge_defaults(sval, target[key], prefix + key + ".", added, obsolete)
+        # sinon : scalaire ou liste deja present -> on garde la valeur locale.
+
+    for key in target:
+        # Les cles de commentaire (_comment...) changent au fil de la doc : les
+        # signaler comme obsoletes serait du bruit permanent.
+        if key not in source and not key.startswith("_"):
+            obsolete.append(prefix + key)
+
+    return added, obsolete
+
+
 # -- shared ----------------------------------------------------------------
 
 def shared(workspace: Workspace, action: str) -> int:
@@ -150,6 +194,59 @@ def shared(workspace: Workspace, action: str) -> int:
             print("Identical.")
             return 0
         print("\n".join(lines))
+        return 0
+
+    if action == "merge":
+        # Mise a niveau NON destructive du contrat de configuration : ajoute les
+        # cles nouvelles du clone, garde toutes les valeurs locales. C'est ce que
+        # `morf upgrade` applique automatiquement -- le pendant, pour le fichier
+        # partage, du merge que `service.py update` fait deja pour la config propre
+        # de chaque service.
+        if not validate(source):
+            print("Refusing to merge from invalid JSON.", file=sys.stderr)
+            return 1
+
+        src = json.loads(source.read_text(encoding="utf-8-sig"))
+        first_deploy = not target.is_file()
+        current = {} if first_deploy else json.loads(
+            target.read_text(encoding="utf-8-sig"))
+
+        # Backup horodate SYSTEMATIQUE, meme si le merge ne change rien : le
+        # mecanisme reste previsible, et le cout est negligeable.
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_file():
+            backup = target.with_name(
+                f"{target.name}.bak-{datetime.now():%Y%m%d-%H%M%S}")
+            shutil.copy2(target, backup)
+            print(f"backup: {backup}")
+
+        merged = copy.deepcopy(current)
+        added, obsolete = merge_defaults(src, merged)
+        changed = first_deploy or bool(added)
+
+        if changed:
+            target.write_text(
+                json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8")
+            if first_deploy:
+                print(f"installed (first deploy): {target}")
+            else:
+                print(f"merged {len(added)} new key(s) into {target}:")
+                for k in added:
+                    print(f"    + {k}")
+            print("Restarting the services that read it:")
+            for name in SHARED_CONSUMERS:
+                print(restart_service(name))
+        else:
+            print(f"up to date: {target} already has every key from the clone.")
+
+        if obsolete:
+            # On SIGNALE sans supprimer : une cle locale absente du clone peut etre
+            # un reglage voulu, pas forcement un residu. Le nettoyage reste un
+            # geste explicite et separe.
+            print("Local keys not present in the clone (kept, review if stale):")
+            for k in obsolete:
+                print(f"    ? {k}")
         return 0
 
     if action in ("install", "apply"):

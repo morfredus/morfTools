@@ -56,14 +56,34 @@ preset accepte `-p/--preset <nom>` ou une valeur en position simple (`mingw`,
 | Commande | Action | Options |
 |---|---|---|
 | `doctor` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git. À lancer avant `push`. | `-u/--update`, `-v/--verbose`, `--only` |
-| `exec-bits` | Restaure le bit exécutable de tout script portant un shebang. | `--check`, `--project NAME` |
 | `clean` | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`...). | - |
-| `config shared` | Gère la config partagée `/etc/morfsystem/morfsystem.json` (lue par morfMonitor et morfDashboard). | `status`, `validate`, `edit`, `diff`, `install`, `apply` |
-| `config deploy <projet>` | Déploie la config d'un projet depuis le dépôt. Délègue à `service.py config push --force` (multi-plateforme). | `-- <mode/flags>` (p. ex. `-- merge`) |
+
+Les 13 commandes de `morf` sont exactement : `clone`, `fetch`, `pull`, `update`
+(alias de `pull`), `push`, `commit`, `status`, `build`, `install`, `uninstall`,
+`upgrade`, `clean`, `doctor`. **Il n'y a pas de commande `morf config` ni
+`morf exec-bits`** : la configuration passe par le script `./config.py`, les bits
+exécutables par `./exec-bits.sh` / `.ps1` (voir §2).
 
 Options globales du CLI : `-p/--preset`, `-m/--message`, `--only`, `--gui`,
 `--force`, `--purge`, `--backup DIR`, `-v/--verbose`, `-u/--update`, `--services`
 (chacune n'a d'effet que sur les commandes qui l'acceptent).
+
+> **Mettre à jour tout le parc en une passe.** `morf upgrade` enchaîne, pour chaque
+> projet installé sur cette machine : `pull` → recompilation → `service.py update`
+> du projet (les services absents de la machine sont sautés proprement). Chaque
+> projet garde son `service.py` ; `morf` ne fait que l'orchestrer. À lancer **sans
+> `sudo`** (il élève lui-même la seule étape de déploiement). `--force` redéploie
+> même sans changement ; `morf install --services` fait la première installation
+> complète d'une machine neuve.
+>
+> En fin de passe, sur une machine qui consomme la config partagée
+> (morfMonitor/morfDashboard), `upgrade` met aussi à niveau **le contrat de config
+> partagée** `morfsystem.json` : un **merge non destructif** (backup horodaté
+> systématique, ajoute les clés nouvelles du clone, ne touche jamais une valeur ni
+> une liste locale, signale les clés obsolètes sans les supprimer). C'est le
+> pendant, pour le fichier partagé, du merge que `service.py update` fait déjà pour
+> la config propre de chaque service. `--only` saute cette étape (cible un projet
+> précis) : utiliser alors `./config.py shared merge` à la main.
 
 ---
 
@@ -72,7 +92,7 @@ Options globales du CLI : `-p/--preset`, `-m/--message`, `--only`, `--gui`,
 | Script | Action | Options / arguments |
 |---|---|---|
 | `morf.py` | Le pilote du parc (toutes les commandes du §1). Une implémentation, toute plateforme. | cf. §1 |
-| `config.py` | Entrée directe de la gestion de config (`shared` / `deploy`) ; ce que `morf config` appelle. | `shared`, `deploy <projet>` |
+| `config.py` | Gestion de la config du parc, **script séparé** (pas une commande `morf`). `shared` agit sur le fichier partagé `/etc/morfsystem/morfsystem.json` (lu par morfMonitor et morfDashboard) : `merge` = mise à niveau non destructive (ajoute les clés du clone, garde les valeurs locales ; ce que lance `morf upgrade`), `install`/`apply` = **écrasement** depuis le clone (réalignement volontaire). `deploy <projet>` déploie la config d'un projet en déléguant à son `service.py config push --force`. | `shared status\|validate\|edit\|diff\|merge\|install\|apply`, `deploy [<projet>] [-- <args>]` |
 | `activate-cli.sh` | Expose les commandes du parc (`morf`, `screenctl`...) dans `~/.local/bin`, sans déplacer les scripts. Action volontaire, ne touche que `~/.local/bin`. | `--status`, `-n/--dry-run`, `--help` |
 | `exec-bits.sh` / `exec-bits.ps1` | Restaure le bit exécutable des scripts à shebang (racine du parc). Enveloppes de `scripts/exec-bits.py`. | `--check`, `--project NAME` |
 | `scripts/ecosystem-check.py` | Implémentation partagée des vérifications à l'échelle du parc, appelée par `doctor`. | (interne) |
@@ -98,8 +118,9 @@ toute plateforme (systemd / Planificateur Windows).
 
 > **Déployer une config modifiée** (une source, une racine, un réglage...) sans
 > recompiler : `sudo ./service.py config push --force`, ou depuis la racine du parc
-> `morf config deploy <projet>`. C'est la voie unifiée qui a remplacé les anciens
-> `deploy-config.sh` par projet (§7).
+> `./config.py deploy <projet>` (qui délègue à ce même `service.py config push
+> --force`). C'est la voie unifiée qui a remplacé les anciens `deploy-config.sh`
+> par projet (§7).
 
 ---
 

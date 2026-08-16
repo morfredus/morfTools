@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.9.5-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.10.0-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -67,15 +67,17 @@ dont le dossier ne correspond pas au nom attendu est signalé
 
 ## Commandes
 
-Sous PowerShell, depuis n'importe quel dossier :
-Depuis n'importe quel dossier : `python3 <espace>/morfTools/morf.py status` (ou `./morf.py status`, il est exécutable). Une implémentation, toutes les plateformes.
+Depuis n'importe quel dossier : `python3 <espace>/morfTools/morf.py status` (ou
+`./morf.py status`, il est exécutable). Une implémentation, toutes les plateformes.
 
 ### Arguments
 
 Toutes les commandes n'opèrent que sur les projets déclarés dans
-`ecosystem.json`.
+`ecosystem.json`. Ce sont les 13 commandes `morf`. La configuration et les bits
+exécutables passent par des **scripts séparés** à la racine (voir la note sous le
+tableau), pas par des sous-commandes `morf`.
 
-| Script / commande | Arguments | Action |
+| Commande `morf` | Arguments | Action |
 | --- | --- | --- |
 | `clone` | aucun | Clone les projets manquants sur la branche du manifeste. |
 | `fetch` | aucun | Récupère les dépôts distants et purge les références supprimées. |
@@ -83,28 +85,36 @@ Toutes les commandes n'opèrent que sur les projets déclarés dans
 | `build` | preset CMake (demandé si omis) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
 | `install` | `--services`, `--only NAME`, `--preset` | Sans `--services` : installe seulement `requirements.txt` s'il existe. **`install --services` déploie TOUS les services du parc en une commande** (compile sous votre compte, puis élève la seule étape d'installation ; le patron morfTemplateService est sauté). À lancer **sans `sudo`**. Restreindre à un service avec `--only`. |
 | `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Désinstalle un service (un seul avec `--only`, sinon tous). Par défaut conserve la configuration ; **`--purge`** retire aussi la configuration et le binaire ; **`--backup DIR`** copie d'abord chaque configuration dans `DIR`. |
-| `upgrade` | preset CMake (demandé si omis), `--gui`, `--force` | Tire, recompile les projets CMake, **puis met à jour les services installés ici**. `--force` redéploie et redémarre chaque service même sans changement (transmis à `service.py update`). |
+| `upgrade` | preset CMake (demandé si omis), `--gui`, `--force` | Tire, recompile les projets CMake, **puis met à jour les services installés ici et fusionne le contrat de config partagée `morfsystem.json`** (ajoute les clés nouvelles du clone, garde toutes les valeurs locales ; sauté avec `--only`). `--force` redéploie et redémarre chaque service même sans changement (transmis à `service.py update`). |
 | `doctor` | `--update`, `--verbose`, `--only` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git ; **`--update`** ajoute la comparaison à `origin/main` (nouvelle version disponible, morfTools compris - un pas réseau). À lancer avant `push`. |
 | `clean` | aucun | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`…). |
 | `status` | aucun | Affiche l'état Git court et la branche. |
 | `commit` | message (demandé si omis) | Indexe toutes les modifications et valide si nécessaire. |
 | `push` | aucun | Pousse la branche du manifeste vers `origin`. |
-| `config.py shared` | `status`, `validate`, `edit`, `diff`, `install`, `apply` | Gère la configuration partagée lue par morfMonitor et morfDashboard. |
+
+Il n'existe **ni `morf config` ni `morf exec-bits`**. Ces fonctions vivent dans des
+scripts séparés à la racine de morfTools :
+
+| Script | Usage | Action |
+| --- | --- | --- |
+| `./config.py shared <action>` | `status`, `validate`, `edit`, `diff`, `merge`, `install`, `apply` | Gère le fichier partagé `morfsystem.json` lu par morfMonitor et morfDashboard. `merge` = mise à niveau non destructive (ce que lance `morf upgrade`) ; `install`/`apply` = écrasement volontaire depuis le clone. |
+| `./config.py deploy <projet>` | nom de projet (les liste si omis) | Déploie la config propre d'un projet, en déléguant à son `service.py config push --force`. |
+| `./exec-bits.sh` / `.ps1` | `--check`, `--project NAME` | Restaure le bit exécutable de tout script portant un shebang. |
 
 Sous Linux et Raspberry Pi, on emploie le vocabulaire de CMake : `--preset <nom>`
 (ou `-p <nom>`) avec `build` et `upgrade`.
 
 ```bash
-./morfTools/build.sh --preset linux-arm64
-./morfTools/upgrade.sh -p linux
+python3 morfTools/morf.py build --preset linux-arm64
+python3 morfTools/morf.py upgrade -p linux
 ```
 
-Le raccourci accepte aussi un preset en position simple, par exemple
-`./morfTools/build.sh linux-arm64`. Sous PowerShell, utiliser `-Preset <nom>` :
+Une seule implémentation sur toutes les plateformes (`python3 morf.py ...`, ou
+`morf ...` une fois la CLI activée) ; il n'y a pas de wrapper par plateforme. Sous
+Windows, le même appel tourne sous PowerShell :
 
 ```powershell
-.\morfTools\build.ps1 -Preset mingw
-python3 ./morfTools/morf.py upgrade --preset linux-arm64
+python3 .\morfTools\morf.py build --preset mingw
 ```
 
 Le preset sélectionne le preset CMake de configuration et de compilation du

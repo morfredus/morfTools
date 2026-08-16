@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Parc configuration: the shared file, and each project's own.
 
-    ./config.py shared status|validate|edit|diff|install|apply
+    ./config.py shared status|validate|edit|diff|merge|install|apply
     ./config.py deploy [<project>] [-- <args passed through>]
 
 Replaces config.sh, config.ps1, shared-config.sh and shared-config.ps1.
+
+`shared merge` is the non-destructive upgrade of the deployed file: it adds the
+clone's new keys and keeps every local value (what `morf upgrade` runs). `install`
+and `apply` still OVERWRITE from the clone -- a deliberate re-alignment, never an
+upgrade side effect.
 """
 import sys
 from pathlib import Path
@@ -13,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 from morftools.config import deploy, shared
 from morftools.workspace import Workspace, WorkspaceError
 
-SHARED_ACTIONS = ("status", "validate", "edit", "diff", "install", "apply")
+SHARED_ACTIONS = ("status", "validate", "edit", "diff", "merge", "install", "apply")
 
 
 def main(argv):

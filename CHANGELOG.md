@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.0] - 2026-08-16
+
+### Ajouté
+
+- **`morf upgrade` met aussi à niveau la config partagée**, sans jamais écraser
+  les choix locaux. En fin de passe, sur une machine qui consomme
+  `morfsystem.json` (morfMonitor/morfDashboard), un **merge non destructif** ajoute
+  les clés nouvelles du clone (ex. `beacon.archive_after_days`), conserve toutes
+  les valeurs et les listes locales, signale les clés obsolètes sans les supprimer,
+  et sauvegarde le fichier (backup horodaté systématique) avant toute écriture.
+  C'est le pendant, pour le fichier partagé, du merge que `service.py update` fait
+  déjà pour la config propre de chaque service : `upgrade` met la machine à niveau
+  **complètement et de façon rétrocompatible** (code + contrat de config). Principe
+  posé : *le clone fournit les valeurs par défaut, `/etc` reste la vérité locale.*
+  `--only` saute cette étape (cible un projet précis).
+- **`./config.py shared merge`** : la nouvelle action qui réalise ce merge, aussi
+  invocable à la main. `install`/`apply` restent l'**écrasement** volontaire depuis
+  le clone (réalignement explicite, jamais un effet de bord d'`upgrade`).
+
 ## [0.9.5] - 2026-08-16
 
 ### Modifié

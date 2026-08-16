@@ -16,7 +16,8 @@ import sys
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from .commands import COMMANDS, PRESET_COMMANDS, cmd_doctor, update_status
+from .commands import COMMANDS, PRESET_COMMANDS, cmd_doctor, elevated, update_status
+from .config import SHARED_CONSUMERS, shared_config_path
 from .report import Reporter
 from .workspace import Workspace, WorkspaceError
 
@@ -113,6 +114,51 @@ def _project_banner(name: str) -> None:
 def _progress_clear(active: bool):
     if active:
         print("\r" + " " * 56 + "\r", end="", file=sys.stderr, flush=True)
+
+
+def _shared_config_relevant() -> bool:
+    """Cette machine consomme-t-elle le fichier partage morfsystem.json ?
+
+    Vrai si le fichier est deja deploye, ou si morfMonitor / morfDashboard tourne
+    ici. Sur une machine de build pur (aucun consommateur, aucun /etc), on ne va
+    pas semer un fichier de configuration partagee dont rien ne se sert.
+    """
+    if shared_config_path().exists():
+        return True
+    import platform
+    for name in SHARED_CONSUMERS:
+        if platform.system() == "Windows":
+            probe = subprocess.run(["sc.exe", "query", name],
+                                   capture_output=True, check=False)
+            if probe.returncode == 0:
+                return True
+        else:
+            probe = subprocess.run(
+                ["systemctl", "list-unit-files", f"{name}.service"],
+                capture_output=True, text=True, check=False)
+            if probe.returncode == 0 and name in probe.stdout:
+                return True
+    return False
+
+
+def _merge_shared_config() -> None:
+    """Mise a niveau NON destructive du fichier partage, pendant `upgrade`.
+
+    Le pendant, pour /etc/morfsystem/morfsystem.json, du merge que service.py
+    update fait deja pour la config propre de chaque service : ajoute les cles
+    nouvelles du clone, garde tous les choix locaux. Delegue a `config.py shared
+    merge`, ELEVE car il ecrit sous /etc -- comme le deploiement d'un service,
+    c'est la seule etape qui demande les droits, jamais le git.
+    """
+    config_py = Path(__file__).resolve().parents[2] / "config.py"
+    _project_banner("configuration partagee (morfsystem.json)")
+    rc = subprocess.run(
+        elevated([sys.executable, str(config_py), "shared", "merge"]),
+        check=False).returncode
+    if rc != 0:
+        print("[WARN] la mise a niveau de la config partagee n'a pas abouti "
+              "(relancer depuis un shell eleve si elle a demande des droits)",
+              file=sys.stderr)
 
 
 def run_doctor(workspace: Workspace, projects: list, verbose: bool,
@@ -378,6 +424,16 @@ def main(argv: list | None = None) -> int:
             # ones would stay stale with nothing saying so.
             print(f"[FAIL] {project.local_name}: {exc}", file=sys.stderr)
             failed.append(project.local_name)
+
+    # Apres avoir mis a niveau le CODE (binaires + config propre de chaque service
+    # via service.py update), `upgrade` met aussi a niveau le CONTRAT de config
+    # PARTAGEE : les cles nouvelles de morfsystem.json arrivent sans qu'aucun choix
+    # local ne soit ecrase. Une seule fois, apres les projets, sur une machine qui
+    # consomme ce fichier. Sautee avec --only, qui cible un projet precis plutot
+    # qu'une mise a niveau complete de la machine (utiliser alors `./config.py
+    # shared merge` a la main).
+    if args.command == "upgrade" and not args.only and _shared_config_relevant():
+        _merge_shared_config()
 
     if failed:
         sys.stdout.flush()
