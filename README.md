@@ -18,6 +18,9 @@
 - [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) *(FR)*: every script (options, action, when to
   use it) and the essential Linux/Windows commands for day-to-day monitoring and maintenance
   (`systemctl`, `journalctl`, `schtasks`, restart, logs). The operations reference.
+- [`docs/SCRIPTS.md`](docs/SCRIPTS.md) *(FR)*: the **exhaustive** catalog of every parc
+  script (global `morf` commands, `service.py`, and each project's local scripts, including
+  packaging and build helpers), with actions and options.
 - `docs/ECOSYSTEM-PRINCIPLES.md`: the founding principles and the architectural invariants that apply to the **whole parc**, including the boundaries no component may cross.
 - [`docs/FIRST-TEST.md`](docs/FIRST-TEST.md) *(FR)*: what to report after a **first**
   installation. The parc has only ever been installed by the person who wrote it -

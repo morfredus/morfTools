@@ -20,6 +20,7 @@ propre emplacement et ne s'appuient jamais sur un chemin absolu.
   l'échelle de l'écosystème, exécutées par `doctor`.
 - dossiers voisins : les projets morfSystem, indépendants les uns des autres.
 - [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) : chaque script (options, action, quand l'utiliser) et les commandes Linux/Windows indispensables au suivi et à la maintenance au quotidien (`systemctl`, `journalctl`, `schtasks`, redémarrage, journaux). La référence d'exploitation.
+- [`docs/SCRIPTS.md`](docs/SCRIPTS.md) : le catalogue **exhaustif** de tous les scripts du parc (commandes globales `morf`, `service.py`, et les scripts locaux de chaque projet, y compris les outils de packaging et de build), avec leurs actions et leurs options.
 - `docs/ECOSYSTEM-PRINCIPLES.md` : les principes fondateurs et les invariants d'architecture valables pour **tout le parc**, y compris les frontières qu'aucun composant ne doit franchir.
 - [`docs/ACTIVATE-CLI.md`](docs/ACTIVATE-CLI.md) : exposer les commandes du parc (`morf`, `screenctl`, …) dans `~/.local/bin` via `activate-cli.sh`, sans déplacer les scripts hors de leur projet.
 - `docs/` : documentation de l'espace de travail.
