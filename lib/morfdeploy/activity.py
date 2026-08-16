@@ -16,11 +16,30 @@ import socket
 import urllib.request
 from pathlib import Path
 
-# Variable d'environnement portant l'URL d'ingestion des activites du domaine
-# Monitor de morfAnalytics, par exemple :
-#   export MORFANALYTICS_ACTIVITY_URL="http://pi4fred:8799/api/monitor/activity"
-# Non definie => aucune emission. morfDeploy ne depend jamais de morfAnalytics.
+# Ou trouver l'URL d'ingestion des activites du domaine Monitor de morfAnalytics.
+# Deux sources, dans l'ordre :
+#   1. la variable d'environnement MORFANALYTICS_ACTIVITY_URL (ex.
+#      "http://pi4fred:8799/api/monitor/activity") -- pratique pour `morf build`,
+#      qui tourne sous le compte utilisateur ;
+#   2. a defaut, un fichier /etc/morfsystem/monitor-activity-url (une ligne).
+#      Necessaire car `sudo service.py update` efface l'environnement : un fichier
+#      admin, lu quel que soit l'appelant, est le moyen robuste et pose une fois.
+# Aucune des deux => aucune emission. morfDeploy ne depend jamais de morfAnalytics.
 _ENV_URL = "MORFANALYTICS_ACTIVITY_URL"
+_FILE_URL = Path("/etc/morfsystem/monitor-activity-url")
+
+
+def _target_url() -> str | None:
+    env = os.environ.get(_ENV_URL)
+    if env and env.strip():
+        return env.strip()
+    try:
+        if _FILE_URL.is_file():
+            text = _FILE_URL.read_text(encoding="utf-8").strip()
+            return text or None
+    except OSError:
+        pass
+    return None
 
 
 def _project_name(repo_root: Path) -> str:
@@ -34,7 +53,7 @@ def _project_name(repo_root: Path) -> str:
 def emit_build_activity(repo_root: Path, preset: str, start: float, end: float,
                         ok: bool) -> None:
     """Signale une compilation a morfAnalytics, si configure. Ne leve jamais."""
-    url = os.environ.get(_ENV_URL)
+    url = _target_url()
     if not url:
         return
     payload = {

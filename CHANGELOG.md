@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.4] - 2026-08-16
+
+### Modifié
+
+- **Émetteur de build : URL lue aussi depuis un fichier.** En plus de la variable
+  `MORFANALYTICS_ACTIVITY_URL`, `lib/morfdeploy/activity.py` lit désormais l'URL
+  d'ingestion depuis `/etc/morfsystem/monitor-activity-url` (une ligne) si la variable
+  est absente. Nécessaire car `sudo service.py update` efface l'environnement : un
+  fichier admin, posé une fois, est le moyen robuste d'activer l'émission.
+- `activity.py` ajouté au registre des copies vendorées de `morfdeploy` dans
+  `ecosystem.json` (contrôlé par `morf doctor`).
+
 ## [0.9.3] - 2026-08-16
 
 ### Ajouté

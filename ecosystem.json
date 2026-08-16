@@ -177,6 +177,7 @@
         ],
         "files": [
           "__init__.py",
+          "activity.py",
           "cli.py",
           "core.py",
           "manifest.py"
