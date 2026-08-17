@@ -1,5 +1,131 @@
 # Changelog
 
+## [0.17.0] - 2026-08-17
+
+### Ajouté
+
+- **Détection automatique du preset plateforme** (§18) quand `--preset` est omis :
+  Windows → `mingw`, Raspberry Pi / ARM64 → `linux-arm64`, Linux x64 → `linux`,
+  et seulement si le projet déclare ce preset. Priorité `--preset` explicite >
+  détection fiable > question interactive. L'architecture décide, jamais
+  l'identité de la machine (un serveur ARM64 vaut un Pi).
+
+### Modifié
+
+- **`morf update` comme opération Git est déprécié** (transition, §17) : il
+  affiche un avertissement et **renvoie vers `morf dev pull`**, tout en continuant
+  de faire le pull (habitudes et scripts préservés). `update` quitte la surface
+  `dev` (le git pull s'y nomme `pull`). `morf update` est réservé au sens futur
+  « mettre à jour les composants installés ». `morf upgrade` reste la mise à
+  niveau complète de la machine (pull + build + déploiement).
+
+## [0.16.0] - 2026-08-17
+
+### Ajouté
+
+- **`--dry-run` transverse à `update`/`pull` et `upgrade`.** `pull`/`update
+  --dry-run` récupère et liste les commits entrants sans fusionner. `upgrade
+  --dry-run` affiche le plan par projet (commits entrants, recompilation prévue,
+  mise à jour du service installé, fusion de la config partagée) sans rien
+  exécuter, et **ne demande plus de preset** (aucune compilation en dry-run). La
+  simulation traverse jusqu'au clone/service, elle ne prétend pas côté morfTools.
+
+## [0.15.0] - 2026-08-17
+
+### Ajouté
+
+- **`morf uninstall` refondu** avec sélection, aperçu et protections (§12) :
+  nommer des services, `--all` (ou forme nue) pour tous, `--only` pour un
+  (compat). **`--dry-run`** liste ce qui serait désinscrit et, avec `--purge`,
+  supprimé, sans rien toucher (traverse jusqu'au `service.py` du projet). Retirer
+  des services demande une confirmation ; **`--purge`** exige un **jeton saisi**
+  (`PURGE`, ou `PURGE ALL` pour un balayage machine) ; un run non interactif
+  exige `--yes`. Un `Entrée` trop rapide ne peut plus détruire des données.
+- **Garde-fou de purge sur service actif** câblé dans `morf purge` : `--force`
+  transmis à `service.py purge`, qui refuse d'effacer des données qu'un service en
+  cours d'exécution pourrait être en train d'écrire (voir morfDeploy 0.4.0).
+
+## [0.14.0] - 2026-08-17
+
+### Ajouté
+
+- **Commande `morf deploy` : installation sélective des services avec choix de
+  configuration.** Le cœur de la façade d'administration (§6 du chantier).
+  - **Sélection** selon la priorité du brief : une liste explicite ou `--all`
+    l'emporte ; sinon un terminal propose un **choix numéroté** (`[x]` du brief,
+    resté un simple script terminal utilisable en SSH) ; un run non interactif
+    sans sélection est une **erreur**, jamais une supposition.
+  - **`--config keep|merge|replace`** décide du sort de la configuration de
+    chaque service : `keep` (défaut sûr, n'écrase jamais), `merge` (ajoute les
+    clés nouvelles du clone, garde les valeurs locales), `replace` (écrase depuis
+    le dépôt, sauvegarde horodatée d'abord). Mappé sur ce que `service.py config`
+    sait déjà faire. Le mode n'est demandé qu'en interactif ; un run scripté garde
+    `keep` sauf `--config`.
+  - **`--dry-run`** affiche le plan (build/install/config par service) sans rien
+    exécuter. **Résumé final** par service. `replace` non interactif exige `--yes`.
+  - Réutilise la machinerie éprouvée (`install --services` reste la forme « tout
+    le parc ») : compile sous le compte utilisateur, n'élève que l'installation
+    et l'écriture de config.
+
+## [0.13.0] - 2026-08-17
+
+### Ajouté
+
+- **Espace de noms `morf dev <sous-commande>`** pour la surface développeur (Git
+  et build) : `clone`, `fetch`, `pull`, `update`, `status`, `push`, `commit`,
+  `build`, `clean`. Sépare visuellement l'administration d'une machine
+  (`deploy`/`install`, `update`, `upgrade`, `purge`, `uninstall`, `doctor`) du
+  travail sur les clones en tant que code source. **Additif et rétrocompatible** :
+  les formes plates (`morf clone`) restent valables (habitudes, `activate-cli`,
+  scripts) ; `morf dev` seul liste les sous-commandes ; `morf dev <admin>` est
+  refusé avec un rappel. Une seule et même implémentation par commande (le `dev`
+  n'est qu'une réécriture vers la commande plate, mêmes contrôles et élévation).
+
+## [0.12.0] - 2026-08-17
+
+### Ajouté
+
+- **Commande `morf purge` : effacement de données orchestré, piloté par ce que
+  chaque projet annonce.** morfTools ne lit aucun `service.json` et ne connaît
+  aucun emplacement de données : il demande à chaque clone ce qu'il sait effacer
+  (`service.py purge --list`, découverte JSON de morfDeploy 0.3.0) et renvoie les
+  catégories choisies au `service.py` du projet, qui exécute. La connaissance
+  reste dans le projet, morfTools orchestre.
+  - `morf purge` seul **liste** ce qui est purgeable sur cette machine (n'affiche
+    que les projets clonés qui déclarent des catégories) et montre comment cibler.
+  - `morf purge <projet> <id>…` ou `morf purge <projet> --all` cible un projet ;
+    `morf purge --all` balaie tous les projets de la machine.
+  - **`--dry-run`** prévisualise sans rien supprimer, en traversant jusqu'au
+    `service.py` du projet (la simulation est réelle, pas une prétention côté
+    morfTools).
+  - **Confirmation renforcée** d'une purge réelle destructive : saisie d'un jeton
+    (`PURGE`, ou `PURGE ALL` pour un balayage machine), refus en non-interactif
+    sans `--yes` (un cron doit dire `--yes` pour effacer, jamais par défaut).
+  - **Résumé final** par projet/catégorie (OK / FAILED), sans masquer ce que les
+    projets ont réellement exécuté.
+  - Une catégorie inconnue, `--all` combiné à des ids, un projet inconnu, ou ces
+    options hors `purge` sont refusés proprement (code 2).
+
+## [0.11.0] - 2026-08-17
+
+### Modifié
+
+- **Bascule de la source canonique de `morfdeploy` vers le dépôt dédié
+  `morfDeploy`.** Le registre `vendored` d'`ecosystem.json` pointait encore sur
+  `morfTools/lib/morfdeploy` alors que les `scripts/sync-morf.*` tiraient déjà
+  leur source de `morfDeploy` (avec repli transitoire). Le détecteur de dérive
+  (`ecosystem-check vendor`) et la synchronisation désignent maintenant la même
+  et unique source de vérité. Changement **purement structurel** : les copies
+  vendorées dans les 13 consommateurs sont inchangées (elles étaient déjà
+  synchronisées depuis `morfDeploy`), vérifié par `ecosystem-check` intégral.
+
+### Supprimé
+
+- **`lib/morfdeploy`** : la copie qui servait de graine canonique quitte
+  morfTools. Elle n'était jamais importée ni exécutée par morfTools (qui invoque
+  le `service.py` de chaque projet), et faisait doublon avec le dépôt `morfDeploy`
+  désormais canonique. Fin de l'ambiguïté « deux sources ».
+
 ## [0.10.0] - 2026-08-16
 
 ### Ajouté

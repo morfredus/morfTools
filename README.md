@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.10.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.17.0-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -75,19 +75,30 @@ Run from any directory with `python3 <workspace>/morfTools/morf.py status` (or `
 
 All commands operate only on projects declared in `ecosystem.json`.
 
-These are the 13 `morf` commands. Configuration and executable bits are handled
+These are the 15 `morf` commands. Configuration and executable bits are handled
 by **separate root scripts**, not `morf` subcommands: see the note below the
 table.
+
+**Two surfaces.** Administering a machine (`deploy`/`install`, `update`,
+`upgrade`, `purge`, `uninstall`, `doctor`) is a different job from working on the
+clones as source code (Git and build). The latter -- `clone`, `fetch`, `pull`,
+`status`, `push`, `commit`, `build`, `clean` -- are also reachable under a
+**`morf dev <subcommand>`** namespace, so the two surfaces read as two. The flat
+forms keep working; `morf dev` with no subcommand lists them. (`morf update` as a
+Git pull is deprecated in favour of `morf dev pull`.)
 
 | `morf` command | Arguments | Action |
 | --- | --- | --- |
 | `clone` | none | Clone missing projects on the manifest branch. |
 | `fetch` | none | Fetch remotes and prune deleted references. |
-| `pull`, `update` | none | Fast-forward pull from the manifest branch. |
-| `build` | CMake preset (asked when omitted), `--gui` | Build PlatformIO projects, or configure and build CMake projects. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
-| `install` | `--services`, `--only NAME`, `--preset` | Without `--services`: install `requirements.txt` when present. **`install --services` deploys EVERY parc service in one command** (builds as you, then elevates only the install step; the morfTemplateService pattern is skipped). Run it **without `sudo`**. Restrict to one with `--only`. |
-| `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Uninstall a service (one with `--only`, else all). `--purge` also removes its configuration and binary; `--backup DIR` copies the configuration there first. |
-| `upgrade` | CMake preset (asked when omitted), `--gui`, `--force` | Pull, rebuild CMake projects, then update the services installed here **and merge the shared `morfsystem.json` contract** (add the clone's new keys, keep every local value; skipped with `--only`). `--force` redeploys and restarts each service even when nothing changed (passed to `service.py update`). |
+| `pull` | `--dry-run` | Fast-forward pull from the manifest branch. `--dry-run` fetches and lists the incoming commits without merging. Prefer `morf dev pull`. |
+| `update` | `--dry-run` | **Deprecated as a Git operation** -- prints a warning and behaves like `pull`. Use `morf dev pull` for Git. `morf update` is reserved to mean "update the installed components" in a later release. |
+| `build` | CMake preset (auto-detected for the platform, else asked), `--gui` | Build PlatformIO projects, or configure and build CMake projects. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
+| `deploy` | `[<project>…]`, `--all`, `--config keep\|merge\|replace`, `--preset`, `--dry-run`, `--yes` | Install selected services on this machine. Bare `morf deploy` offers a numbered choice (and asks the config behaviour); name services or `--all` to script it. `--config` decides each service's configuration: `keep` (default, never overwrite), `merge` (add the clone's new keys, keep local values), `replace` (overwrite from the repo, backup first). `--dry-run` prints the plan and touches nothing. Builds as you, elevates only the install and config write. |
+| `install` | `--services`, `--only NAME`, `--preset` | Without `--services`: install `requirements.txt` when present. **`install --services` deploys EVERY parc service in one command** (builds as you, then elevates only the install step; the morfTemplateService pattern is skipped). Run it **without `sudo`**. Restrict to one with `--only`. (`deploy` is the selective, config-aware front to the same machinery.) |
+| `uninstall` | `[<project>…]`, `--all`, `--only NAME`, `--purge`, `--backup DIR`, `--dry-run`, `--yes` | Uninstall services: name them, `--all` (or bare) for every one, `--only` for one (compat). `--purge` also removes configuration and data; `--backup DIR` copies the configuration first. `--dry-run` lists what would go without touching anything. Removing services asks to confirm; `--purge` asks for a typed token (`PURGE`, or `PURGE ALL` machine-wide); non-interactive needs `--yes`. |
+| `purge` | `[<project> [<id>…]]`, `--all`, `--dry-run`, `--yes`, `--force` | Erase declared data categories. Each project announces what it can erase (`service.py purge --list`); morfTools never reads a service.json. Bare `morf purge` lists what is purgeable here; `morf purge <project> <id>…` or `--all` targets it; `morf purge --all` sweeps every project on this machine. `--dry-run` previews without removing; a destructive real purge asks for a typed confirmation unless `--yes`. A real purge is refused while the service is running (it may be mid-write); `--force` overrides. |
+| `upgrade` | CMake preset (auto-detected for the platform, else asked), `--gui`, `--force`, `--dry-run` | Pull, rebuild CMake projects, then update the services installed here **and merge the shared `morfsystem.json` contract** (add the clone's new keys, keep every local value; skipped with `--only`). `--force` redeploys and restarts each service even when nothing changed (passed to `service.py update`). `--dry-run` prints the per-project plan (incoming commits, rebuild, service update, shared-config merge) without doing any of it. |
 | `doctor` | `--update`, `--verbose`, `--only` | Check the port registry, vendored copies, active version of installed services, and Git repositories; **`--update`** adds a comparison against `origin/main` (newer version available, morfTools included -- a network step). Run it before `push`. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |

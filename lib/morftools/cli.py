@@ -16,7 +16,9 @@ import sys
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from .commands import COMMANDS, PRESET_COMMANDS, cmd_doctor, elevated, update_status
+from .commands import (COMMANDS, CONFIG_MODES, PRESET_COMMANDS, cmd_doctor,
+                       deploy_one, elevated, is_service_project, purge_catalog,
+                       service_purge, service_uninstall, update_status)
 from .config import SHARED_CONSUMERS, shared_config_path
 from .report import Reporter
 from .workspace import Workspace, WorkspaceError
@@ -38,10 +40,39 @@ def prompt(question: str) -> str | None:
         return None
 
 
+def _detect_platform_preset(available: set) -> str:
+    """The preset this machine's OS and architecture call for, if it is offered.
+
+    Detection follows §18: architecture and OS, never the machine's identity (an
+    ARM64 server is linux-arm64 as much as a Raspberry Pi is). Only a preset the
+    projects actually declare is proposed -- detecting a name nothing builds would
+    help no one. Returned only when unambiguous; the caller keeps the last word.
+    """
+    import platform
+    if platform.system() == "Windows":
+        candidate = "mingw"
+    elif platform.machine().lower() in ("aarch64", "arm64"):
+        candidate = "linux-arm64"
+    elif platform.system() == "Linux":
+        candidate = "linux"
+    else:
+        return ""
+    return candidate if candidate in available else ""
+
+
 def choose_preset(workspace: Workspace) -> str:
     presets = workspace.all_presets()
     if not presets:
         return ""    # no CMake project cloned: nothing to ask
+
+    # Priority (§18): an explicit --preset already won upstream; here, a reliable
+    # detection is used before falling back to asking. The person still overrides
+    # by passing --preset.
+    detected = _detect_platform_preset({name for name, _, _ in presets})
+    if detected:
+        print(f"[INFO] no --preset given; auto-detected for this machine: {detected}",
+              file=sys.stderr)
+        return detected
 
     print("No preset given. Available presets:", file=sys.stderr)
     for index, (name, count, total) in enumerate(presets, start=1):
@@ -248,12 +279,376 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
 
 
 
+def _confirm_destructive_purge(destructive_lines: list, machine_wide: bool,
+                               assume_yes: bool) -> bool:
+    """Guard a real purge that would lose data for good.
+
+    `--yes` is the explicit override. Without it, a terminal is asked to type a
+    word -- not a bare y/N a fast Enter could sail through -- and a
+    non-interactive run is refused rather than guessed at: a cron job must say
+    --yes to erase, never have it assumed. A purge spanning the whole machine
+    asks for the stronger token, so `morf purge --all` cannot be a reflex.
+    """
+    print("\nThis will PERMANENTLY erase:")
+    for line in destructive_lines:
+        print(f"    {line}")
+    if assume_yes:
+        return True
+    token = "PURGE ALL" if machine_wide else "PURGE"
+    reply = prompt(f'\nType "{token}" to confirm (anything else cancels): ')
+    if reply is None:
+        print("Not a terminal: re-run with --yes to confirm.", file=sys.stderr)
+        return False
+    return reply.strip() == token
+
+
+def _print_purge_summary(results: list, dry_run: bool) -> None:
+    """One block at the end saying exactly what each project did (or did not).
+
+    morfTools must never hide what the projects actually ran: after a sweep, the
+    reader needs to see per project whether the erasure happened, was a dry-run
+    preview, or failed -- not a single opaque line.
+    """
+    print()
+    print("=" * 72)
+    print("  purge --dry-run (rien supprimé)" if dry_run else "  purge")
+    print("=" * 72)
+    for name, outcome, ids in results:
+        shown = ", ".join(ids) if ids else "--all"
+        print(f"  {name:<24} {shown:<28} {outcome}")
+
+
+def run_purge(workspace: Workspace, args) -> int:
+    """Erase declared data across the machine, driven by what each project announces.
+
+    morfTools reads no service.json and knows no data location: it asks each
+    clone what it can erase (`purge --list`), shows or forwards the chosen
+    categories, and lets the project do the erasing. The plan is built the same
+    way for a dry-run and for the real run; only whether service.py finally
+    removes anything differs.
+    """
+    projects = workspace.projects()
+
+    target = None
+    ids: list = []
+    if args.targets:
+        wanted = args.targets[0].lower()
+        matches = [p for p in projects if p.name.lower() == wanted]
+        if not matches:
+            print(f"No project named '{args.targets[0]}' in the manifest.",
+                  file=sys.stderr)
+            return 2
+        target = matches[0]
+        ids = args.targets[1:]
+
+    if ids and args.all_categories:
+        print("Give category ids or --all, not both.", file=sys.stderr)
+        return 2
+
+    # What is purgeable HERE: cloned projects that actually declare categories.
+    # Asked of each project, never inferred, so a machine only ever offers what
+    # its own components announce.
+    scope = [target] if target else projects
+    catalog = []
+    for project in scope:
+        if not project.exists:
+            if target is not None:
+                print(f"[SKIP] {project.local_name} (not cloned)", file=sys.stderr)
+            continue
+        categories = purge_catalog(project)
+        if categories:
+            catalog.append((project, categories))
+
+    if not catalog:
+        where = target.local_name if target else "this machine"
+        print(f"No purgeable data on {where}.")
+        return 0
+
+    # No selection given: this is discovery, not a no-op. Show what is available
+    # and how to name it, rather than doing something unasked.
+    if not ids and not args.all_categories:
+        print("Purgeable data on this machine:\n")
+        for project, categories in catalog:
+            print(f"  {project.name}")
+            for category in categories:
+                mark = "  [destructive]" if category.get("destructive") else ""
+                print(f"      {category['id']:<18}{category.get('label', '')}{mark}")
+        first_project, first_cats = catalog[0]
+        print("\nName what to purge, for example:")
+        print(f"  morf purge {first_project.name} {first_cats[0]['id']}")
+        print(f"  morf purge {first_project.name} --all")
+        print("  morf purge --all            (every category above)")
+        print("Add --dry-run to preview, --yes to skip confirmation.")
+        return 0
+
+    # A named list of ids is validated against the one targeted project.
+    if ids:
+        valid = {c["id"] for c in catalog[0][1]}
+        unknown = [i for i in ids if i not in valid]
+        if unknown:
+            plural = "y" if len(unknown) == 1 else "ies"
+            print(f"Unknown categor{plural} for {target.name}: {', '.join(unknown)}.",
+                  file=sys.stderr)
+            print(f"Available: {', '.join(sorted(valid))}", file=sys.stderr)
+            return 2
+
+    # Build the plan, identically for dry-run and real.
+    plan = []          # (project, ids | None-for-all, selected categories)
+    for project, categories in catalog:
+        if ids:
+            selected = [c for c in categories if c["id"] in ids]
+            plan.append((project, ids, selected))
+        else:
+            plan.append((project, None, categories))
+
+    machine_wide = target is None and args.all_categories
+    destructive_lines = [
+        f"{project.name}: {c.get('label', c['id'])}"
+        for project, _, selected in plan for c in selected if c.get("destructive")
+    ]
+    if not args.dry_run and destructive_lines:
+        if not _confirm_destructive_purge(destructive_lines, machine_wide, args.yes):
+            print("Aborted.", file=sys.stderr)
+            return 1
+
+    results = []
+    for project, id_list, selected in plan:
+        _project_banner(project.local_name)
+        rc = service_purge(project, id_list or [], all_flag=(id_list is None),
+                           dry_run=args.dry_run, force=args.force)
+        outcome = "OK" if rc == 0 else f"FAILED ({rc})"
+        results.append((project.local_name, outcome, [c["id"] for c in selected]))
+
+    _print_purge_summary(results, args.dry_run)
+    return 0 if all(outcome == "OK" for _, outcome, _ in results) else 1
+
+
+def _select_services_interactive(candidates: list):
+    """A numbered toggle on the terminal -- the brief's `[x]` selection, kept a
+    plain terminal script usable over SSH, not a full-screen UI. Returns the
+    chosen projects, or None if the person gave up.
+    """
+    print("Services deployable on this machine:\n")
+    for index, project in enumerate(candidates, start=1):
+        print(f"  {index}) {project.name}")
+    reply = prompt("\nSelect (numbers, space-separated, or 'all'): ")
+    if reply is None:
+        return None
+    reply = reply.strip().lower()
+    if reply in ("all", "*"):
+        return list(candidates)
+    chosen = []
+    for token in reply.replace(",", " ").split():
+        if token.isdigit() and 1 <= int(token) <= len(candidates):
+            picked = candidates[int(token) - 1]
+            if picked not in chosen:
+                chosen.append(picked)
+    return chosen
+
+
+def _choose_config_mode():
+    """Ask keep/merge/replace, defaulting to the safe keep. None if given up."""
+    print("\nConfiguration:")
+    print("  1) keep    (default, never overwrite an existing configuration)")
+    print("  2) merge   (add the clone's new keys, keep local values)")
+    print("  3) replace (overwrite from the repo; a backup is written first)")
+    reply = prompt("Choice [1-3, default 1]: ")
+    if reply is None:
+        return None
+    return {"": "keep", "1": "keep", "2": "merge",
+            "3": "replace"}.get(reply.strip(), None)
+
+
+def run_deploy(workspace: Workspace, args) -> int:
+    """Install selected services on this machine, with a chosen config behaviour.
+
+    Selection follows the brief's priority: an explicit CLI list or --all wins;
+    otherwise a terminal offers a numbered choice; a non-interactive run with no
+    selection is an error, never a guess. `--dry-run` prints the plan and touches
+    nothing. Only the interactive path asks for the config mode; a scripted run
+    keeps the safe default (keep) unless --config says otherwise.
+    """
+    projects = workspace.projects()
+    candidates = [p for p in projects if p.exists and is_service_project(p)]
+
+    interactive_selection = False
+    if args.targets:
+        selected = []
+        for name in args.targets:
+            match = [p for p in candidates if p.name.lower() == name.lower()]
+            if not match:
+                known = any(p.name.lower() == name.lower() for p in projects)
+                if known:
+                    print(f"'{name}' is not a deployable service.", file=sys.stderr)
+                else:
+                    print(f"No project named '{name}' in the manifest.",
+                          file=sys.stderr)
+                return 2
+            if match[0] not in selected:
+                selected.append(match[0])
+    elif args.all_categories:
+        selected = list(candidates)
+    else:
+        if not candidates:
+            print("No deployable services cloned on this machine.")
+            return 0
+        if not (sys.stdin and sys.stdin.isatty()):
+            print("Nothing selected: name one or more services, or pass --all "
+                  "(a non-interactive run needs an explicit selection).",
+                  file=sys.stderr)
+            return 2
+        selected = _select_services_interactive(candidates)
+        interactive_selection = True
+        if selected is None:
+            print("Aborted.", file=sys.stderr)
+            return 1
+
+    if not selected:
+        print("No service selected.")
+        return 0
+
+    # Config behaviour: an explicit --config wins; an interactive selection is
+    # asked; a scripted run keeps the safe default.
+    config_mode = args.config
+    if config_mode is None:
+        if interactive_selection:
+            config_mode = _choose_config_mode()
+            if config_mode is None:
+                print("Aborted.", file=sys.stderr)
+                return 1
+        else:
+            config_mode = "keep"
+
+    # A build needs a preset; asked only for a real run of a CMake service.
+    preset = args.preset
+    if any(p.is_cmake for p in selected) and not preset and not args.dry_run:
+        preset = choose_preset(workspace)
+
+    print("\nDeployment plan:" if args.dry_run else "\nDeploying:")
+    for project in selected:
+        print(f"  {project.name}  [config {config_mode}]")
+
+    if not args.dry_run and not args.yes:
+        if sys.stdin and sys.stdin.isatty():
+            reply = prompt("Proceed? [y/N]: ")
+            if reply is None or reply.strip().lower() not in ("y", "yes", "o", "oui"):
+                print("Aborted.", file=sys.stderr)
+                return 1
+        elif config_mode == "replace":
+            # replace overwrites the deployed configuration: never silently in a
+            # script. install and merge keep local values, so they may proceed.
+            print("config replace overwrites configuration: pass --yes to confirm "
+                  "it non-interactively.", file=sys.stderr)
+            return 2
+
+    results = []
+    for project in selected:
+        _project_banner(project.local_name)
+        rc, steps = deploy_one(project, preset, config_mode, args.dry_run)
+        outcome = "OK" if rc == 0 else f"FAILED ({rc})"
+        results.append((project.local_name, outcome, steps))
+
+    print()
+    print("=" * 72)
+    print("  deploy --dry-run (rien exécuté)" if args.dry_run else "  deploy")
+    print("=" * 72)
+    for name, outcome, steps in results:
+        print(f"  {name:<24} {', '.join(steps):<40} {outcome}")
+    return 0 if all(outcome == "OK" for _, outcome, _ in results) else 1
+
+
+def run_uninstall(workspace: Workspace, args) -> int:
+    """Uninstall selected services, with a dry-run and destructive protections.
+
+    Removing a service is one act; removing its configuration and data (--purge)
+    is a heavier, separate one -- so --purge asks for a typed token, and a sweep
+    of the whole machine asks for the stronger one. A non-interactive run must
+    say --yes to remove anything: a fast Enter must never destroy years of data.
+    """
+    projects = workspace.projects()
+    candidates = [p for p in projects if p.exists and is_service_project(p)]
+
+    def resolve(name):
+        match = [p for p in candidates if p.name.lower() == name.lower()]
+        if match:
+            return match[0]
+        known = any(p.name.lower() == name.lower() for p in projects)
+        print(f"'{name}' is not a deployable service." if known
+              else f"No project named '{name}' in the manifest.", file=sys.stderr)
+        return None
+
+    if args.targets:
+        selected = []
+        for name in args.targets:
+            project = resolve(name)
+            if project is None:
+                return 2
+            if project not in selected:
+                selected.append(project)
+        machine_wide = False
+    elif args.only:
+        project = resolve(args.only)
+        if project is None:
+            return 2
+        selected, machine_wide = [project], False
+    else:
+        # Bare `uninstall` or `--all`: the whole machine.
+        selected, machine_wide = list(candidates), True
+
+    if not selected:
+        print("No service to uninstall on this machine.")
+        return 0
+
+    if not args.dry_run and not args.yes:
+        if not (sys.stdin and sys.stdin.isatty()):
+            print("Refusing to uninstall non-interactively without --yes.",
+                  file=sys.stderr)
+            return 2
+        print("\nWill uninstall:" if not args.purge
+              else "\nWill uninstall AND erase configuration/data of:")
+        for project in selected:
+            print(f"    {project.name}")
+        if args.purge:
+            token = "PURGE ALL" if machine_wide else "PURGE"
+            reply = prompt(f'\nThis also erases configuration and data. '
+                           f'Type "{token}" to confirm: ')
+            if reply is None or reply.strip() != token:
+                print("Aborted.", file=sys.stderr)
+                return 1
+        else:
+            reply = prompt("Proceed? [y/N]: ")
+            if reply is None or reply.strip().lower() not in ("y", "yes", "o", "oui"):
+                print("Aborted.", file=sys.stderr)
+                return 1
+
+    results = []
+    for project in selected:
+        _project_banner(project.local_name)
+        rc = service_uninstall(project, args.purge, args.backup, args.dry_run)
+        results.append((project.local_name, "OK" if rc == 0 else f"FAILED ({rc})"))
+
+    print()
+    print("=" * 72)
+    action = "uninstall --purge" if args.purge else "uninstall"
+    print(f"  {action} --dry-run (rien retiré)" if args.dry_run else f"  {action}")
+    print("=" * 72)
+    for name, outcome in results:
+        print(f"  {name:<28} {outcome}")
+    return 0 if all(outcome == "OK" for _, outcome in results) else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="morf",
         description="Operate on every project declared in ecosystem.json.",
     )
-    parser.add_argument("command", choices=sorted(COMMANDS), help="What to do")
+    parser.add_argument("command",
+                        choices=sorted(set(COMMANDS) | {"purge", "dev", "deploy"}),
+                        help="What to do (admin surface); or 'dev <subcommand>' for "
+                             "the developer surface (git and build)")
+    parser.add_argument("targets", nargs="*",
+                        help="purge: <project> [<category-id>...] to target one "
+                             "project's data")
     parser.add_argument("--preset", "-p", default="",
                         help=f"CMake preset ({', '.join(sorted(PRESET_COMMANDS))} only)")
     parser.add_argument("--message", "-m", default="", help="Commit message")
@@ -263,7 +658,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="build/upgrade: build desktop GUI apps even on a headless machine")
     parser.add_argument("--force", action="store_true",
                         help="upgrade: redeploy and restart each service even when "
-                             "nothing changed (passed to service.py update)")
+                             "nothing changed. purge: erase even while the service "
+                             "is running (overrides the safety guard)")
     parser.add_argument("--purge", action="store_true",
                         help="uninstall: also remove the configuration and binary")
     parser.add_argument("--backup", default="", metavar="DIR",
@@ -276,7 +672,66 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--services", action="store_true",
                         help="install: deploy every service too, via each project's "
                              "service.py (Linux, Raspberry Pi or Windows)")
+    parser.add_argument("--all", action="store_true", dest="all_categories",
+                        help="purge: every declared category (of the named project, "
+                             "or of every project on this machine)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="show what would happen without doing it "
+                             "(purge, deploy, uninstall, pull/update, upgrade)")
+    parser.add_argument("--yes", "-y", action="store_true",
+                        help="purge: skip the confirmation prompt (required in "
+                             "non-interactive use to erase destructive data)")
+    parser.add_argument("--config", choices=CONFIG_MODES, default=None,
+                        help="deploy: how to treat each service's configuration -- "
+                             "keep (default, never overwrite), merge (add the "
+                             "clone's new keys, keep local values), or replace "
+                             "(overwrite from the repo; a backup is written first)")
     return parser
+
+
+#: The developer surface: Git and build. These operate on the clones as source
+#: code, not on the machine as an administered host -- a different job from
+#: deploy/update/upgrade/purge/uninstall/doctor. They stay callable flat
+#: (`morf clone`) so existing habits and scripts keep working, and are also
+#: reachable as `morf dev clone`, which is how the help presents them so the two
+#: surfaces read as two surfaces.
+#: `update` is deliberately NOT here: the developer surface names the Git pull
+#: `pull`. `morf update` survives as a deprecated alias of `morf dev pull` (with a
+#: warning) during the transition, and is reserved to mean "update the installed
+#: components" once that period ends -- the sense someone on a production machine
+#: expects from it.
+DEV_COMMANDS = {"clone", "fetch", "pull", "status", "push", "commit",
+                "build", "clean"}
+
+
+def _expand_dev(args) -> int | None:
+    """Turn `morf dev <subcommand> ...` into the plain command it stands for.
+
+    Returns an exit code to stop on (a usage error, or the dev listing), or None
+    to continue with `args` rewritten. Keeping this a rewrite rather than a
+    second dispatcher means every dev command goes through exactly the same
+    handling, checks and elevation rules as its flat form -- there is only ever
+    one code path per command.
+    """
+    if args.command != "dev":
+        return None
+    if not args.targets:
+        print("Developer surface. Usage: morf dev <subcommand> [options]")
+        print(f"Subcommands: {', '.join(sorted(DEV_COMMANDS))}")
+        return 0
+    sub = args.targets[0]
+    if sub not in DEV_COMMANDS:
+        print(f"'{sub}' is not a dev subcommand.", file=sys.stderr)
+        print(f"Dev subcommands: {', '.join(sorted(DEV_COMMANDS))}", file=sys.stderr)
+        print("(deploy/update/upgrade/purge/uninstall/doctor are admin commands, "
+              "run without 'dev'.)", file=sys.stderr)
+        return 2
+    # Rewrite in place: the command becomes the subcommand, and the rest of the
+    # positionals move on with it (none of the dev commands take any today, but
+    # this keeps the shape correct if one ever does).
+    args.command = sub
+    args.targets = args.targets[1:]
+    return None
 
 
 def main(argv: list | None = None) -> int:
@@ -295,6 +750,23 @@ def main(argv: list | None = None) -> int:
             pass
 
     args = build_parser().parse_args(argv)
+
+    # `morf dev <subcommand>` is rewritten to the plain command before anything
+    # else, so the developer surface shares one code path with the flat form.
+    stop = _expand_dev(args)
+    if stop is not None:
+        return stop
+
+    # Transition (§17): `morf update` as a Git pull is deprecated in favour of
+    # `morf dev pull`. It still pulls for now, with a warning, so habits and
+    # scripts keep working; a later release will repurpose `morf update` to mean
+    # "update the installed components". The warning goes to stderr so it never
+    # contaminates output a script might read.
+    if args.command == "update":
+        print("Warning: `morf update` as a Git operation is deprecated; "
+              "use `morf dev pull`.", file=sys.stderr)
+        print("         (a future release will repurpose `morf update` to update "
+              "the installed components.)", file=sys.stderr)
 
     # Git must run as YOU, never under sudo. Elevated, it authenticates with
     # root's SSH key -- which does not exist, so every repository answers
@@ -350,13 +822,32 @@ def main(argv: list | None = None) -> int:
     if args.gui and args.command not in ("build", "upgrade"):
         print("--gui only applies to build and upgrade.", file=sys.stderr)
         return 2
-    if args.force and args.command != "upgrade":
-        print("--force only applies to upgrade "
-              "(a single service: <project>/service.py update --force).",
-              file=sys.stderr)
+    if args.force and args.command not in ("upgrade", "purge"):
+        print("--force only applies to upgrade and purge.", file=sys.stderr)
         return 2
     if args.backup and not args.purge:
         print("--backup only applies with --purge.", file=sys.stderr)
+        return 2
+    # The purge-only surface. Refused elsewhere rather than ignored, same rule as
+    # every other option: a flag that silently did nothing is how someone trusts
+    # an effect that never happened.
+    if args.targets and args.command not in ("purge", "deploy", "uninstall"):
+        print("positional project/category arguments only apply to purge, "
+              "deploy and uninstall.", file=sys.stderr)
+        return 2
+    if args.all_categories and args.command not in ("purge", "deploy", "uninstall"):
+        print("--all only applies to purge, deploy and uninstall.", file=sys.stderr)
+        return 2
+    if args.dry_run and args.command not in ("purge", "deploy", "uninstall",
+                                             "pull", "update", "upgrade"):
+        print("--dry-run only applies to purge, deploy, uninstall, "
+              "pull/update and upgrade.", file=sys.stderr)
+        return 2
+    if args.yes and args.command not in ("purge", "deploy", "uninstall"):
+        print("--yes only applies to purge, deploy and uninstall.", file=sys.stderr)
+        return 2
+    if args.config and args.command != "deploy":
+        print("--config only applies to deploy.", file=sys.stderr)
         return 2
 
     try:
@@ -365,12 +856,23 @@ def main(argv: list | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
+    # Purge and deploy orchestrate across projects with selection, confirmation
+    # and a summary, so each gets its own path rather than the generic loop.
+    if args.command == "purge":
+        return run_purge(workspace, args)
+    if args.command == "deploy":
+        return run_deploy(workspace, args)
+    if args.command == "uninstall":
+        return run_uninstall(workspace, args)
+
     preset = args.preset
     # A plain `install` (Python deps only) never builds, so it must not ask for a
     # preset; `install --services` does build, and needs one like build/upgrade.
     needs_preset = args.command in ("build", "upgrade") or (
         args.command == "install" and args.services)
-    if needs_preset and not preset:
+    # A dry-run never builds, so it must not stop to ask for a build preset: the
+    # plan simply reports "preset default" for the rebuild it would run.
+    if needs_preset and not preset and not args.dry_run:
         preset = choose_preset(workspace)
 
     message = args.message
@@ -406,7 +908,8 @@ def main(argv: list | None = None) -> int:
             # Extra arguments go only to the handlers that take them, so a
             # command's signature states what it actually depends on.
             if handler.__name__ == "cmd_upgrade":
-                ok = handler(workspace, project, preset, args.gui, args.force)
+                ok = handler(workspace, project, preset, args.gui, args.force,
+                             args.dry_run)
             elif handler.__name__ == "cmd_build":
                 ok = handler(workspace, project, preset, args.gui)
             elif handler.__name__ == "cmd_install":
@@ -415,6 +918,8 @@ def main(argv: list | None = None) -> int:
                 ok = handler(workspace, project, message)
             elif handler.__name__ == "cmd_uninstall":
                 ok = handler(workspace, project, args.purge, args.backup)
+            elif handler.__name__ == "cmd_pull":
+                ok = handler(workspace, project, args.dry_run)
             else:
                 ok = handler(workspace, project)
             if ok is False:
@@ -432,8 +937,13 @@ def main(argv: list | None = None) -> int:
     # consomme ce fichier. Sautee avec --only, qui cible un projet precis plutot
     # qu'une mise a niveau complete de la machine (utiliser alors `./config.py
     # shared merge` a la main).
-    if args.command == "upgrade" and not args.only and _shared_config_relevant():
+    if (args.command == "upgrade" and not args.only and not args.dry_run
+            and _shared_config_relevant()):
         _merge_shared_config()
+    elif (args.command == "upgrade" and not args.only and args.dry_run
+          and _shared_config_relevant()):
+        print("\n[dry-run] would merge the shared morfsystem.json contract "
+              "(non-destructive; keeps every local value).")
 
     if failed:
         sys.stdout.flush()

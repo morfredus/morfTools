@@ -53,7 +53,22 @@ def cmd_fetch(workspace: Workspace, project: Project) -> bool:
     return True
 
 
-def cmd_pull(workspace: Workspace, project: Project) -> bool:
+def cmd_pull(workspace: Workspace, project: Project, dry_run: bool = False) -> bool:
+    if dry_run:
+        # Show what a fast-forward would bring, without merging. The fetch only
+        # updates remote-tracking refs (never the working tree or a service), so
+        # the preview is honest about what `update` would apply.
+        run(["git", "fetch", "--quiet", "origin", workspace.branch],
+            cwd=project.path, check=False)
+        incoming = capture(
+            ["git", "log", "--oneline", f"HEAD..origin/{workspace.branch}"],
+            cwd=project.path)
+        if incoming:
+            print(f"[dry-run] would fast-forward {workspace.branch}; incoming:")
+            print(incoming)
+        else:
+            print(f"[dry-run] already up to date with origin/{workspace.branch}")
+        return True
     run(["git", "pull", "--ff-only", "origin", workspace.branch], cwd=project.path)
     return True
 
@@ -264,7 +279,27 @@ def redeploy_service(project: Project, force: bool = False) -> None:
 
 
 def cmd_upgrade(workspace: Workspace, project: Project, preset: str = "",
-                force_gui: bool = False, force: bool = False) -> bool:
+                force_gui: bool = False, force: bool = False,
+                dry_run: bool = False) -> bool:
+    if dry_run:
+        # The plan, without doing any of it: what would be pulled, whether a
+        # rebuild would run, and whether the installed service would be updated.
+        print("[dry-run] plan:")
+        cmd_pull(workspace, project, dry_run=True)
+        if project.is_cmake and not skip_gui(project, force_gui):
+            print(f"  would rebuild (CMake, preset {preset or 'default'})")
+        entry = project.path / "service.py"
+        if entry.is_file():
+            probe = subprocess.run(
+                [sys.executable, str(entry), "is-installed"],
+                cwd=project.path, capture_output=True, check=False)
+            if probe.returncode == 0:
+                print("  would update the installed service (service.py update)")
+            elif probe.returncode == 2:
+                print("  would try to update the service (cannot tell without rights)")
+            else:
+                print("  service not installed here: would skip redeploy")
+        return True
     cmd_pull(workspace, project)
     # The sources are pulled regardless; only the build is skipped on a headless
     # machine, so an upgrade still refreshes a GUI app's code without compiling
@@ -318,6 +353,142 @@ def cmd_clean(workspace: Workspace, project: Project) -> bool:
             print(f"[RM] {directory.name}")
             shutil.rmtree(directory, ignore_errors=True)
     return True
+
+
+# -- Purge ----------------------------------------------------------------
+#
+# morfTools does not read service.json and does not know where any service
+# keeps its data. It asks each project what it can erase (`purge --list`) and
+# forwards the chosen categories back to that project's service.py. The
+# knowledge stays in the project; morfTools only orchestrates.
+
+def purge_catalog(project: Project) -> list:
+    """The purge categories a project declares, via its own `service.py purge --list`.
+
+    Returns a list of {id, label, destructive, type}. An empty list covers every
+    "nothing to purge" case identically -- not a service, no purge block,
+    service.py failing -- because for an orchestrator the answer is the same:
+    this clone offers no category to erase.
+    """
+    entry = project.path / "service.py"
+    if not entry.is_file():
+        return []
+    result = subprocess.run(
+        [sys.executable, str(entry), "purge", "--list"],
+        cwd=project.path, capture_output=True, text=True,
+        encoding="utf-8", errors="replace", check=False,
+    )
+    if result.returncode != 0:
+        return []
+    try:
+        data = json.loads(result.stdout)
+    except (ValueError, TypeError):
+        return []
+    categories = data.get("categories")
+    return categories if isinstance(categories, list) else []
+
+
+def service_uninstall(project: Project, purge: bool, backup: str,
+                      dry_run: bool) -> int:
+    """Uninstall one service through its own service.py; return the exit code.
+
+    Mirrors service_purge: elevated for the real removal, never for a dry-run.
+    Delegates the actual teardown (deregister, remove config/binary) to the
+    project, which knows its own paths -- morfTools only decides which services
+    and forwards the intent.
+    """
+    entry = project.path / "service.py"
+    cmd = [sys.executable, str(entry), "uninstall"]
+    if purge:
+        cmd.append("--purge")
+        if backup:
+            cmd += ["--backup", backup]
+    if dry_run:
+        cmd.append("--dry-run")
+    else:
+        cmd = elevated(cmd)
+    return subprocess.run(cmd, cwd=project.path).returncode
+
+
+def is_service_project(project: Project) -> bool:
+    """A project morfTools can deploy as a service on this machine.
+
+    It carries a service.py and is not the template pattern -- the same rule
+    install --services already uses, named once so deploy and the discovery of
+    deployable components agree.
+    """
+    return (project.path / "service.py").is_file() and not is_template(project)
+
+
+#: The three configuration behaviours the façade offers, mapped onto what
+#: service.py already does. `keep` is the safe default: install never overwrites
+#: an existing config, so keeping it is simply not running a config step.
+CONFIG_MODES = ("keep", "merge", "replace")
+
+
+def deploy_one(project: Project, preset: str, config_mode: str,
+               dry_run: bool) -> tuple:
+    """Build and install one service, then apply the chosen config behaviour.
+
+    Returns (returncode, steps) where steps names what ran (or would run under a
+    dry-run), for the summary. Mirrors `install --services`: build as the user,
+    elevate only the install and the config write. `keep` runs no config step at
+    all; `merge` adds the clone's new keys without touching local values;
+    `replace` overwrites the deployed config from the repo (a timestamped backup
+    is written by service.py first).
+    """
+    entry = project.path / "service.py"
+    steps = []
+    builds = project.is_cmake and not skip_gui(project, False)
+    if builds:
+        steps.append(f"build (preset {preset or 'default'})")
+    steps.append("install")
+    if config_mode != "keep":
+        steps.append(f"config {config_mode}")
+
+    if dry_run:
+        return 0, steps
+
+    if builds:
+        cmake_build(project, preset)
+    rc = subprocess.run(elevated(["python3", str(entry), "install"]),
+                        cwd=project.path).returncode
+    if rc != 0:
+        return rc, steps
+    if config_mode == "merge":
+        rc = subprocess.run(elevated(["python3", str(entry), "config", "merge"]),
+                            cwd=project.path).returncode
+    elif config_mode == "replace":
+        rc = subprocess.run(
+            elevated(["python3", str(entry), "config", "push", "--force"]),
+            cwd=project.path).returncode
+    return rc, steps
+
+
+def service_purge(project: Project, ids, all_flag: bool, dry_run: bool,
+                  force: bool = False) -> int:
+    """Run the project's own purge for the chosen categories; return its exit code.
+
+    The real erasure reaches under /etc, /var/lib or /opt and is elevated exactly
+    as the service install is. A dry-run touches nothing, so it is never elevated
+    -- the safe preview must never be harder to run than the destructive act.
+
+    `force` is passed through to override the running-service guard: service.py
+    refuses to erase data a live service may be writing unless told to proceed.
+    """
+    entry = project.path / "service.py"
+    cmd = [sys.executable, str(entry), "purge"]
+    if all_flag:
+        cmd.append("--all")
+    else:
+        cmd += list(ids)
+    if force:
+        cmd.append("--force")
+    if dry_run:
+        cmd.append("--dry-run")
+    else:
+        cmd = elevated(cmd)
+    return subprocess.run(cmd, cwd=project.path).returncode
 
 
 # -- Doctor ---------------------------------------------------------------
@@ -498,4 +669,4 @@ COMMANDS = {
 #: Commands that accept --preset. Passing it elsewhere is refused rather than
 #: ignored: silently dropping an option the person typed is how they end up
 #: believing a build used a configuration it never saw.
-PRESET_COMMANDS = {"build", "upgrade", "install"}
+PRESET_COMMANDS = {"build", "upgrade", "install", "deploy"}

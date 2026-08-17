@@ -170,8 +170,8 @@
       },
       {
         "module": "morfdeploy",
-        "source": "morfTools",
-        "sourceSubdir": "lib/morfdeploy",
+        "source": "morfDeploy",
+        "sourceSubdir": "morfdeploy",
         "compare": [
           "backends"
         ],

@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.10.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.17.0-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -73,19 +73,31 @@ Depuis n'importe quel dossier : `python3 <espace>/morfTools/morf.py status` (ou
 ### Arguments
 
 Toutes les commandes n'opèrent que sur les projets déclarés dans
-`ecosystem.json`. Ce sont les 13 commandes `morf`. La configuration et les bits
+`ecosystem.json`. Ce sont les 15 commandes `morf`. La configuration et les bits
 exécutables passent par des **scripts séparés** à la racine (voir la note sous le
 tableau), pas par des sous-commandes `morf`.
+
+**Deux surfaces.** Administrer une machine (`deploy`/`install`, `update`,
+`upgrade`, `purge`, `uninstall`, `doctor`) est un métier différent de travailler
+sur les clones en tant que code source (Git et build). Ces dernières -- `clone`,
+`fetch`, `pull`, `status`, `push`, `commit`, `build`, `clean` -- sont aussi
+accessibles sous un espace **`morf dev <sous-commande>`**, pour que les deux
+surfaces se lisent comme deux. Les formes plates restent valables ; `morf dev`
+sans sous-commande les liste. (`morf update` comme git pull est déprécié au
+profit de `morf dev pull`.)
 
 | Commande `morf` | Arguments | Action |
 | --- | --- | --- |
 | `clone` | aucun | Clone les projets manquants sur la branche du manifeste. |
 | `fetch` | aucun | Récupère les dépôts distants et purge les références supprimées. |
-| `pull`, `update` | aucun | Tire en avance rapide depuis la branche du manifeste. |
-| `build` | preset CMake (demandé si omis) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
-| `install` | `--services`, `--only NAME`, `--preset` | Sans `--services` : installe seulement `requirements.txt` s'il existe. **`install --services` déploie TOUS les services du parc en une commande** (compile sous votre compte, puis élève la seule étape d'installation ; le patron morfTemplateService est sauté). À lancer **sans `sudo`**. Restreindre à un service avec `--only`. |
-| `uninstall` | `--only NAME`, `--purge`, `--backup DIR` | Désinstalle un service (un seul avec `--only`, sinon tous). Par défaut conserve la configuration ; **`--purge`** retire aussi la configuration et le binaire ; **`--backup DIR`** copie d'abord chaque configuration dans `DIR`. |
-| `upgrade` | preset CMake (demandé si omis), `--gui`, `--force` | Tire, recompile les projets CMake, **puis met à jour les services installés ici et fusionne le contrat de config partagée `morfsystem.json`** (ajoute les clés nouvelles du clone, garde toutes les valeurs locales ; sauté avec `--only`). `--force` redéploie et redémarre chaque service même sans changement (transmis à `service.py update`). |
+| `pull` | `--dry-run` | Tire en avance rapide depuis la branche du manifeste. `--dry-run` récupère et liste les commits entrants sans fusionner. Préférer `morf dev pull`. |
+| `update` | `--dry-run` | **Déprécié comme opération Git** : affiche un avertissement et se comporte comme `pull`. Utiliser `morf dev pull` pour Git. `morf update` est réservé au sens « mettre à jour les composants installés » dans une version ultérieure. |
+| `build` | preset CMake (auto-détecté pour la plateforme, sinon demandé) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
+| `deploy` | `[<projet>…]`, `--all`, `--config keep\|merge\|replace`, `--preset`, `--dry-run`, `--yes` | Installe les services choisis sur cette machine. `morf deploy` seul propose un choix numéroté (et demande le comportement de config) ; nommer des services ou `--all` pour scripter. `--config` décide de la configuration de chaque service : `keep` (défaut, ne jamais écraser), `merge` (ajoute les clés nouvelles du clone, garde les valeurs locales), `replace` (écrase depuis le dépôt, sauvegarde d'abord). `--dry-run` affiche le plan sans rien toucher. Compile sous votre compte, n'élève que l'installation et l'écriture de config. |
+| `install` | `--services`, `--only NAME`, `--preset` | Sans `--services` : installe seulement `requirements.txt` s'il existe. **`install --services` déploie TOUS les services du parc en une commande** (compile sous votre compte, puis élève la seule étape d'installation ; le patron morfTemplateService est sauté). À lancer **sans `sudo`**. Restreindre à un service avec `--only`. (`deploy` est la façade sélective et consciente de la config sur la même machinerie.) |
+| `uninstall` | `[<projet>…]`, `--all`, `--only NAME`, `--purge`, `--backup DIR`, `--dry-run`, `--yes` | Désinstalle des services : les nommer, `--all` (ou forme nue) pour tous, `--only` pour un (compat). `--purge` retire aussi configuration et données ; `--backup DIR` copie d'abord la configuration. `--dry-run` liste ce qui partirait sans rien toucher. Retirer des services demande confirmation ; `--purge` demande un jeton saisi (`PURGE`, ou `PURGE ALL` sur toute la machine) ; le non-interactif exige `--yes`. |
+| `purge` | `[<projet> [<id>…]]`, `--all`, `--dry-run`, `--yes`, `--force` | Efface des catégories de données déclarées. Chaque projet annonce ce qu'il sait effacer (`service.py purge --list`) ; morfTools ne lit jamais un service.json. `morf purge` seul liste ce qui est purgeable ici ; `morf purge <projet> <id>…` ou `--all` cible ; `morf purge --all` balaie tous les projets de la machine. `--dry-run` prévisualise sans rien supprimer ; une purge réelle destructive demande une confirmation saisie sauf `--yes`. Une purge réelle est refusée tant que le service tourne (écriture possible en cours) ; `--force` outrepasse. |
+| `upgrade` | preset CMake (auto-détecté pour la plateforme, sinon demandé), `--gui`, `--force`, `--dry-run` | Tire, recompile les projets CMake, **puis met à jour les services installés ici et fusionne le contrat de config partagée `morfsystem.json`** (ajoute les clés nouvelles du clone, garde toutes les valeurs locales ; sauté avec `--only`). `--force` redéploie et redémarre chaque service même sans changement (transmis à `service.py update`). `--dry-run` affiche le plan par projet (commits entrants, recompilation, mise à jour du service, fusion de config partagée) sans rien exécuter. |
 | `doctor` | `--update`, `--verbose`, `--only` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git ; **`--update`** ajoute la comparaison à `origin/main` (nouvelle version disponible, morfTools compris - un pas réseau). À lancer avant `push`. |
 | `clean` | aucun | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`…). |
 | `status` | aucun | Affiche l'état Git court et la branche. |
