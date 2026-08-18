@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import json
+from functools import lru_cache
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -121,11 +122,67 @@ def skip_gui(project: Project, force_gui: bool) -> bool:
     return False
 
 
+@lru_cache(maxsize=1)
+def detect_windows_toolchain() -> tuple:
+    """Detect the MinGW/Qt build toolchain actually present, for -D overrides.
+
+    The parc's `mingw` preset pins one machine's MSYS2 paths -- ninja, g++, the
+    Qt prefix -- as absolute cache variables. Those paths do not exist on another
+    Windows box (the official Qt toolchain lives under C:/Qt/..., MSYS2 may be
+    absent entirely), so the pinned `ninja.exe` fails with "no such file". Rather
+    than assume a layout, morfTools detects what is on THIS machine and overrides
+    the pins: the same "the machine announces, morfTools adapts" rule as the rest
+    of the chantier.
+
+    Returns (overrides, problems): CMake -D flags to add, and human-readable gaps.
+    Cached: the toolchain is the same for every project in one run.
+    """
+    overrides, problems = [], []
+    ninja = shutil.which("ninja")
+    if ninja:
+        overrides.append(f"-DCMAKE_MAKE_PROGRAM={ninja}")
+    else:
+        problems.append("ninja introuvable sur le PATH")
+
+    cxx = shutil.which("g++") or shutil.which("c++")
+    if cxx:
+        overrides.append(f"-DCMAKE_CXX_COMPILER={cxx}")
+        cc = shutil.which("gcc") or shutil.which("cc")
+        if cc:
+            overrides.append(f"-DCMAKE_C_COMPILER={cc}")
+    else:
+        problems.append("compilateur MinGW (g++/c++) introuvable sur le PATH")
+
+    # Qt: an explicit CMAKE_PREFIX_PATH wins; Qt6_DIR lets CMake resolve on its
+    # own (no override, no problem); otherwise derive the prefix from qmake on
+    # the PATH (.../<qtver>/mingw_64/bin/qmake.exe -> .../<qtver>/mingw_64).
+    prefix = os.environ.get("CMAKE_PREFIX_PATH", "")
+    qt_via_env = bool(prefix or os.environ.get("Qt6_DIR"))
+    if not qt_via_env:
+        qmake = shutil.which("qmake6") or shutil.which("qmake")
+        if qmake:
+            prefix = str(Path(qmake).resolve().parent.parent)
+    if prefix:
+        overrides.append(f"-DCMAKE_PREFIX_PATH={prefix}")
+    elif not qt_via_env:
+        problems.append("préfixe Qt introuvable "
+                        "(ni CMAKE_PREFIX_PATH/Qt6_DIR, ni qmake sur le PATH)")
+    return tuple(overrides), tuple(problems)
+
+
+#: Print the toolchain diagnostic only once per run, not once per project.
+_TOOLCHAIN_REPORTED = [False]
+
+
 def cmake_build(project: Project, preset: str = "") -> None:
     """Build, skipping a preset this project does not declare.
 
     A preset missing here is a normal absence rather than a failure: it means
     the project does not target that configuration, not that the build broke.
+
+    On Windows, the `mingw` preset's pinned toolchain paths are overridden with
+    what this machine actually has (see detect_windows_toolchain), so a fresh box
+    with a different Qt/MinGW layout builds without editing thirteen presets.
     """
     if not preset:
         run(["cmake", "-S", ".", "-B", "build"], cwd=project.path)
@@ -134,7 +191,27 @@ def cmake_build(project: Project, preset: str = "") -> None:
     if preset not in project.presets():
         print(f"[SKIP] preset '{preset}' not defined in this project")
         return
-    run(["cmake", "--preset", preset], cwd=project.path)
+
+    overrides = ()
+    if platform.system() == "Windows" and preset in ("mingw", "windows"):
+        overrides, problems = detect_windows_toolchain()
+        if problems:
+            if not _TOOLCHAIN_REPORTED[0]:
+                print("[FAIL] toolchain de build incomplète sur cette machine :")
+                for gap in problems:
+                    print(f"       - {gap}")
+                print("       installer / mettre sur le PATH : ninja, un compilateur "
+                      "MinGW, et Qt")
+                print("       (ou définir CMAKE_PREFIX_PATH vers votre Qt). "
+                      "Voir 'morf doctor'.")
+                _TOOLCHAIN_REPORTED[0] = True
+            raise RuntimeError("toolchain de build incomplète")
+        if not _TOOLCHAIN_REPORTED[0]:
+            shown = ", ".join(o.split("=", 1)[1] for o in overrides)
+            print(f"[INFO] toolchain détectée sur cette machine : {shown}")
+            _TOOLCHAIN_REPORTED[0] = True
+
+    run(["cmake", "--preset", preset, *overrides], cwd=project.path)
     run(["cmake", "--build", "--preset", preset], cwd=project.path)
 
 
@@ -145,7 +222,16 @@ def cmd_build(workspace: Workspace, project: Project, preset: str = "",
     if project.is_platformio:
         if preset:
             print(f"[INFO] preset ignored for PlatformIO: {preset}")
-        run(["pio", "run"], cwd=project.path)
+        # PlatformIO is a separate toolchain, often absent on a machine that only
+        # builds the Qt services. Its absence is not a failure of the parc: skip
+        # the firmware with a clear note rather than crashing on a missing 'pio'.
+        pio = shutil.which("pio") or shutil.which("platformio")
+        if not pio:
+            print("[SKIP] PlatformIO (pio) introuvable sur le PATH : build firmware sauté.")
+            print("       Installer PlatformIO (pip install platformio) pour compiler "
+                  "les projets ESP32.")
+            return True
+        run([pio, "run"], cwd=project.path)
     elif project.is_cmake:
         cmake_build(project, preset)
     else:

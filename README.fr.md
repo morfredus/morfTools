@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.18.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.19.0-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -92,7 +92,7 @@ profit de `morf dev pull`.)
 | `fetch` | aucun | Récupère les dépôts distants et purge les références supprimées. |
 | `pull` | `--dry-run` | Tire en avance rapide depuis la branche du manifeste. `--dry-run` récupère et liste les commits entrants sans fusionner. Préférer `morf dev pull`. |
 | `update` | `--dry-run` | **Déprécié comme opération Git** : affiche un avertissement et se comporte comme `pull`. Utiliser `morf dev pull` pour Git. `morf update` est réservé au sens « mettre à jour les composants installés » dans une version ultérieure. |
-| `build` | preset CMake (auto-détecté pour la plateforme, sinon demandé) | Compile les projets PlatformIO, ou configure et compile les projets CMake. |
+| `build` | preset CMake (auto-détecté pour la plateforme, sinon demandé), `--gui` | Compile les projets PlatformIO, ou configure et compile les projets CMake. Sous Windows, les chemins de toolchain figés dans le preset `mingw` sont **surchargés par ce que la machine possède réellement** (ninja, compilateur MinGW et préfixe Qt détectés sur le PATH / l'env) : une machine avec une autre disposition Qt/MinGW compile sans éditer les presets ; un élément manquant est signalé clairement (voir `morf doctor`). Le firmware PlatformIO est sauté avec un avis si `pio` est absent. Les apps desktop sont sautées sur une machine sans écran (Linux) ; `--gui` force. |
 | `deploy` | `[<projet>…]`, `--all`, `--config keep\|merge\|replace`, `--preset`, `--dry-run`, `--yes` | Installe les services choisis sur cette machine. `morf deploy` seul propose un choix numéroté (et demande le comportement de config) ; nommer des services ou `--all` pour scripter. `--config` décide de la configuration de chaque service : `keep` (défaut, ne jamais écraser), `merge` (ajoute les clés nouvelles du clone, garde les valeurs locales), `replace` (écrase depuis le dépôt, sauvegarde d'abord). `--dry-run` affiche le plan sans rien toucher. Compile sous votre compte, n'élève que l'installation et l'écriture de config. |
 | `install` | `--services`, `--only NAME`, `--preset` | Sans `--services` : installe seulement `requirements.txt` s'il existe. **`install --services` déploie TOUS les services du parc en une commande** (compile sous votre compte, puis élève la seule étape d'installation ; le patron morfTemplateService est sauté). À lancer **sans `sudo`**. Restreindre à un service avec `--only`. (`deploy` est la façade sélective et consciente de la config sur la même machinerie.) |
 | `uninstall` | `[<projet>…]`, `--all`, `--only NAME`, `--purge`, `--backup DIR`, `--dry-run`, `--yes` | Désinstalle des services : les nommer, `--all` (ou forme nue) pour tous, `--only` pour un (compat). `--purge` retire aussi configuration et données ; `--backup DIR` copie d'abord la configuration. `--dry-run` liste ce qui partirait sans rien toucher. Retirer des services demande confirmation ; `--purge` demande un jeton saisi (`PURGE`, ou `PURGE ALL` sur toute la machine) ; le non-interactif exige `--yes`. |

@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.18.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.19.0-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -93,7 +93,7 @@ Git pull is deprecated in favour of `morf dev pull`.)
 | `fetch` | none | Fetch remotes and prune deleted references. |
 | `pull` | `--dry-run` | Fast-forward pull from the manifest branch. `--dry-run` fetches and lists the incoming commits without merging. Prefer `morf dev pull`. |
 | `update` | `--dry-run` | **Deprecated as a Git operation** -- prints a warning and behaves like `pull`. Use `morf dev pull` for Git. `morf update` is reserved to mean "update the installed components" in a later release. |
-| `build` | CMake preset (auto-detected for the platform, else asked), `--gui` | Build PlatformIO projects, or configure and build CMake projects. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
+| `build` | CMake preset (auto-detected for the platform, else asked), `--gui` | Build PlatformIO projects, or configure and build CMake projects. On Windows the `mingw` preset's pinned toolchain paths are **overridden with what this machine actually has** (ninja, MinGW compiler and Qt prefix detected on the PATH / env), so a box with a different Qt/MinGW layout builds without editing presets; a missing piece is reported clearly (see `morf doctor`). PlatformIO firmware is skipped with a note when `pio` is absent. Desktop GUI apps are skipped on a headless machine (Linux, no display); `--gui` builds them anyway. |
 | `deploy` | `[<project>…]`, `--all`, `--config keep\|merge\|replace`, `--preset`, `--dry-run`, `--yes` | Install selected services on this machine. Bare `morf deploy` offers a numbered choice (and asks the config behaviour); name services or `--all` to script it. `--config` decides each service's configuration: `keep` (default, never overwrite), `merge` (add the clone's new keys, keep local values), `replace` (overwrite from the repo, backup first). `--dry-run` prints the plan and touches nothing. Builds as you, elevates only the install and config write. |
 | `install` | `--services`, `--only NAME`, `--preset` | Without `--services`: install `requirements.txt` when present. **`install --services` deploys EVERY parc service in one command** (builds as you, then elevates only the install step; the morfTemplateService pattern is skipped). Run it **without `sudo`**. Restrict to one with `--only`. (`deploy` is the selective, config-aware front to the same machinery.) |
 | `uninstall` | `[<project>…]`, `--all`, `--only NAME`, `--purge`, `--backup DIR`, `--dry-run`, `--yes` | Uninstall services: name them, `--all` (or bare) for every one, `--only` for one (compat). `--purge` also removes configuration and data; `--backup DIR` copies the configuration first. `--dry-run` lists what would go without touching anything. Removing services asks to confirm; `--purge` asks for a typed token (`PURGE`, or `PURGE ALL` machine-wide); non-interactive needs `--yes`. |

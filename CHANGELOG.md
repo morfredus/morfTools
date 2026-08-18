@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.19.0] - 2026-08-18
+
+### Corrigé / Ajouté
+
+- **`morf build` s'adapte à la toolchain réellement présente** (Windows). Le
+  preset `mingw` figeait les chemins MSYS2 d'une machine (`C:/msys64/mingw64/bin/
+  ninja.exe`, `c++.exe`, `CMAKE_PREFIX_PATH`), donc échouait sur une machine
+  neuve avec une autre disposition (toolchain Qt officielle sous `C:/Qt/...`) :
+  `'…/ninja.exe' failed with: no such file or directory` sur les 15 projets.
+  morfTools **détecte** désormais ninja, le compilateur MinGW (g++/gcc) et le
+  préfixe Qt (via `CMAKE_PREFIX_PATH`/`Qt6_DIR`/`qmake` sur le PATH) et
+  **surcharge** les valeurs figées du preset avec des `-D` — sans éditer les 13
+  presets. Un élément manquant est signalé clairement une fois (pas 13 échecs
+  cryptiques). Détection mise en cache (une fois par run).
+- **PlatformIO absent géré proprement** : `morf build` saute le firmware ESP32
+  avec un avis (« installer PlatformIO ») au lieu de crasher sur `pio`
+  introuvable (`WinError 2`).
+- **`morf doctor` : section « Toolchain build (Windows) »** (ninja, compilateur,
+  préfixe Qt), pour comprendre l'état de compilation d'une machine avant de
+  builder.
+
 ## [0.18.0] - 2026-08-18
 
 ### Ajouté

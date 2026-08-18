@@ -246,6 +246,31 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
         lines.append("[SKIP] accès GitHub SSH/HTTPS (réseau ; --update)")
     reporter.feed("\n".join(lines), group="Accès Git", name="environnement")
 
+    # Build toolchain on Windows: the `mingw` preset pins one machine's paths, so
+    # a fresh box needs to know whether ninja, a MinGW compiler and Qt are found
+    # HERE before `morf build` overrides the pins with them. Local checks only.
+    import platform as _platform
+    if _platform.system() == "Windows":
+        from .commands import detect_windows_toolchain
+        overrides, _problems = detect_windows_toolchain()
+        found = {o.split("=", 1)[0]: o.split("=", 1)[1] for o in overrides}
+        tlines = [
+            f"[OK] ninja : {found['-DCMAKE_MAKE_PROGRAM']}"
+            if "-DCMAKE_MAKE_PROGRAM" in found else "[WARN] ninja introuvable sur le PATH",
+            f"[OK] compilateur : {found['-DCMAKE_CXX_COMPILER']}"
+            if "-DCMAKE_CXX_COMPILER" in found
+            else "[WARN] compilateur MinGW introuvable sur le PATH",
+        ]
+        if "-DCMAKE_PREFIX_PATH" in found:
+            tlines.append(f"[OK] Qt : {found['-DCMAKE_PREFIX_PATH']}")
+        elif os.environ.get("Qt6_DIR"):
+            tlines.append("[OK] Qt : résolu via Qt6_DIR")
+        else:
+            tlines.append("[WARN] préfixe Qt introuvable "
+                          "(définir CMAKE_PREFIX_PATH ou mettre qmake sur le PATH)")
+        reporter.feed("\n".join(tlines), group="Toolchain build (Windows)",
+                      name="mingw")
+
     branch = workspace.branch
     live = check_updates and sys.stderr.isatty()
     total = len(projects) + 1        # the projects, plus morfTools itself
