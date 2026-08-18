@@ -38,11 +38,19 @@ morfTools **détecte et surcharge**, il n'installe pas la toolchain (ninja/MinGW
 restent à la charge de l'utilisateur, comme le documente `doctor`). Détecter ≠
 configurer, comme pour le reste du chantier.
 
-## Reste
+## Validé
 
-- Le vrai test sur l'Asus : `morf build` avec la toolchain Qt officielle sur le
-  PATH doit compiler (détection → surcharge → build).
+- **Compilation confirmée sur l'Asus (2026-08-18)** : machine Windows fraîche,
+  toolchain Qt officielle (`C:\Qt\Tools\Ninja`, `mingw1310_64`, `C:\Qt\6.11.1\
+  mingw_64`) sur le PATH. `morf build` détecte cette toolchain, surcharge les
+  chemins MSYS2 figés du preset, et compile — sans édition des presets. L'objectif
+  du chantier est atteint : morfTools est indépendant de l'environnement du poste
+  principal.
+
+## Reste (non urgent)
+
 - Éventuel nettoyage des presets `mingw` figés (pour que `cmake --preset mingw`
-  direct, hors morfTools, soit aussi portable) — chantier distinct, non urgent.
+  direct, hors morfTools, soit aussi portable) — chantier distinct.
 - Risque de toolchains mélangées sur le PATH (msys64 + Qt officielle) : la
-  détection suit l'ordre du PATH ; sur une machine bien configurée, cohérent.
+  détection suit l'ordre du PATH ; sur une machine bien configurée, cohérent (le
+  cas Asus l'a confirmé).

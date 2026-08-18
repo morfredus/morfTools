@@ -233,6 +233,10 @@ def cmd_build(workspace: Workspace, project: Project, preset: str = "",
             return True
         run([pio, "run"], cwd=project.path)
     elif project.is_cmake:
+        # Resolve declared build libraries first (a no-op for a non-service
+        # project, which has no service.py to declare them yet).
+        if service_build_deps(project) != 0:
+            raise RuntimeError("build dependencies not satisfied")
         cmake_build(project, preset)
     else:
         print("[SKIP] no known build definition")
@@ -274,7 +278,7 @@ def cmd_install(workspace: Workspace, project: Project,
         # binary and installs it without rebuilding as root.
         if project.is_cmake and not skip_gui(project, False):
             cmake_build(project, preset)
-        run(elevated(["python3", str(entry), "install"]), cwd=project.path)
+        run(elevated([sys.executable, str(entry), "install"]), cwd=project.path)
         return True
 
     # Default (no --services): generic per-language setup only, no service.
@@ -284,7 +288,7 @@ def cmd_install(workspace: Workspace, project: Project,
     # install. Such a file is treated as "no generic install definition".
     req = project.path / "requirements.txt"
     if req.is_file() and _requirements_has_packages(req):
-        run(["python3", "-m", "pip", "install", "-r", "requirements.txt"], cwd=project.path)
+        run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=project.path)
     else:
         print("[SKIP] no generic install definition")
     return True
@@ -342,7 +346,7 @@ def redeploy_service(project: Project, force: bool = False) -> None:
     if not entry.is_file():
         return                            # not a service at all
 
-    probe = subprocess.run(["python3", str(entry), "is-installed"],
+    probe = subprocess.run([sys.executable, str(entry), "is-installed"],
                            cwd=project.path, capture_output=True, check=False)
     if probe.returncode == 2:
         # Not the same as "no": we were not allowed to ask. Staying quiet here
@@ -360,7 +364,7 @@ def redeploy_service(project: Project, force: bool = False) -> None:
     # `--force` is passed through to service.py update: redeploy and restart even
     # when nothing changed. Useful to bounce a service on demand, since the
     # unchanged-binary case is otherwise a deliberate no-op.
-    cmd = ["python3", str(entry), "update"] + (["--force"] if force else [])
+    cmd = [sys.executable, str(entry), "update"] + (["--force"] if force else [])
     run(elevated(cmd), cwd=project.path)
 
 
@@ -429,7 +433,7 @@ def cmd_uninstall(workspace: Workspace, project: Project,
             # One directory for the whole run; each service prefixes its own
             # files, so a single --backup collects the entire parc.
             args += ["--backup", backup]
-    run(["python3", *args], cwd=project.path)
+    run([sys.executable, *args], cwd=project.path)
     return True
 
 
@@ -496,6 +500,29 @@ def service_uninstall(project: Project, purge: bool, backup: str,
     return subprocess.run(cmd, cwd=project.path).returncode
 
 
+def service_build_deps(project: Project, dry_run: bool = False,
+                       assume_yes: bool = False) -> int:
+    """Resolve a project's declared build libraries before compiling it.
+
+    Delegates to the project's own `service.py build-deps` (morfDeploy), which
+    knows the packages per platform. A non-service project has no service.py and
+    no such contract yet, so it is a no-op (returns 0). The real install of a
+    build library needs root, so it is elevated like the service install; a
+    dry-run only reports and is never elevated.
+    """
+    entry = project.path / "service.py"
+    if not entry.is_file():
+        return 0
+    cmd = [sys.executable, str(entry), "build-deps"]
+    if dry_run:
+        cmd.append("--dry-run")
+    if assume_yes:
+        cmd.append("--yes")
+    if not dry_run:
+        cmd = elevated(cmd)
+    return subprocess.run(cmd, cwd=project.path).returncode
+
+
 def is_service_project(project: Project) -> bool:
     """A project morfTools can deploy as a service on this machine.
 
@@ -513,7 +540,7 @@ CONFIG_MODES = ("keep", "merge", "replace")
 
 
 def deploy_one(project: Project, preset: str, config_mode: str,
-               dry_run: bool) -> tuple:
+               dry_run: bool, assume_yes: bool = False) -> tuple:
     """Build and install one service, then apply the chosen config behaviour.
 
     Returns (returncode, steps) where steps names what ran (or would run under a
@@ -532,21 +559,29 @@ def deploy_one(project: Project, preset: str, config_mode: str,
     if config_mode != "keep":
         steps.append(f"config {config_mode}")
 
+    if builds:
+        steps.insert(0, "build-deps")
+
     if dry_run:
         return 0, steps
 
     if builds:
+        # Build libraries BEFORE compiling: a missing OpenSSL stops here with a
+        # clear message rather than a find_package failure mid-build. On a
+        # toolchain with no package manager it only announces and proceeds.
+        if service_build_deps(project, dry_run=False, assume_yes=assume_yes) != 0:
+            raise RuntimeError("build dependencies not satisfied")
         cmake_build(project, preset)
-    rc = subprocess.run(elevated(["python3", str(entry), "install"]),
+    rc = subprocess.run(elevated([sys.executable, str(entry), "install"]),
                         cwd=project.path).returncode
     if rc != 0:
         return rc, steps
     if config_mode == "merge":
-        rc = subprocess.run(elevated(["python3", str(entry), "config", "merge"]),
+        rc = subprocess.run(elevated([sys.executable, str(entry), "config", "merge"]),
                             cwd=project.path).returncode
     elif config_mode == "replace":
         rc = subprocess.run(
-            elevated(["python3", str(entry), "config", "push", "--force"]),
+            elevated([sys.executable, str(entry), "config", "push", "--force"]),
             cwd=project.path).returncode
     return rc, steps
 

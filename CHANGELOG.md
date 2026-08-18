@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.21.0] - 2026-08-18
+
+### Ajouté
+
+- **`morf build` et `morf deploy` résolvent les dépendances de build AVANT de
+  compiler** (via morfDeploy 0.9.0). Avant `cmake --preset`, chaque projet qui
+  déclare des `build_dependencies` (par `service.py build-deps`) voit ses
+  bibliothèques de compilation vérifiées : sur Debian, installées avec validation
+  (`--yes` transmis depuis `deploy --yes`) ; sur une toolchain sans gestionnaire
+  (Qt officielle Windows), simplement annoncées, le build restant le juge. Une
+  dépendance obligatoire non satisfaite marque le projet **FAILED** (rattrapé, pas
+  de cascade) avec un message clair au lieu d'une erreur `find_package` opaque.
+  Un projet non-service (sans `service.py`) n'a pas encore ce contrat : no-op.
+
+## [0.20.1] - 2026-08-18
+
+### Corrigé
+
+- **`morf deploy` ne s'arrête plus au premier échec de build.** Une erreur de
+  compilation d'un service (ex. une dépendance introuvable comme OpenSSL)
+  remontait en **traceback non rattrapé** et abandonnait tout le déploiement.
+  `run_deploy` rattrape désormais l'exception par projet, la marque **FAILED**
+  dans le résumé, et poursuit les services suivants -- comme la boucle générique
+  de `build`/`upgrade` le fait déjà.
+
+## [0.20.0] - 2026-08-18
+
+### Corrigé
+
+- **`morf deploy` / `install --services` / `upgrade` n'assument plus la commande
+  `python3`.** Les appels au `service.py` de chaque projet utilisaient le
+  littéral `"python3"` ; sur une machine Windows fraîche (Python installé comme
+  `python`/`py`, sans alias `python3`), `deploy` plantait avec `WinError 2` au
+  moment d'appeler `service.py install`. Tous ces appels utilisent désormais
+  **`sys.executable`** (l'interpréteur réellement en cours), comme le code de
+  purge/uninstall le faisait déjà. Même leçon que la toolchain de build : ne pas
+  supposer l'environnement du poste principal.
+- **`build_as_user` de morfDeploy adapté aussi** (via morfDeploy 0.8.0) : si un
+  `service.py install` recompile sur une machine à la toolchain différente, il
+  surcharge le preset `mingw` figé comme `morf build`.
+
 ## [0.19.0] - 2026-08-18
 
 ### Corrigé / Ajouté

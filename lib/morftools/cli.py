@@ -595,8 +595,17 @@ def run_deploy(workspace: Workspace, args) -> int:
     results = []
     for project in selected:
         _project_banner(project.local_name)
-        rc, steps = deploy_one(project, preset, config_mode, args.dry_run)
-        outcome = "OK" if rc == 0 else f"FAILED ({rc})"
+        # One project's build or install failing must never abort the sweep: the
+        # remaining services would be left untouched with nothing saying so. A
+        # raised error (a CMake failure, say) becomes a FAILED line, like a
+        # non-zero return, and the deploy carries on to the next.
+        try:
+            rc, steps = deploy_one(project, preset, config_mode, args.dry_run,
+                                   assume_yes=args.yes)
+            outcome = "OK" if rc == 0 else f"FAILED ({rc})"
+        except (RuntimeError, OSError) as exc:
+            print(f"[FAIL] {project.local_name}: {exc}", file=sys.stderr)
+            outcome, steps = "FAILED", ["build/install error"]
         results.append((project.local_name, outcome, steps))
 
     print()
