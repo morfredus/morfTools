@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.18.0] - 2026-08-18
+
+### Ajouté
+
+- **`morf clone` détecte l'accès Git au lieu de le supposer**, pour tourner sur
+  une machine neuve sans la préparation implicite du poste de dev. Nouveau module
+  `gitaccess.py` (lecture seule : git/ssh présents, clé présente, **accès GitHub
+  SSH réellement vérifié** par `git ls-remote` en batch, HTTPS joignable). Option
+  **`--protocol auto|ssh|https`** :
+  - `auto` (défaut) : SSH s'il s'authentifie vraiment à GitHub, sinon propose
+    HTTPS (menu interactif ; repli HTTPS en non-interactif avec `--yes`).
+  - `ssh` : échoue proprement si SSH n'est pas opérationnel, en disant ce qui
+    manque et comment poursuivre.
+  - `https` : clone via HTTPS (mode d'accès valide, pas un simple fallback) ;
+    URL dérivée de la template SSH (`git@host:owner/…` → `https://host/owner/…`)
+    ou `httpsUrlTemplate` du manifeste.
+  - **Ne configure jamais SSH** (aucune génération de clé, aucune modif `~/.ssh`) :
+    l'option « configurer SSH » montre seulement la marche à suivre. `--yes`
+    autorise le repli HTTPS en non-interactif.
+- **`morf doctor` : section « Accès Git »** (git, ssh, clé SSH, accès GitHub SSH,
+  clone HTTPS). Les tests réseau (SSH/HTTPS) sont gated sur `--update` ; les
+  vérifications locales s'affichent toujours. On comprend l'état d'une machine
+  neuve avant même de cloner.
+
 ## [0.17.0] - 2026-08-17
 
 ### Ajouté

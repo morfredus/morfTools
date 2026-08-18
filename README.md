@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.17.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.18.0-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -89,7 +89,7 @@ Git pull is deprecated in favour of `morf dev pull`.)
 
 | `morf` command | Arguments | Action |
 | --- | --- | --- |
-| `clone` | none | Clone missing projects on the manifest branch. |
+| `clone` | `--protocol auto\|ssh\|https`, `--yes` | Clone missing projects on the manifest branch. Detects the machine's real Git access first (no assumed SSH setup): `auto` uses SSH when it truly authenticates to GitHub, else proposes HTTPS; `ssh` fails cleanly if SSH is not operational (saying what is missing); `https` clones over HTTPS. Never generates keys or edits `~/.ssh`. `--yes` authorises the HTTPS fallback non-interactively. |
 | `fetch` | none | Fetch remotes and prune deleted references. |
 | `pull` | `--dry-run` | Fast-forward pull from the manifest branch. `--dry-run` fetches and lists the incoming commits without merging. Prefer `morf dev pull`. |
 | `update` | `--dry-run` | **Deprecated as a Git operation** -- prints a warning and behaves like `pull`. Use `morf dev pull` for Git. `morf update` is reserved to mean "update the installed components" in a later release. |

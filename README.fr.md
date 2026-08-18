@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.17.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.18.0-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -88,7 +88,7 @@ profit de `morf dev pull`.)
 
 | Commande `morf` | Arguments | Action |
 | --- | --- | --- |
-| `clone` | aucun | Clone les projets manquants sur la branche du manifeste. |
+| `clone` | `--protocol auto\|ssh\|https`, `--yes` | Clone les projets manquants sur la branche du manifeste. Détecte d'abord l'accès Git réel de la machine (aucune config SSH supposée) : `auto` utilise SSH s'il s'authentifie vraiment à GitHub, sinon propose HTTPS ; `ssh` échoue proprement si SSH n'est pas opérationnel (en disant ce qui manque) ; `https` clone via HTTPS. Ne génère jamais de clé ni ne modifie `~/.ssh`. `--yes` autorise le repli HTTPS en non-interactif. |
 | `fetch` | aucun | Récupère les dépôts distants et purge les références supprimées. |
 | `pull` | `--dry-run` | Tire en avance rapide depuis la branche du manifeste. `--dry-run` récupère et liste les commits entrants sans fusionner. Préférer `morf dev pull`. |
 | `update` | `--dry-run` | **Déprécié comme opération Git** : affiche un avertissement et se comporte comme `pull`. Utiliser `morf dev pull` pour Git. `morf update` est réservé au sens « mettre à jour les composants installés » dans une version ultérieure. |

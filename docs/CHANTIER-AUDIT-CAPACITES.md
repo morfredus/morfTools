@@ -282,10 +282,41 @@ Tranchages retenus pour la suite du chantier :
 14. `from_config` pour chemins configurables (décision de Fred) - **fait**
     (morfDeploy 0.5.0) ; appliqué à **morfCollector** (0.4.4).
 
-### Reste (tranches suivantes)
+15. Extension `from_config` **dossier + sous-chemin** (`from_config_kind: dir` +
+    `default_dir`) - **fait** (morfDeploy 0.6.0). Appliquée à **morfAnalytics
+    `sitewatch-history`** (0.29.5), seule donnée d'analytics adressable par une clé
+    top-level (`sitewatch_cache_dir`).
 
-- Déclarer et **vérifier sur le Pi** la purge de **morfAnalytics** (historiques ;
-  from_config dossier + sous-chemin, petite extension) et **morfSync**
-  (change-stores sous state).
-- Sens définitif de `morf update` (« mettre à jour les composants installés »)
-  une fois la période de dépréciation écoulée.
+### Reste (command-type binaire, C++, à faire et vérifier sur le Pi)
+
+- **morfAnalytics** historiques `monitor` et `meteo` : chemins issus de params
+  **par-module imbriqués** (`modules[].cache_dir`/`db_path`), non adressables par
+  une clé top-level → purge de type `command` (le binaire connaît ses chemins).
+- **morfSync** journaux de synchro : fichiers `{domain}.json` à **noms dynamiques**
+  sous `state_dir` → purge `command` (le binaire les énumère) ou effacement du
+  contenu de `state_dir` (qui ne contient que ces journaux).
+- Ces deux cas exigent un sous-`purge` dans le binaire C++ concerné : à faire et
+  éprouver sur le Pi avec le vrai service.
+- Sens définitif de `morf update` (« mettre à jour les composants installés ») une
+  fois la période de dépréciation écoulée - décision à prendre par Fred, et à
+  définir en cohérence avec le chantier « dépendances système » (voir
+  `CHANTIER-DEPENDANCES-SYSTEME.md`).
+
+### Validation sur le Pi (opérations réelles, non exerçables sous Windows)
+
+Le dry-run et la logique hors-privilèges ont été validés ici ; l'exécution réelle
+(build + admin) reste à éprouver sur Linux. Séquence conseillée sur pi4fred :
+
+1. `python3 morf.py deploy morfPhoto --dry-run` puis sans `--dry-run` (build +
+   install + config) ; vérifier `service.py status`.
+2. `python3 morf.py purge morfPhoto database --dry-run` (voir le vrai chemin
+   `photos.db`), puis, service arrêté, sans `--dry-run` ; re-indexer ensuite.
+3. `python3 morf.py purge morfCollector vault --dry-run` (vérifie la résolution
+   `vault_root`/repli `state/vault`) ; ne PAS purger le vrai coffre sans intention.
+4. `python3 morf.py purge morfAnalytics sitewatch-history --dry-run` (résolution
+   `sitewatch_cache_dir`/repli `app/cache`).
+5. `python3 morf.py uninstall morfPhoto --dry-run` puis, si voulu, réel + jeton.
+6. Vérifier le **garde-fou** : purge réelle refusée tant que le service tourne
+   (message clair) ; `--force` pour outrepasser une fois le service arrêté.
+7. Vérifier la **détection de preset** : `deploy`/`upgrade` sans `--preset` doit
+   choisir `linux-arm64` sur le Pi.

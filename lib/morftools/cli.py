@@ -16,6 +16,7 @@ import sys
 from contextlib import redirect_stdout
 from pathlib import Path
 
+from . import gitaccess
 from .commands import (COMMANDS, CONFIG_MODES, PRESET_COMMANDS, cmd_doctor,
                        deploy_one, elevated, is_service_project, purge_catalog,
                        service_purge, service_uninstall, update_status)
@@ -219,6 +220,31 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
     text = capture([sys.executable, str(scripts / "exec-bits.py"),
                     str(workspace.root), "--check"])
     reporter.feed(text, group="Écosystème", name="Bits exécutables")
+
+    # Git access: what a fresh machine can actually do, so `clone` is understood
+    # before it is run. The cheap local checks always show; the live GitHub tests
+    # are a network step, gated on --update like the version check.
+    sample = projects[0].local_name if projects else ""
+    ssh_url = workspace.clone_url(sample, "ssh") if sample else ""
+    https_url = workspace.clone_url(sample, "https") if sample else ""
+    lines = [
+        "[OK] git présent" if gitaccess.git_available() else "[FAIL] git absent",
+        "[OK] ssh présent" if gitaccess.ssh_available()
+        else "[WARN] ssh absent (clone HTTPS possible)",
+        "[OK] clé SSH présente" if gitaccess.ssh_key_present()
+        else "[WARN] clé SSH absente",
+    ]
+    if check_updates and ssh_url:
+        lines.append("[OK] accès GitHub SSH vérifié"
+                     if gitaccess.ssh_github_access(ssh_url)
+                     else "[WARN] accès GitHub SSH indisponible "
+                          "(utiliser --protocol https)")
+        lines.append("[OK] clone HTTPS accessible"
+                     if gitaccess.https_reachable(https_url)
+                     else "[WARN] clone HTTPS : identifiants requis à la demande")
+    else:
+        lines.append("[SKIP] accès GitHub SSH/HTTPS (réseau ; --update)")
+    reporter.feed("\n".join(lines), group="Accès Git", name="environnement")
 
     branch = workspace.branch
     live = check_updates and sys.stderr.isatty()
@@ -637,6 +663,100 @@ def run_uninstall(workspace: Workspace, args) -> int:
     return 0 if all(outcome == "OK" for _, outcome in results) else 1
 
 
+def _print_git_access(diag: dict) -> None:
+    """The Git-access snapshot, aligned, for clone diagnostics and doctor."""
+    def mark(ok):
+        return "OK" if ok else "non"
+    print(f"  Git              : {mark(diag['git'])}")
+    print(f"  SSH              : {mark(diag['ssh'])}")
+    print(f"  SSH key          : {'présente' if diag['ssh_key'] else 'absente'}")
+    print(f"  GitHub SSH access: {'disponible' if diag['ssh_github'] else 'indisponible'}")
+    print(f"  HTTPS clone      : {'disponible' if diag['https'] else 'identifiants requis / à confirmer'}")
+
+
+def resolve_clone_protocol(workspace: Workspace, args) -> str | None:
+    """Pick or propose the Git protocol for cloning on THIS machine.
+
+    Detect first, never assume the developer's setup. Returns 'ssh' or 'https' to
+    proceed, or None to stop (message already printed). Never configures SSH: the
+    'configure' path only shows how, then leaves it to the user.
+    """
+    if not gitaccess.git_available():
+        print("git is not available on this machine. Install Git, then re-run.",
+              file=sys.stderr)
+        return None
+
+    projects = workspace.projects()
+    sample = projects[0].local_name if projects else ""
+    ssh_url = workspace.clone_url(sample, "ssh") if sample else ""
+    https_url = workspace.clone_url(sample, "https") if sample else ""
+    interactive = bool(sys.stdin and sys.stdin.isatty())
+
+    if args.protocol == "https":
+        if not https_url:
+            print("No HTTPS URL could be derived from the manifest "
+                  "(set httpsUrlTemplate).", file=sys.stderr)
+            return None
+        return "https"
+
+    if args.protocol == "ssh":
+        if gitaccess.ssh_github_access(ssh_url):
+            return "ssh"
+        print("SSH access to GitHub is not operational, but --protocol ssh was "
+              "requested.", file=sys.stderr)
+        _print_git_access(gitaccess.diagnose(ssh_url, https_url))
+        print("\nConfigure SSH (below) or use --protocol https.", file=sys.stderr)
+        print(gitaccess.ssh_setup_hint(), file=sys.stderr)
+        return None
+
+    # auto
+    if gitaccess.ssh_available() and gitaccess.ssh_github_access(ssh_url):
+        print("[INFO] SSH access to GitHub verified; cloning over SSH.",
+              file=sys.stderr)
+        return "ssh"
+
+    if not gitaccess.ssh_available():
+        if not https_url:
+            print("SSH is unavailable and no HTTPS URL could be derived.",
+                  file=sys.stderr)
+            return None
+        print("SSH is not available on this machine; cloning can use HTTPS.")
+        if args.yes or not interactive:
+            print("[INFO] proceeding over HTTPS.")
+            return "https"
+        reply = prompt("Continue with HTTPS? [Y/n] ")
+        if reply is not None and reply.strip().lower() in ("", "y", "yes", "o", "oui"):
+            return "https"
+        return None
+
+    # SSH present but not authenticated to GitHub.
+    print("Git SSH access is not configured: no working SSH authentication to "
+          "GitHub was detected.")
+    if not interactive:
+        if args.yes and https_url:
+            print("[INFO] non-interactive: falling back to HTTPS.")
+            return "https"
+        print("Re-run with --protocol https [--yes], or configure SSH then "
+              "--protocol ssh.", file=sys.stderr)
+        return None
+
+    print("\nChoices:")
+    print("  [1] Configure SSH access (show how)")
+    print("  [2] Use HTTPS")
+    print("  [3] Cancel")
+    reply = prompt("Choice [1-3]: ")
+    if reply is None:
+        return None
+    choice = reply.strip()
+    if choice == "1":
+        print("\n" + gitaccess.ssh_setup_hint())
+        print("\nSSH not changed. Re-run `morf clone` once configured.")
+        return None
+    if choice == "2":
+        return "https" if https_url else None
+    return None
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="morf",
@@ -651,6 +771,8 @@ def build_parser() -> argparse.ArgumentParser:
                              "project's data")
     parser.add_argument("--preset", "-p", default="",
                         help=f"CMake preset ({', '.join(sorted(PRESET_COMMANDS))} only)")
+    parser.add_argument("--protocol", choices=("auto", "ssh", "https"), default="auto",
+                        help="clone: Git access protocol (auto detects SSH, else HTTPS)")
     parser.add_argument("--message", "-m", default="", help="Commit message")
     parser.add_argument("--only", default="",
                         help="Restrict to one project, by canonical name")
@@ -843,8 +965,12 @@ def main(argv: list | None = None) -> int:
         print("--dry-run only applies to purge, deploy, uninstall, "
               "pull/update and upgrade.", file=sys.stderr)
         return 2
-    if args.yes and args.command not in ("purge", "deploy", "uninstall"):
-        print("--yes only applies to purge, deploy and uninstall.", file=sys.stderr)
+    if args.yes and args.command not in ("purge", "deploy", "uninstall", "clone"):
+        print("--yes only applies to purge, deploy, uninstall and clone.",
+              file=sys.stderr)
+        return 2
+    if args.protocol != "auto" and args.command != "clone":
+        print("--protocol only applies to clone.", file=sys.stderr)
         return 2
     if args.config and args.command != "deploy":
         print("--config only applies to deploy.", file=sys.stderr)
@@ -893,6 +1019,15 @@ def main(argv: list | None = None) -> int:
     if args.command == "doctor":
         return run_doctor(workspace, projects, args.verbose, args.update)
 
+    # Clone resolves the Git protocol ONCE, up front, from what this machine can
+    # actually do -- so a fresh box without SSH is handled before the first clone,
+    # not by thirteen identical failures.
+    clone_protocol = "ssh"
+    if args.command == "clone":
+        clone_protocol = resolve_clone_protocol(workspace, args)
+        if clone_protocol is None:
+            return 2
+
     failed = []
 
     for project in projects:
@@ -920,6 +1055,8 @@ def main(argv: list | None = None) -> int:
                 ok = handler(workspace, project, args.purge, args.backup)
             elif handler.__name__ == "cmd_pull":
                 ok = handler(workspace, project, args.dry_run)
+            elif handler.__name__ == "cmd_clone":
+                ok = handler(workspace, project, clone_protocol)
             else:
                 ok = handler(workspace, project)
             if ok is False:

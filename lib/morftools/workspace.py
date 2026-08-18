@@ -108,9 +108,39 @@ class Workspace:
     def branch(self) -> str:
         return self.manifest.get("branch", "main")
 
-    def clone_url(self, local_name: str) -> str:
-        template = self.manifest.get("cloneUrlTemplate", "")
+    def clone_url(self, local_name: str, protocol: str = "ssh") -> str:
+        """The clone URL for a repository, over SSH or HTTPS.
+
+        SSH is the manifest's `cloneUrlTemplate` (the developer default). HTTPS is
+        an equally valid access mode for a fresh machine that has no SSH identity:
+        it is derived from the SSH template (git@host:owner/... -> https://host/
+        owner/...), or read from an explicit `httpsUrlTemplate` when the manifest
+        provides one.
+        """
+        if protocol == "https":
+            template = self.manifest.get("httpsUrlTemplate") or self._derive_https_template()
+        else:
+            template = self.manifest.get("cloneUrlTemplate", "")
         return template.replace("{name}", local_name)
+
+    def _derive_https_template(self) -> str:
+        """Turn the SSH template into an HTTPS one, or "" if it cannot be parsed.
+
+        Handles the common forms `git@host:owner/{name}.git` and
+        `ssh://git@host/owner/{name}.git`. Anything else returns empty, and the
+        caller reports HTTPS as unavailable rather than building a wrong URL.
+        """
+        ssh = self.manifest.get("cloneUrlTemplate", "")
+        if ssh.startswith("git@") and ":" in ssh:
+            host, path = ssh[len("git@"):].split(":", 1)
+            return f"https://{host}/{path}"
+        if ssh.startswith("ssh://"):
+            rest = ssh[len("ssh://"):]
+            if rest.startswith("git@"):
+                rest = rest[len("git@"):]
+            host, _, path = rest.partition("/")
+            return f"https://{host}/{path}"
+        return ""
 
     def local_name(self, canonical: str) -> str:
         return f"{canonical}_travail" if self.sandbox else canonical

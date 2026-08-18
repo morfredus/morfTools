@@ -39,11 +39,11 @@ def capture(args: list, cwd: Path | None = None) -> str:
 
 # -- Git ------------------------------------------------------------------
 
-def cmd_clone(workspace: Workspace, project: Project) -> bool:
+def cmd_clone(workspace: Workspace, project: Project, protocol: str = "ssh") -> bool:
     if project.exists:
         print(f"[SKIP] {project.local_name} (already present)")
         return True
-    url = workspace.clone_url(project.local_name)
+    url = workspace.clone_url(project.local_name, protocol)
     run(["git", "clone", "--branch", workspace.branch, url, str(project.path)])
     return True
 
