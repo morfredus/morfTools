@@ -106,6 +106,13 @@ applications n'est donc qu'un instantané : elle grandira.
 - **Qt 6** pour la plupart des services (pas pour morfSync)
 - Sur Raspberry Pi : tout est dans les dépôts Raspberry Pi OS
 
+Sur une machine neuve, l'installation détaillée par plateforme (Windows, Linux,
+Raspberry Pi) et les bibliothèques non-Qt à prévoir - OpenSSL, libssh2,
+nlohmann_json, zlib, qui manquent souvent à une toolchain Qt seule et bloquent
+alors la compilation de certains services - sont dans
+[ENVIRONNEMENT-DEV.md](ENVIRONNEMENT-DEV.md). Lisez-le avant de compiler si vous
+partez de zéro.
+
 Systèmes officiellement supportés : **Windows x64**, **Linux x64**, **Linux
 ARM64 (Raspberry Pi)**. macOS n'est pas supporté - voir
 [ECOSYSTEM-PRINCIPLES.md](ECOSYSTEM-PRINCIPLES.md).

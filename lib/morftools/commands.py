@@ -22,6 +22,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from . import morfproject
 from .workspace import Project, Workspace
 
 
@@ -238,9 +239,38 @@ def cmd_build(workspace: Workspace, project: Project, preset: str = "",
         if service_build_deps(project) != 0:
             raise RuntimeError("build dependencies not satisfied")
         cmake_build(project, preset)
+        _stamp_provenance(project)
     else:
         print("[SKIP] no known build definition")
     return True
+
+
+def _stamp_provenance(project: Project) -> None:
+    """After a successful build, record this binary's provenance for a service.
+
+    Delegated to morfdeploy, and ONLY for a standardised service (its
+    `morfproject.json` declares packaging provider "morfdeploy"): morfdeploy owns
+    the artifact location (locate_binary) and the build-info.json format, so
+    morfTools carries no artifact heuristic of its own -- the single source of
+    truth stays where the build layout is already defined. Projects that own their
+    packaging (provider "project") write their own conformant provenance in their
+    scripts.
+
+    Never a build failure: provenance is what lets the later packaging chain trust
+    a binary, not a build requirement. A missing morfproject.json is a project not
+    yet onboarded, silently skipped.
+    """
+    try:
+        declared = morfproject.load(project.path)
+    except morfproject.MorfProjectError as exc:
+        print(f"[WARN] {exc}")
+        return
+    if declared is None or not declared.is_morfdeploy_service:
+        return
+    entry = project.path / "service.py"
+    if not entry.is_file():
+        return
+    run([sys.executable, str(entry), "build-info"], cwd=project.path, check=False)
 
 
 def is_template(project: Project) -> bool:
@@ -289,6 +319,13 @@ def cmd_install(workspace: Workspace, project: Project,
     req = project.path / "requirements.txt"
     if req.is_file() and _requirements_has_packages(req):
         run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=project.path)
+    elif (project.path / "service.py").is_file() and not is_template(project):
+        # A service has nothing to do in the GENERIC install (no requirements.txt):
+        # its install goes through service.py, reached by `--services`. Saying so
+        # here turns a puzzling "no generic install definition" -- printed for the
+        # whole parc when someone runs a bare `morf install` -- into the one
+        # command that actually deploys it.
+        print("[SKIP] service — run 'morf install --services' to deploy it")
     else:
         print("[SKIP] no generic install definition")
     return True

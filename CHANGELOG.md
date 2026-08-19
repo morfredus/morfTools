@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.24.0] - 2026-08-19
+
+### Ajouté
+
+- **`package-all.py` : l'orchestrateur de packaging** (Phase 4), **hors
+  `morf.py`** - packaging = un métier à part, morfTools reste le chef d'orchestre
+  sans recette. Il lit chaque `morfproject.json`, ne garde que les targets
+  **buildables sur cette machine** (natif = os+arch de l'hôte ; firmware = toute
+  machine avec PlatformIO), et délègue au bon producteur :
+  - provider `morfdeploy` → `service.py package --target … --out …` (build prouvé
+    + `.deb`/`.zip`) ;
+  - provider `project` → le script de packaging déclaré sur la target ;
+  - firmware (`build.tool` platformio) → build PlatformIO + `firmware.bin` renommé ;
+  - provider `none` / pas de target native → signalé et ignoré.
+  - **Idempotent** (saute un livrable `morfdeploy` déjà présent, `--force` pour
+    refaire), `--dry-run` (plan sans rien construire), `--out` (dossier de
+    distribution commun), `--only`. Ne **publie** rien : la distribution vers
+    morfPackages (assets de Releases) est la Phase 5, volontairement séparée.
+
+## [0.23.1] - 2026-08-19
+
+### Corrigé
+
+- **`morf install` (sans `--services`) : message clair pour un service.** Un
+  parc C++ n'a aucun `requirements.txt` : un `morf install` nu affichait
+  « [SKIP] no generic install definition » pour chaque projet, sans dire quoi
+  faire. Un projet portant un `service.py` (hors template) affiche désormais
+  « [SKIP] service — run 'morf install --services' to deploy it », qui pointe la
+  commande qui l'installe réellement.
+
+## [0.23.0] - 2026-08-19
+
+### Modifié
+
+- **`morfproject.json` : schéma v1 riche.** Le contrat gagne `schema_version`,
+  `project` (`id` + `type` parmi service/application/firmware/library/tool/
+  documentation/meta/template) et un `packaging` où `targets` est **une map par
+  livrable** : chaque target porte `platform` (`os`/`arch`), `build`
+  (`preset` pour morfdeploy, `script` ou `tool` pour un projet) et `package`
+  (`format`, `architecture`, et un `provider` **optionnel qui surcharge** le
+  provider par défaut du projet). `packaging.provider` est le **provider par
+  défaut** (none/morfdeploy/project) ; la **classification** reste portée par
+  `project.type`. Architectures normalisées en interne (`x86_64`, `arm64`).
+  Le loader ne connaît que le schéma ; il découvre les dépôts et agrège.
+
+## [0.22.0] - 2026-08-19
+
+### Ajouté
+
+- **Contrat projet `morfproject.json` (schéma + loader).** morfTools lit un
+  manifeste uniforme à la racine de chaque dépôt - `type`
+  (`service`/`application`/`firmware`) et `packaging` (provider `morfdeploy` ou
+  `project`, cibles) - distinct de `service.json` (une UI ou un firmware n'est pas
+  un service). morfTools ne connaît que le **schéma**, jamais la liste des
+  projets : il découvre les dépôts et agrège leurs déclarations
+  (`lib/morftools/morfproject.py`). Un fichier absent = projet pas encore
+  onboardé (ignoré) ; un fichier malformé = erreur.
+- **Provenance dans `morf build`.** Après un build CMake réussi, un service
+  standardisé (`provider: morfdeploy`) est marqué : `morf build` appelle
+  `service.py build-info` (morfdeploy localise l'artefact et écrit
+  `build-info.json`). **Aucune heuristique de localisation** côté morfTools ; les
+  projets qui possèdent leur packaging (`provider: project`) écrivent leur
+  provenance dans leurs propres scripts. Jamais bloquant pour un build.
+
+## [0.21.2] - 2026-08-19
+
+### Modifié
+
+- **`docs/GUIDE-DEMARRAGE.md` §2 renvoie à `ENVIRONNEMENT-DEV.md`.** La section
+  « Ce qu'il vous faut » listait les prérequis sans mener au guide d'installation
+  détaillée par plateforme ni au piège des bibliothèques non-Qt (OpenSSL, libssh2,
+  nlohmann_json, zlib) sur une toolchain neuve. Le lien manquant est ajouté :
+  celui qui part de zéro trouve désormais l'installation complète avant de compiler.
+
 ## [0.21.1] - 2026-08-18
 
 ### Ajouté
