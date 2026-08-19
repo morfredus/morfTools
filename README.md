@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.21.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.21.1-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -15,6 +15,10 @@
 - [`docs/GUIDE-DEMARRAGE.md`](docs/GUIDE-DEMARRAGE.md) *(FR)*: installing and configuring
   morfSystem from nothing, and which command to run when. **Start here** if the parc is
   new to you.
+- [`docs/ENVIRONNEMENT-DEV.md`](docs/ENVIRONNEMENT-DEV.md) *(FR)*: development environment
+  and **compilation dependencies** (toolchain, Qt6 components, OpenSSL/libssh2/… per
+  project, per-platform install). Read this to compile the parc without errors on a new
+  machine.
 - [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) *(FR)*: every script (options, action, when to
   use it) and the essential Linux/Windows commands for day-to-day monitoring and maintenance
   (`systemctl`, `journalctl`, `schtasks`, restart, logs). The operations reference.

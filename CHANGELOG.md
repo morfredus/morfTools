@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.21.1] - 2026-08-18
+
+### Ajouté
+
+- **`docs/ENVIRONNEMENT-DEV.md`** : guide d'installation de l'environnement de
+  développement et des **dépendances de compilation** du parc (toolchain commune,
+  composants Qt6 utilisés, bibliothèques non-Qt par projet - OpenSSL, libssh2,
+  nlohmann_json, zlib -, installation par plateforme Debian/Mint/Pi et Windows
+  MSYS2 vs Qt officielle, firmware PlatformIO, dépendances runtime, récapitulatif
+  par projet). Référencé depuis `README.md` et `README.fr.md`. Objectif : compiler
+  le parc sans erreur sur une machine neuve, en documentant explicitement le point
+  qui a piégé l'Asus (la toolchain Qt officielle ne fournit pas OpenSSL/libssh2/
+  nlohmann_json/zlib, donc morfCollector/morfSync/SiteWatch n'y compilent pas sans
+  ces bibliothèques).
+
 ## [0.21.0] - 2026-08-18
 
 ### Ajouté

@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.21.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.21.1-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -19,6 +19,7 @@ propre emplacement et ne s'appuient jamais sur un chemin absolu.
 - `scripts/ecosystem-check.py` : implémentation partagée des vérifications à
   l'échelle de l'écosystème, exécutées par `doctor`.
 - dossiers voisins : les projets morfSystem, indépendants les uns des autres.
+- [`docs/ENVIRONNEMENT-DEV.md`](docs/ENVIRONNEMENT-DEV.md) : environnement de développement et **dépendances de compilation** (toolchain, composants Qt6, OpenSSL/libssh2/… par projet, installation par plateforme). À lire pour compiler le parc sans erreur sur une machine neuve.
 - [`docs/EXPLOITATION.md`](docs/EXPLOITATION.md) : chaque script (options, action, quand l'utiliser) et les commandes Linux/Windows indispensables au suivi et à la maintenance au quotidien (`systemctl`, `journalctl`, `schtasks`, redémarrage, journaux). La référence d'exploitation.
 - [`docs/SCRIPTS.md`](docs/SCRIPTS.md) : le catalogue **exhaustif** de tous les scripts du parc (commandes globales `morf`, `service.py`, et les scripts locaux de chaque projet, y compris les outils de packaging et de build), avec leurs actions et leurs options.
 - `docs/ECOSYSTEM-PRINCIPLES.md` : les principes fondateurs et les invariants d'architecture valables pour **tout le parc**, y compris les frontières qu'aucun composant ne doit franchir.
