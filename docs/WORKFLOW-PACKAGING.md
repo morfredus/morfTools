@@ -1,0 +1,178 @@
+# Workflow de packaging multi-plateforme
+
+Ce document décrit le chemin complet entre une version source et ses paquets.
+Je le garde volontairement en deux temps : je décide et publie la version
+source, puis chaque machine produit ce qu'elle sait réellement construire. Le
+dépôt de distribution réunit les plateformes sans que je copie des binaires
+dans Git.
+
+## Les deux releases à ne pas confondre
+
+Chaque version porte deux releases distinctes.
+
+| Rôle | Dépôt | Tag | Titre |
+| --- | --- | --- | --- |
+| Autorité de la version source | dépôt du projet | `vX.Y.Z` | `nomProjet - vX.Y.Z` |
+| Distribution des installables | morfPackages | `nomprojet-vX.Y.Z` | `nomProjet - vX.Y.Z` |
+
+La première est créée par moi après ma mise à jour manuelle de la production.
+Elle ne reçoit pas les binaires. La seconde est créée automatiquement au premier
+packaging réussi et reçoit les `.deb`, `.zip`, firmwares, `manifest.json` et
+`checksums.sha256`.
+
+## 1. Préparer une version source
+
+Je choisis les projets et une même version pour chaque projet concerné. Je
+vérifie que les sources sont propres, je pousse mon dépôt de travail, puis je
+répercute moi-même le changement vers le dépôt de production. Cette propagation
+reste une action délibérée, hors de `package-all`.
+
+Une fois le dépôt source de production à jour, je crée sa release d'autorité.
+Sous Windows ou Linux, les commandes `gh` sont les mêmes :
+
+```text
+projet=morfCollector
+version=0.7.0
+notes="Packaging release: provenance-checked Windows and Linux artifacts."
+```
+
+Sous PowerShell :
+
+```powershell
+$project = "morfCollector"
+$version = "0.7.0"
+$notes = "Packaging release: provenance-checked Windows and Linux artifacts."
+
+gh release create "v$version" --repo "morfredus/$project" `
+  --title "$project - v$version" --notes $notes
+```
+
+Sous Linux :
+
+```bash
+project="morfCollector"
+version="0.7.0"
+notes="Packaging release: provenance-checked Windows and Linux artifacts."
+
+gh release create "v${version}" --repo "morfredus/${project}" \
+  --title "${project} - v${version}" --notes "$notes"
+```
+
+Si la release existe déjà, je vérifie au lieu de la recréer :
+
+```bash
+gh release view "v${version}" --repo "morfredus/${project}"
+```
+
+`morfPackages` refusera volontairement un artefact si cette release source
+n'existe pas.
+
+## 2. Construire et publier depuis Windows
+
+Je me place dans le dossier `morfTools` de mon workspace de travail. Avant de
+lancer la commande, les projets ciblés doivent être propres et à jour.
+
+```powershell
+cd C:\Users\frede\Codage\01-Travail\morfTools
+
+python .\package-all.py --sync --out ..\dist `
+  --release-notes "Windows and Linux installables for morfCollector 0.7.0." `
+  --only morfCollector
+```
+
+Pour plusieurs projets, j'ajoute simplement leurs noms après `--only` :
+
+```powershell
+python .\package-all.py --sync --out ..\dist `
+  --release-notes "Windows installables for the selected projects." `
+  --only morfCollector morfNotify morfMonitor
+```
+
+La commande sélectionne les cibles Windows natives, construit les ZIP, écrit
+leur sidecar `.metadata.json`, puis les publie automatiquement dans
+morfPackages. Le préflight de morfPackages fait `fetch --prune`, vérifie que
+l'arbre est propre et non divergent, puis applique `pull --ff-only` si besoin.
+
+## 3. Construire et publier depuis Linux
+
+Je fais la même chose sur la machine Linux AMD64 ou ARM64. Le dossier de sortie
+s'écrit avec des slashs Linux : `../dist`, jamais une barre oblique inversée.
+
+```bash
+cd ~/Codage/01-Travail/morfTools
+
+python3 ./package-all.py --sync --out ../dist \
+  --release-notes "Windows and Linux installables for morfCollector 0.7.0." \
+  --only morfCollector
+```
+
+Pour plusieurs projets :
+
+```bash
+python3 ./package-all.py --sync --out ../dist \
+  --release-notes "Linux installables for the selected projects." \
+  --only morfCollector morfNotify morfMonitor
+```
+
+Une machine ARM64 produit les `.deb` ARM64, une machine AMD64 les `.deb` AMD64.
+Un firmware est produit sur toute machine qui possède PlatformIO.
+
+## 4. Réunir les plateformes
+
+Je n'ai pas besoin de transporter un dossier `dist` entre Windows et Linux.
+`--sync` télécharge au début les assets déjà présents dans la release de ce
+projet et de cette version. La machine suivante ajoute seulement son livrable
+manquant. Chaque release morfPackages finit donc par contenir toutes les
+plateformes disponibles.
+
+Je peux néanmoins garder un dossier `dist` commun pour mon contrôle visuel. Il
+est jetable : Git l'ignore et les assets GitHub restent la distribution de
+référence.
+
+## 5. Publier manuellement un livrable déjà créé
+
+Normalement, `package-all` publie lui-même. Cette commande sert seulement à
+reprendre un livrable valide déjà présent dans `dist`, sans reconstruire :
+
+Sous PowerShell :
+
+```powershell
+cd C:\Users\frede\Codage\01-Travail\morfPackages
+
+python .\scripts\release.py publish --project morfCollector --version 0.7.0 `
+  --metadata ..\dist\morfcollector-0.7.0-windows-x86_64.zip.metadata.json `
+  --notes "Windows and Linux installables for morfCollector 0.7.0."
+```
+
+Sous Linux :
+
+```bash
+cd ~/Codage/01-Travail/morfPackages
+
+python3 ./scripts/release.py publish --project morfCollector --version 0.7.0 \
+  --metadata ../dist/morfcollector-0.7.0-linux-arm64.deb.metadata.json \
+  --notes "Windows and Linux installables for morfCollector 0.7.0."
+```
+
+La note n'est utilisée que si la release de distribution est créée à cette
+occasion. Les passages suivants ajoutent les assets manquants. Un même nom avec
+un commit ou un SHA-256 différent est un conflit et s'arrête sans écraser quoi
+que ce soit.
+
+## Contrôles utiles
+
+Avant une production, je peux inspecter le plan sans rien construire ni publier :
+
+```bash
+python3 ./package-all.py --dry-run --sync --out ../dist --only morfCollector
+```
+
+Après une production :
+
+```bash
+gh release view morfcollector-v0.7.0 --repo morfredus/morfPackages
+```
+
+Le tag de distribution reste volontairement différent du tag source : il permet
+à une seule release morfPackages de rassembler les plateformes d'un projet sans
+mélanger les versions de projets différents.

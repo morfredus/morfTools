@@ -12,6 +12,7 @@
     "morfDeploy",
     "morfMonitor",
     "morfNotify",
+    "morfPackages",
     "morfPhoto",
     "morfSensor",
     "morfSync",

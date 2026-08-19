@@ -15,20 +15,23 @@ is assumed), and hands each to the right producer:
     firmware.bin renamed with project and version, when the toolchain is present;
   - packaging.provider none, or no native target -> reported and skipped.
 
-The deliverables land in one shared distribution directory. Feeding them to the
-morfPackages GitHub Releases is a separate step (Phase 5), kept out of here on
-purpose: this script only PRODUCES, it does not publish.
+The deliverables land in one shared distribution directory, then the verified
+ones are uploaded to the matching private morfPackages GitHub Release. Git only
+holds the durable scripts and contract: package files are release assets.
 
-    python3 package-all.py [--dry-run] [--force] [--out DIR] [--only NAME ...]
+    python3 package-all.py [--sync] [--dry-run] [--force] [--out DIR] [--only NAME ...]
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import platform
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -93,6 +96,100 @@ def _expected_name(project, target, svc: str | None, version: str) -> str | None
 def _run(cmd: list, cwd: Path | None = None) -> int:
     print(f"    $ {' '.join(str(c) for c in cmd)}")
     return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=False).returncode
+
+
+def _sync_published(project, version: str, out: Path, dry: bool) -> str:
+    """Retrieve this release's existing assets before adding local output.
+
+    The sibling's name is derived from this tools directory, so the same source
+    works in both workspaces without embedding a workspace-specific suffix.
+    """
+    packages = HERE.parent / HERE.name.replace("Tools", "Packages")
+    script = packages / "scripts" / "release.py"
+    if not script.is_file():
+        return f"morfPackages script missing: {script}"
+    cmd = [sys.executable, str(script), "sync", "--project", project.name,
+           "--version", version, "--out", str(out)]
+    if dry:
+        print(f"    would sync: {' '.join(str(c) for c in cmd)}")
+        return "planned"
+    return "synced" if _run(cmd, packages) == 0 else "FAILED (sync)"
+
+
+def _packages_script() -> Path:
+    """Resolve the sibling through the tools name, never a fixed workspace path."""
+    return HERE.parent / HERE.name.replace("Tools", "Packages") / "scripts" / "release.py"
+
+
+def _release_preflight(dry: bool) -> str:
+    """Fetch and fast-forward morfPackages before producing any new asset."""
+    script = _packages_script()
+    if not script.is_file():
+        return f"morfPackages script missing: {script}"
+    cmd = [sys.executable, str(script), "preflight"]
+    if dry:
+        print(f"  would preflight: {' '.join(str(c) for c in cmd)}")
+        return "planned"
+    return "ready" if _run(cmd, script.parent.parent) == 0 else "FAILED (preflight)"
+
+
+def _publish_release(project, version: str, artifact: Path, notes: str | None, dry: bool) -> str:
+    """Upload an artifact only through its checked morfPackages release."""
+    script = _packages_script()
+    sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
+    cmd = [sys.executable, str(script), "publish", "--project", project.name,
+           "--version", version, "--metadata", str(sidecar)]
+    if notes:
+        cmd += ["--notes", notes]
+    if dry:
+        print(f"    would publish: {' '.join(str(c) for c in cmd)}")
+        return "planned"
+    return "published" if _run(cmd, script.parent.parent) == 0 else "FAILED (publish)"
+
+
+def _release_metadata(project, target, artifact: Path, version: str) -> str | None:
+    """Write the immutable provenance sidecar consumed by morfPackages.
+
+    This is deliberately a read-only Git check. Packaging must never turn a
+    dirty or unprovable source tree into something publishable later.
+    """
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project.path,
+                            text=True, capture_output=True, check=False)
+    dirty = subprocess.run(["git", "status", "--porcelain"], cwd=project.path,
+                           text=True, capture_output=True, check=False)
+    if commit.returncode or dirty.returncode:
+        return "Git provenance cannot be read"
+    if dirty.stdout.strip():
+        return "source tree is dirty; provenance sidecar refused"
+
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    metadata = {
+        "project": project.name,
+        "version": version,
+        "name": artifact.name,
+        "sha256": digest,
+        "commit": commit.stdout.strip(),
+        "dirty": False,
+        "target": target.name,
+        "platform": {"os": target.os, "arch": target.arch},
+        "format": target.package.get("format"),
+        "built_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
+    sidecar.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    print(f"    provenance: {sidecar.name}")
+    return None
+
+
+def _new_artifact(out: Path, target, before: set[Path], expected: str | None) -> Path | None:
+    """Find exactly the deliverable created for this target, never guess."""
+    if expected:
+        candidate = out / expected
+        return candidate if candidate.is_file() else None
+    extension = target.package.get("format")
+    candidates = [path for path in out.glob(f"*.{extension}")
+                  if path.is_file() and path not in before]
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def _package_service(project, target, out: Path, dry: bool) -> str:
@@ -160,6 +257,10 @@ def main(argv=None) -> int:
                         help="show the plan without building anything")
     parser.add_argument("--force", action="store_true",
                         help="build even a deliverable already present in --out")
+    parser.add_argument("--sync", action="store_true",
+                        help="download already published assets before local packaging")
+    parser.add_argument("--release-notes",
+                        help="text for a newly created morfPackages release")
     parser.add_argument("--out", type=Path, default=HERE.parent / "dist",
                         help="shared distribution directory (default: <workspace>/dist)")
     parser.add_argument("--only", nargs="*", default=None, metavar="NAME",
@@ -176,6 +277,11 @@ def main(argv=None) -> int:
     out = args.out.resolve()
     print(f"Platform: {cur_os}-{cur_arch}   Output: {out}"
           + ("   [dry-run]" if args.dry_run else ""))
+
+    preflight = _release_preflight(args.dry_run)
+    print(f"morfPackages preflight -> {preflight}")
+    if preflight.startswith("FAILED") or preflight.startswith("morfPackages script missing"):
+        return 2
 
     produced, skipped, failed = 0, 0, 0
     for project in ws.projects():
@@ -217,6 +323,13 @@ def main(argv=None) -> int:
         svc = _service_name(project.path)
         version = _read_first_line(project.path / "VERSION") or "0.0.0"
 
+        if args.sync:
+            result = _sync_published(project, version, out, args.dry_run)
+            print(f"  release sync -> {result}")
+            if result.startswith("FAILED") or result.startswith("morfPackages script missing"):
+                failed += 1
+                continue
+
         for target in native:
             expected = _expected_name(project, target, svc, version)
             if expected and (out / expected).exists() and not args.force:
@@ -227,6 +340,7 @@ def main(argv=None) -> int:
 
             print(f"  {target.name} -> provider {target.provider}, "
                   f"format {target.package.get('format')}")
+            before = set(out.glob(f"*.{target.package.get('format')}")) if out.exists() else set()
             if target.provider == "morfdeploy":
                 result = _package_service(project, target, out, args.dry_run)
             elif declared.type == "firmware":
@@ -235,8 +349,19 @@ def main(argv=None) -> int:
                 result = _package_project_script(project, target, out, args.dry_run)
             else:
                 result = f"no producer for provider '{target.provider}'"
+            if result == "built":
+                artifact = _new_artifact(out, target, before, expected)
+                if artifact is None:
+                    result = "FAILED (deliverable ambiguous; provenance not written)"
+                else:
+                    error = _release_metadata(project, target, artifact, version)
+                    if error:
+                        result = f"FAILED ({error})"
+                    else:
+                        result = _publish_release(project, version, artifact,
+                                                  args.release_notes, args.dry_run)
             print(f"    -> {result}")
-            if result in ("built",):
+            if result in ("published",):
                 produced += 1
             elif result.startswith("FAILED"):
                 failed += 1

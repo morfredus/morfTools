@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.29.0] - 2026-08-20
+
+### Ajouté
+
+- `--release-notes` pour donner le texte de la première release morfPackages,
+  et le guide `docs/WORKFLOW-PACKAGING.md` qui décrit le passage source,
+  Windows, Linux et reprise manuelle.
+
+## [0.28.0] - 2026-08-20
+
+### Modifié
+
+- **Publication intégrée à `package-all.py`** : le dépôt morfPackages est
+  précontrôlé et mis à jour avant toute production, puis chaque livrable propre
+  et prouvé est envoyé automatiquement vers sa release GitHub privée. Les
+  binaires restent exclusivement des assets de release, jamais des fichiers Git.
+
+## [0.27.0] - 2026-08-20
+
+### Ajouté
+
+- **Sidecar de provenance de distribution** : chaque livrable effectivement
+  produit par `package-all.py` reçoit un fichier `.metadata.json` voisin,
+  contenant le commit Git complet, la cible, la plateforme et le SHA-256. Une
+  source sale ou un livrable ambigu est refusé ; morfPackages peut donc publier
+  sans réinterpréter l'origine du fichier.
+
+## [0.26.0] - 2026-08-20
+
+### Ajouté
+
+- **`package-all.py --sync`** : avant de produire une cible locale, récupère les
+  assets déjà publiés pour cette même release dans le dossier de distribution
+  commun. La lecture passe par le script de `morfPackages` et donc uniquement par
+  `gh release`, sans écrire de binaire dans Git ni publier quoi que ce soit.
+
 ## [0.25.0] - 2026-08-19
 
 ### Modifié
