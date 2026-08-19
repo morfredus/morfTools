@@ -200,13 +200,22 @@ Il vous demandera un *preset* - le profil de compilation :
 
 ### Étape 4 - Installer les services
 
-**Tout installer d'un coup** (Linux, Raspberry Pi ou Windows), depuis morfTools :
+**En une passe** (Linux, Raspberry Pi ou Windows), depuis morfTools - `morf install`
+est LA commande d'installation : elle installe les services **et** leur
+configuration, d'un coup.
 
 ```bash
-python3 morf.py install --services         # SANS sudo : voir ci-dessous
+python3 morf.py install               # choix interactif : tous, ou une sélection
+python3 morf.py install --all         # tous les services, sans question
+python3 morf.py install morfMonitor   # seulement celui-là (ou plusieurs noms)
 ```
 
-Cette commande déploie **tous** les services du parc via leur propre
+`--config keep` (défaut, ne touche jamais vos réglages) / `merge` (ajoute les
+nouvelles clés) / `replace` (repart de la config du dépôt, sauvegarde avant).
+`--dry-run` montre le plan sans rien installer. (`morf deploy` reste un alias de
+`morf install` ; `morf setup` fait, lui, l'installation des dépendances Python.)
+
+Cette commande déploie les services choisis via leur propre
 `service.py` : elle compile chacun (en tant que **vous**), puis élève uniquement
 l'étape d'installation. Le patron **morfTemplateService** est automatiquement
 sauté (il n'a rien à faire en production). Sur le Pi, choisir le preset

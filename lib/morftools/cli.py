@@ -987,27 +987,30 @@ def main(argv: list | None = None) -> int:
     # The purge-only surface. Refused elsewhere rather than ignored, same rule as
     # every other option: a flag that silently did nothing is how someone trusts
     # an effect that never happened.
-    if args.targets and args.command not in ("purge", "deploy", "uninstall"):
+    if args.targets and args.command not in ("purge", "install", "deploy", "uninstall"):
         print("positional project/category arguments only apply to purge, "
-              "deploy and uninstall.", file=sys.stderr)
+              "install, deploy and uninstall.", file=sys.stderr)
         return 2
-    if args.all_categories and args.command not in ("purge", "deploy", "uninstall"):
-        print("--all only applies to purge, deploy and uninstall.", file=sys.stderr)
+    if args.all_categories and args.command not in ("purge", "install", "deploy",
+                                                    "uninstall"):
+        print("--all only applies to purge, install, deploy and uninstall.",
+              file=sys.stderr)
         return 2
-    if args.dry_run and args.command not in ("purge", "deploy", "uninstall",
-                                             "pull", "update", "upgrade"):
-        print("--dry-run only applies to purge, deploy, uninstall, "
+    if args.dry_run and args.command not in ("purge", "install", "deploy",
+                                             "uninstall", "pull", "update", "upgrade"):
+        print("--dry-run only applies to purge, install, deploy, uninstall, "
               "pull/update and upgrade.", file=sys.stderr)
         return 2
-    if args.yes and args.command not in ("purge", "deploy", "uninstall", "clone"):
-        print("--yes only applies to purge, deploy, uninstall and clone.",
+    if args.yes and args.command not in ("purge", "install", "deploy", "uninstall",
+                                         "clone"):
+        print("--yes only applies to purge, install, deploy, uninstall and clone.",
               file=sys.stderr)
         return 2
     if args.protocol != "auto" and args.command != "clone":
         print("--protocol only applies to clone.", file=sys.stderr)
         return 2
-    if args.config and args.command != "deploy":
-        print("--config only applies to deploy.", file=sys.stderr)
+    if args.config and args.command not in ("install", "deploy"):
+        print("--config only applies to install and deploy.", file=sys.stderr)
         return 2
 
     try:
@@ -1020,7 +1023,18 @@ def main(argv: list | None = None) -> int:
     # and a summary, so each gets its own path rather than the generic loop.
     if args.command == "purge":
         return run_purge(workspace, args)
-    if args.command == "deploy":
+    # `install` IS the primo-install: build (or reuse the package), install the
+    # selected services and place their configuration, in one pass. `deploy` is
+    # kept as a backward-compatible alias for the same engine. The generic
+    # per-language step (Python deps) lives under `setup`, so it no longer
+    # monopolises the word `install`.
+    if args.command in ("install", "deploy"):
+        if args.command == "deploy":
+            print("Note: 'morf deploy' is kept as an alias; the recommended "
+                  "command is now 'morf install'.\n")
+        # Legacy: `install --services` meant "every service" -- now spelled --all.
+        if getattr(args, "services", False):
+            args.all_categories = True
         return run_deploy(workspace, args)
     if args.command == "uninstall":
         return run_uninstall(workspace, args)

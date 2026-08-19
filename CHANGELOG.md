@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.25.0] - 2026-08-19
+
+### Modifié
+
+- **`morf install` devient la vraie commande de primo-installation.** Le verbe
+  naturel installe désormais les services (tout ou partie) **et** leur
+  configuration en une passe - c'est l'ancien moteur `deploy` :
+  - `morf install` : sélection interactive (tous ou une partie) + choix du mode de
+    config ; `morf install --all` ; `morf install morfCollector morfMonitor` ;
+    `--config keep|merge|replace` (keep par défaut, jamais d'écrasement sans
+    demande) ; `--dry-run` ; `--yes`.
+  - `morf deploy` reste un **alias rétrocompatible** (affiche une note qui pointe
+    vers `install`). `morf install --services` reste accepté (= `--all`).
+- **`morf setup`** : nouvelle commande pour l'ancien comportement générique de
+  `install` (dépendances Python ; « SKIP » pour les services C++). Il ne
+  monopolise plus le mot `install`.
+
 ## [0.24.1] - 2026-08-19
 
 ### Ajouté

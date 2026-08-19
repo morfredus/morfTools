@@ -320,12 +320,11 @@ def cmd_install(workspace: Workspace, project: Project,
     if req.is_file() and _requirements_has_packages(req):
         run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=project.path)
     elif (project.path / "service.py").is_file() and not is_template(project):
-        # A service has nothing to do in the GENERIC install (no requirements.txt):
-        # its install goes through service.py, reached by `--services`. Saying so
-        # here turns a puzzling "no generic install definition" -- printed for the
-        # whole parc when someone runs a bare `morf install` -- into the one
-        # command that actually deploys it.
-        print("[SKIP] service — run 'morf install --services' to deploy it")
+        # Reached only through `morf setup` (the generic per-language step): a
+        # service has nothing to do here (no requirements.txt). It is installed by
+        # `morf install`, which builds it and places its configuration in one pass.
+        print("[SKIP] service — installed by 'morf install' (this is 'setup': "
+              "generic dependencies only)")
     else:
         print("[SKIP] no generic install definition")
     return True
@@ -817,7 +816,8 @@ COMMANDS = {
     "push": cmd_push,
     "commit": cmd_commit,
     "build": cmd_build,
-    "install": cmd_install,
+    "install": cmd_install,   # intercepted in the CLI: install IS the deploy engine
+    "setup": cmd_install,     # the generic per-language setup (Python deps only)
     "uninstall": cmd_uninstall,
     "upgrade": cmd_upgrade,
     "clean": cmd_clean,

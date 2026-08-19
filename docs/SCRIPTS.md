@@ -73,7 +73,7 @@ Options globales du CLI : `-p/--preset`, `-m/--message`, `--only`, `--gui`,
 > du projet (les services absents de la machine sont sautés proprement). Chaque
 > projet garde son `service.py` ; `morf` ne fait que l'orchestrer. À lancer **sans
 > `sudo`** (il élève lui-même la seule étape de déploiement). `--force` redéploie
-> même sans changement ; `morf install --services` fait la première installation
+> même sans changement ; `morf install` fait la première installation
 > complète d'une machine neuve.
 >
 > En fin de passe, sur une machine qui consomme la config partagée

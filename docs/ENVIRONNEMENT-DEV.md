@@ -7,7 +7,7 @@ concentrant sur la préparation de l'environnement de build.
 Principe : le parc ne suppose plus l'environnement du poste principal. `morf build`
 détecte la toolchain réellement présente (Qt, MinGW, Ninja) et s'y adapte. Restent
 à fournir, une fois par machine, la **toolchain** et les **bibliothèques de
-compilation** listées ici. Sur Debian/Ubuntu/Mint, `morf deploy`/`build` sait même
+compilation** listées ici. Sur Debian/Ubuntu/Mint, `morf install`/`build` sait même
 proposer d'installer les dépendances de build déclarées ; sur une toolchain sans
 gestionnaire de paquets (Qt officielle sous Windows), elles doivent être présentes
 au préalable.
@@ -80,7 +80,7 @@ sudo apt install -y \
 - `libimage-exiftool-perl` : dépendance **runtime** de morfPhoto (métadonnées
   EXIF), pas de compilation.
 
-Sur Debian/Ubuntu/Mint, `morf deploy` et `morf build` peuvent aussi installer les
+Sur Debian/Ubuntu/Mint, `morf install` et `morf build` peuvent aussi installer les
 dépendances de build **déclarées** (morfCollector, morfSync) avant de compiler :
 elles sont proposées, jamais installées en silence (`--yes` pour un run non
 interactif).
