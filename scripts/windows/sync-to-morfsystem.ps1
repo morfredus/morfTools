@@ -99,6 +99,33 @@ foreach ($CanonicalName in $Projects) {
     }
 }
 
+# --- Personal notes tree: .morfredus_travail -> .morfredus -------------------
+# Not a project in ecosystem.json, so promoted here explicitly: a personal folder
+# (session logs, working notes) that follows the same '_travail' -> prod naming as
+# the projects. Same excludes and same dry-run/WhatIf handling; the destination
+# .git (if any) is preserved like everywhere else.
+$PersonalSource = Join-Path $SourceRoot '.morfredus_travail'
+$PersonalDest   = Join-Path $DestinationRoot '.morfredus'
+if (Test-Path -LiteralPath $PersonalSource -PathType Container) {
+    Write-Host "[.morfredus] $PersonalSource -> $PersonalDest"
+    if ($DryRun) {
+        Write-Host '  [DRY RUN] Content would be copied; destination .git would be preserved.'
+    } elseif ($PSCmdlet.ShouldProcess($PersonalDest, 'Synchronize .morfredus')) {
+        New-Item -ItemType Directory -Force -Path $PersonalDest | Out-Null
+        $PersonalArgs = @(
+            $PersonalSource, $PersonalDest,
+            '/E', '/FFT', '/MT:16', '/R:2', '/W:1', '/COPY:DAT',
+            '/XD'
+        ) + $ExcludeDirs + @('/NFL', '/NDL', '/NP')
+        & robocopy @PersonalArgs | Out-Null
+        if ($LASTEXITCODE -ge 8) {
+            throw ".morfredus robocopy failed (exit code $LASTEXITCODE)."
+        }
+    }
+} else {
+    Write-Warning '[SKIP] .morfredus_travail is absent from the sandbox.'
+}
+
 Write-Host 'Synchronization completed. Existing destination .git directories were excluded and preserved.'
 
 # --- Restore the executable bit in the promoted trees ------------------------

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.24.1] - 2026-08-19
+
+### Ajouté
+
+- **`sync-to-morfsystem.ps1` promeut aussi `.morfredus`.** Le dossier personnel
+  `.morfredus_travail` (journaux de session, notes de travail) est désormais
+  synchronisé vers `<prod>/.morfredus`, avec le même nommage `_travail` → prod, les
+  mêmes exclusions et le même `-WhatIf`/dry-run que les projets. Absent → simple
+  avertissement, jamais un échec.
+
 ## [0.24.0] - 2026-08-19
 
 ### Ajouté
