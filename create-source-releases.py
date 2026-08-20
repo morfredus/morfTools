@@ -26,7 +26,7 @@ def run(command: list[str], cwd: Path, *, capture: bool = False) -> str:
     print("$ " + " ".join(command))
     result = subprocess.run(command, cwd=cwd, text=True, capture_output=capture)
     if result.returncode:
-        detail = (result.stderr or result.stdout).strip()
+        detail = (result.stderr or result.stdout or "").strip()
         raise RuntimeError(detail or f"command failed ({result.returncode})")
     return result.stdout if capture else ""
 
@@ -62,6 +62,14 @@ def release_repository(project: Path, fallback_owner: str) -> str:
     return f"{fallback_owner}/{project.name}"
 
 
+def require_github_auth() -> None:
+    """Fail before touching any project when this machine cannot create releases."""
+    result = subprocess.run(["gh", "auth", "status"], text=True,
+                            capture_output=True, check=False)
+    if result.returncode:
+        raise RuntimeError("GitHub CLI is not authenticated. Run: gh auth login")
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Create source releases from current workspace clones.")
     choice = parser.add_mutually_exclusive_group(required=True)
@@ -77,6 +85,11 @@ def main(argv=None) -> int:
         workspace = Workspace(HERE)
     except WorkspaceError as exc:
         print(exc, file=sys.stderr)
+        return 2
+    try:
+        require_github_auth()
+    except RuntimeError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
         return 2
     requested = set(args.only or [])
     available = {project.name: project for project in workspace.projects()}
