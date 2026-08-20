@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.33.1] - 2026-08-20
+
+### Documentation
+
+- Le workflow contient maintenant les commandes complètes pour créer les
+  releases source puis construire et publier tout le parc depuis Windows,
+  Linux AMD64 et Linux ARM64.
+
+## [0.33.0] - 2026-08-20
+
+### Ajouté
+
+- La première release de distribution reçoit automatiquement un résumé court de
+  la section correspondant à sa version dans `CHANGELOG.md`.
+- Un `RELEASE-NOTES.md` facultatif permet une introduction personnelle par
+  projet et le marqueur `{{changelog_summary}}` choisit l'emplacement du résumé.
+
 ## [0.32.1] - 2026-08-20
 
 ### Corrigé

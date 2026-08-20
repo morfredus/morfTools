@@ -31,6 +31,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -152,6 +153,81 @@ def _publish_release(project, version: str, artifact: Path, notes: str | None, d
         print(f"    would publish: {' '.join(str(c) for c in cmd)}")
         return "planned"
     return "published" if _run(cmd, script.parent.parent) == 0 else "FAILED (publish)"
+
+
+def _latest_changelog_summary(project_path: Path, version: str) -> str | None:
+    """Return at most three useful items from this version's changelog section.
+
+    A GitHub release should point to the changes without becoming a second copy
+    of CHANGELOG.md.  The parser deliberately understands only the common
+    Markdown structure used by the projects: a level-two version heading and
+    bullet items under it.  If a project writes prose instead, its first two
+    meaningful lines remain a concise fallback.
+    """
+    changelog = project_path / "CHANGELOG.md"
+    try:
+        lines = changelog.read_text(encoding="utf-8-sig").splitlines()
+    except OSError:
+        return None
+
+    heading = re.compile(rf"^##\s+\[?{re.escape(version)}\]?(?:\s|$)")
+    start = next((index for index, line in enumerate(lines) if heading.match(line)), None)
+    if start is None:
+        return None
+    section = []
+    for line in lines[start + 1:]:
+        if line.startswith("## "):
+            break
+        section.append(line.rstrip())
+
+    bullets = []
+    current = None
+    for line in section:
+        stripped = line.strip()
+        if stripped.startswith(("- ", "* ")):
+            if current:
+                bullets.append(current)
+            current = stripped[2:].strip()
+        elif current and stripped and not stripped.startswith("#"):
+            current = f"{current} {stripped}"
+    if current:
+        bullets.append(current)
+    if bullets:
+        return "\n".join(f"- {item}" for item in bullets[:3])
+
+    prose = [line.strip() for line in section
+             if line.strip() and not line.lstrip().startswith("#")]
+    return "\n".join(prose[:2]) or None
+
+
+def _project_release_notes(project, version: str, global_notes: str | None) -> str:
+    """Build the first-release text, with a project note taking priority.
+
+    RELEASE-NOTES.md is intentionally tiny and human-owned.  Its optional
+    {{changelog_summary}} marker places the generated highlights exactly where
+    the author wants them.  Without the marker they are appended, so every
+    automatic release still points at the current changelog rather than copying
+    it in full.  The existing command-line option remains an explicit global
+    override for a one-off release campaign.
+    """
+    if global_notes:
+        return global_notes.replace("{project}", project.name).replace("{version}", version)
+
+    summary = _latest_changelog_summary(project.path, version)
+    default = (f"## {project.name} {version}\n\n{summary}" if summary
+               else f"## {project.name} {version}\n\nRelease package for this version.")
+    notes_file = project.path / "RELEASE-NOTES.md"
+    if not notes_file.is_file():
+        return default
+    try:
+        custom = notes_file.read_text(encoding="utf-8-sig").strip()
+    except OSError:
+        return default
+    custom = custom.replace("{project}", project.name).replace("{version}", version)
+    marker = "{{changelog_summary}}"
+    if marker in custom:
+        return custom.replace(marker, summary or "No changelog summary is available.")
+    return f"{custom}\n\n{summary}" if custom and summary else (custom or default)
 
 
 def _release_metadata(project, target, artifact: Path, version: str) -> str | None:
@@ -353,6 +429,7 @@ def main(argv=None) -> int:
 
         svc = _service_name(project.path)
         version = _read_first_line(project.path / "VERSION") or "0.0.0"
+        notes = _project_release_notes(project, version, args.release_notes)
 
         if args.sync:
             result = _sync_published(project, version, out, args.dry_run)
@@ -370,7 +447,7 @@ def main(argv=None) -> int:
                     print(f"  {target.name}: already present ({expected}), publishing "
                           "its verified metadata")
                     result = _publish_release(project, version, artifact,
-                                              args.release_notes, args.dry_run)
+                                              notes, args.dry_run)
                     print(f"    -> {result}")
                     if result == "published":
                         produced += 1
@@ -403,7 +480,7 @@ def main(argv=None) -> int:
                         result = f"FAILED ({error})"
                     else:
                         result = _publish_release(project, version, artifact,
-                                                  args.release_notes, args.dry_run)
+                                                  notes, args.dry_run)
             print(f"    -> {result}")
             if result in ("published",):
                 produced += 1

@@ -21,6 +21,30 @@ canoniques après ma mise à jour manuelle. Elle ne reçoit pas les binaires. La
 seconde est créée automatiquement au premier packaging réussi et reçoit les
 `.deb`, `.zip`, firmwares, `manifest.json` et `checksums.sha256`.
 
+## Notes de release par projet
+
+Sans option supplémentaire, la première release de distribution contient un
+résumé de trois éléments au plus, extrait de la section de `CHANGELOG.md` dont
+le numéro correspond à `VERSION`. Le changelog complet reste dans le dépôt : la
+release GitHub ne le recopie pas.
+
+Quand une formulation personnelle est souhaitée pour un projet, j'ajoute à sa
+racine un fichier `RELEASE-NOTES.md`. Je peux y employer `{project}` et
+`{version}`. Le marqueur `{{changelog_summary}}` est remplacé par le résumé au
+point exact où je le pose. S'il est absent, le résumé est ajouté à la fin.
+
+```markdown
+## {project} {version}
+
+Cette version consolide le packaging avant les prochains déploiements.
+
+{{changelog_summary}}
+```
+
+`--release-notes` reste disponible pour une campagne ponctuelle : il remplace
+alors ces notes pour tous les projets concernés. Il accepte aussi `{project}`
+et `{version}`.
+
 ## 1. Préparer une version source
 
 Je choisis les projets et une même version pour chaque projet concerné. Je
@@ -94,6 +118,41 @@ gh release view "v${version}" --repo "morfredus/${project}"
 `morfPackages` refusera volontairement un artefact si cette release source
 n'existe pas.
 
+## Parc complet : les commandes en une passe
+
+Il n'y a pas de build global distinct à lancer : `package-all` construit toutes
+les cibles réellement natives de la machine qui l'exécute. Je crée d'abord les
+releases source une seule fois depuis l'une des machines, puis je lance le
+packaging complet sur Windows et sur chaque Linux utile. J'omets volontairement
+`--release-notes` ci-dessous afin que chaque projet utilise son propre résumé
+de changelog ou son éventuel `RELEASE-NOTES.md`.
+
+Sous Windows, depuis le dossier `morfTools` du workspace courant :
+
+```powershell
+python .\create-source-releases.py --all `
+  --notes "Source release for {project} {version}."
+
+python .\package-all.py --sync --out ..\dist
+```
+
+Sous Linux AMD64, depuis le dossier `morfTools` du workspace courant :
+
+```bash
+python3 ./package-all.py --sync --out ../dist
+```
+
+Sous Linux ARM64, la même commande produit les `.deb` ARM64 :
+
+```bash
+python3 ./package-all.py --sync --out ../dist
+```
+
+Le premier passage crée une release de distribution par projet. Les suivants
+téléchargent ses assets grâce à `--sync`, puis ajoutent uniquement les formats
+manquants. Je peux relancer sans `--force` après un échec de publication : un
+livrable déjà construit avec son sidecar est repris et publié sans rebuild.
+
 ## 2. Construire et publier depuis Windows
 
 Je me place dans le dossier `morfTools` de mon workspace de travail. Avant de
@@ -103,7 +162,6 @@ lancer la commande, les projets ciblés doivent être propres et à jour.
 cd C:\Users\frede\Codage\01-Travail\morfTools
 
 python .\package-all.py --sync --out ..\dist `
-  --release-notes "Windows and Linux installables for morfCollector 0.7.0." `
   --only morfCollector
 ```
 
@@ -111,7 +169,6 @@ Pour plusieurs projets, j'ajoute simplement leurs noms après `--only` :
 
 ```powershell
 python .\package-all.py --sync --out ..\dist `
-  --release-notes "Windows installables for the selected projects." `
   --only morfCollector morfNotify morfMonitor
 ```
 
@@ -129,7 +186,6 @@ s'écrit avec des slashs Linux : `../dist`, jamais une barre oblique inversée.
 cd ~/Codage/01-Travail/morfTools
 
 python3 ./package-all.py --sync --out ../dist \
-  --release-notes "Windows and Linux installables for morfCollector 0.7.0." \
   --only morfCollector
 ```
 
@@ -137,7 +193,6 @@ Pour plusieurs projets :
 
 ```bash
 python3 ./package-all.py --sync --out ../dist \
-  --release-notes "Linux installables for the selected projects." \
   --only morfCollector morfNotify morfMonitor
 ```
 
@@ -192,6 +247,13 @@ Avant une production, je peux inspecter le plan sans rien construire ni publier 
 
 ```bash
 python3 ./package-all.py --dry-run --sync --out ../dist --only morfCollector
+```
+
+Pour visualiser toutes les releases de distribution du workspace courant :
+
+```bash
+cd ../morfPackages
+gh release list
 ```
 
 Après une production :
