@@ -142,12 +142,31 @@ de changelog ou son éventuel `RELEASE-NOTES.md`.
 Pour les projets portant un script de packaging propre, la commande lance aussi
 leur configuration et leur build CMake avec le preset déclaré avant le script.
 
-Sous Windows, depuis le dossier `morfTools` du workspace courant :
+### 1. Créer les releases source une seule fois
+
+J'exécute cette étape depuis **une seule** des machines du workspace courant,
+Windows ou Linux. Elle est identique quant au résultat : les remotes privés de
+la sandbox ou les remotes canoniques de production sont déduits automatiquement.
+
+Sous Windows :
 
 ```powershell
 python .\create-source-releases.py --all `
   --notes "Source release for {project} {version}."
+```
 
+Sous Linux :
+
+```bash
+python3 ./create-source-releases.py --all \
+  --notes "Source release for {project} {version}."
+```
+
+### 2. Construire et publier depuis chaque plateforme
+
+Sous Windows, depuis le dossier `morfTools` du workspace courant :
+
+```powershell
 python .\package-all.py --sync --out ..\dist
 ```
 

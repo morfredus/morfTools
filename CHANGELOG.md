@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.34.1] - 2026-08-20
+
+### Documentation
+
+- La création groupée des releases source est maintenant présentée explicitement
+  pour Windows et Linux, comme une étape unique exécutée depuis l'une des deux
+  plateformes avant les packagings.
+
 ## [0.34.0] - 2026-08-20
 
 ### Corrigé
