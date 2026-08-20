@@ -95,6 +95,13 @@
         "note": "Indexation d'une phototheque locale : source de verite des metadonnees photo (EXIF via ExifTool, base SQLite), capacite morfBeacon 'photo_index'."
       },
       {
+        "project": "morfUpdate",
+        "http": 8794,
+        "config": "config/morfupdate.example.json",
+        "key": "http_port",
+        "note": "Local-only verified package update agent. Its write API binds to loopback and requires a dedicated token."
+      },
+      {
         "project": "morfAnalytics",
         "http": 8799,
         "config": "config/morfanalytics.example.json",

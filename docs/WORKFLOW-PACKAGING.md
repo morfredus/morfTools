@@ -5,31 +5,35 @@ Suivre volontairement deux temps : décider et publier la version source, puis
 laisser chaque machine produire ce qu'elle sait réellement construire. Le dépôt
 de distribution réunit les plateformes sans copier de binaires dans Git.
 
-## Les deux releases à ne pas confondre
+## Une release utilisateur, deux rôles techniques
 
-Chaque version porte deux releases distinctes.
+Chaque version possède une seule release destinée aux utilisateurs : celle du
+dépôt du projet. Elle est à la fois l'autorité de la version et le point de
+téléchargement des installables.
 
 | Rôle | Dépôt | Tag | Titre |
 | --- | --- | --- | --- |
-| Autorité de la version source | dépôt du projet | `vX.Y.Z` | `nomProjet - vX.Y.Z` |
-| Distribution des installables | morfPackages | `nomprojet-vX.Y.Z` | `nomProjet - vX.Y.Z` |
+| Release utilisateur, source et installables | dépôt du projet | `vX.Y.Z` | `nomProjet - vX.Y.Z` |
+| Index technique de provenance | morfPackages | `nomprojet-vX.Y.Z` | `nomProjet - vX.Y.Z` |
 
 La première est créée dans le même workspace que les sources : la sandbox crée
 des releases privées sur ses remotes privés, la production crée les releases
 canoniques après une mise à jour manuelle. Après publication, elle reçoit les
-installables validés, leur manifeste et leurs sommes de contrôle. La seconde
-reste l'index de distribution qui réunit exactement les mêmes assets.
+installables validés, leur manifeste et leurs sommes de contrôle. L'index de
+morfPackages conserve les mêmes assets pour la synchronisation entre plateformes
+et la vérification stricte de leur provenance ; il ne constitue pas une seconde
+release à présenter aux utilisateurs.
 
-Avant toute création ou mise à jour de cette seconde release, morfPackages
+Avant toute publication dans l'index technique, morfPackages
 résout le tag distant `vX.Y.Z` du dépôt source d'autorité du workspace. Le SHA
 complet désigné par ce tag doit correspondre au commit du sidecar et à tous les
 assets déjà inscrits dans le manifeste. Un écart bloque l'opération avant tout
-upload : une même release de distribution ne peut donc réunir que des paquets
+upload : un même index de distribution ne peut donc réunir que des paquets
 issus du même commit source.
 
 ## Notes de release par projet
 
-Sans option supplémentaire, la première release de distribution contient un
+Sans option supplémentaire, la release utilisateur du projet contient un
 résumé de trois éléments au plus, extrait de la section de `CHANGELOG.md` dont
 le numéro correspond à `VERSION`. Le changelog complet reste dans le dépôt : la
 release GitHub ne le recopie pas.
@@ -126,10 +130,10 @@ résumé de la version courante dans `CHANGELOG.md`.
 ## Publier les binaires déjà réunis dans `dist`
 
 Il n'y a normalement pas de seconde commande de publication à lancer :
-`package-all.py --sync` attache automatiquement chaque binaire validé à la
-release de distribution correspondante dans `morfPackages`, puis à la release
-source du projet. Après les passages Windows et Linux, le contenu de `dist` est
-donc déjà publié dans la release que les utilisateurs voient en premier.
+`package-all.py --sync` indexe automatiquement chaque binaire validé dans
+`morfPackages`, puis l'attache à la release utilisateur du projet. Après les
+passages Windows et Linux, le contenu de `dist` est donc déjà publié dans la
+release que les utilisateurs voient en premier.
 
 Pour publier en une seule passe les sidecars et binaires déjà réunis dans
 `dist`, sans reconstruire, exécuter depuis `morfTools` :
@@ -156,7 +160,7 @@ release publique du projet depuis le dossier de celui-ci :
 gh release view v0.7.0
 ```
 
-Pour donner un texte propre à une release de distribution avant sa première
+Pour donner un texte propre à la release utilisateur avant sa première
 publication, créer `RELEASE-NOTES.md` à la racine du projet, le committer et le
 pousser avant de créer la release source. La note peut garder le résumé concis
 du changelog :
@@ -182,10 +186,9 @@ python .\package-all.py --sync --out ..\dist `
   --release-notes "Packages for {project} {version}."
 ```
 
-Pour modifier le texte d'une release de distribution qui existe déjà, sans
-toucher à ses binaires, exécuter cette commande depuis `morfPackages`. Le tag
-de distribution est en minuscules et ne doit pas être confondu avec le tag
-source `vX.Y.Z` :
+Pour modifier le texte d'une release utilisateur qui existe déjà, sans toucher
+à ses binaires, exécuter cette commande depuis le dépôt du projet. Utiliser le
+tag source `vX.Y.Z` :
 
 ```powershell
 $project = "morfCollector"
@@ -196,7 +199,7 @@ $notes = @"
 Texte personnalisé de la release.
 "@
 
-gh release edit "morfcollector-v$version" `
+gh release edit "v$version" `
   --title "$project - v$version" --notes $notes
 ```
 
@@ -205,7 +208,7 @@ project="morfCollector"
 version="0.7.0"
 notes=$'## morfCollector 0.7.0\n\nTexte personnalisé de la release.'
 
-gh release edit "morfcollector-v${version}" \
+gh release edit "v${version}" \
   --title "${project} - v${version}" --notes "$notes"
 ```
 
@@ -339,10 +342,11 @@ Sous Linux ARM64, la même commande produit les `.deb` ARM64 :
 python3 ./package-all.py --sync --out ../dist
 ```
 
-Le premier passage crée une release de distribution par projet. Les suivants
-téléchargent ses assets grâce à `--sync`, puis ajoutent uniquement les formats
-manquants. Relancer sans `--force` après un échec de publication : un
-livrable déjà construit avec son sidecar est repris et publié sans rebuild.
+Le premier passage crée ou complète la release utilisateur du projet. Les
+suivants téléchargent les assets indexés grâce à `--sync`, puis ajoutent
+uniquement les formats manquants. Relancer sans `--force` après un échec de
+publication : un livrable déjà construit avec son sidecar est repris et publié
+sans rebuild.
 
 ## 2. Construire et publier depuis Windows
 

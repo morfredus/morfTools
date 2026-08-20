@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.34.11] - 2026-08-20
+
+### Ajouté
+
+- Le port HTTP 8794 est réservé à l'agent local morfUpdate.
+
+## [0.34.10] - 2026-08-20
+
+### Modifié
+
+- Le workflow distingue désormais la release utilisateur unique du projet et
+  l'index technique de provenance maintenu par morfPackages.
+
 ## [0.34.9] - 2026-08-20
 
 ### Corrigé
