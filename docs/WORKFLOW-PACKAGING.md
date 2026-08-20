@@ -5,6 +5,20 @@ Suivre volontairement deux temps : décider et publier la version source, puis
 laisser chaque machine produire ce qu'elle sait réellement construire. Le dépôt
 de distribution réunit les plateformes sans copier de binaires dans Git.
 
+> Point de contrôle indispensable : `create-source-releases.py` crée le tag et
+> la page GitHub, **sans aucun binaire**. `publish-dist.py` ne construit rien :
+> il ne peut publier que les couples déjà présents dans `dist` - un livrable et
+> son fichier voisin `.metadata.json`. Après une release source, lancer donc
+> obligatoirement `package-all.py` sur au moins une plateforme avant toute
+> publication finale. Un résultat `[SKIP] ... no matching sidecar` signifie
+> exactement qu'aucun paquet correspondant n'a été reconstruit dans ce `dist`.
+
+| Étape | Produit | Condition pour passer à la suivante |
+| --- | --- | --- |
+| Release source | tag et page GitHub sans asset | les dépôts sont propres et poussés |
+| `package-all` Windows/Linux | binaire + `.metadata.json` dans `dist` | version et commit identiques au tag |
+| `publish-dist` | assets attachés à la release projet | au moins un sidecar est présent dans `dist` |
+
 ## Une release utilisateur, deux rôles techniques
 
 Chaque version possède une seule release destinée aux utilisateurs : celle du
@@ -55,7 +69,81 @@ Cette version consolide le packaging avant les prochains déploiements.
 alors ces notes pour tous les projets concernés. Il accepte aussi `{project}`
 et `{version}`.
 
-## Parcours rapide - commandes à copier dans l'ordre
+## Parc entier - tout construire avant une publication unique
+
+Choisir ce parcours pour vérifier tous les paquets avant d'attacher le premier
+asset à GitHub. `--no-publish` produit le binaire et son sidecar dans `dist`,
+sans téléverser quoi que ce soit. Il ne faut pas ajouter `--sync` à cette
+commande : aucun asset n'est encore publié à synchroniser.
+
+Préparer les versions, changelogs et éventuels `RELEASE-NOTES.md`, puis les
+committer et les pousser avant de commencer. Se placer dans le dossier
+`morfTools` du workspace courant. Les trois blocs ci-dessous s'exécutent sur
+leurs plateformes respectives, pas sur une même machine.
+
+### 1. Windows - créer les releases source et produire les ZIP
+
+Exécuter la création des releases source une seule fois, ici ou sur l'une des
+machines Linux. `--all` inclut aussi morfTools, même s'il ne produit pas lui-même
+de paquet.
+
+```powershell
+python .\create-source-releases.py --all `
+  --notes "Source release for {project} {version}."
+
+python .\package-all.py --no-publish --out ..\dist
+```
+
+### 2. Linux AMD64 - produire les paquets AMD64
+
+Si l'étape Windows n'est pas exécutée, créer d'abord les releases source ici,
+une seule fois. Sinon, supprimer les deux premières lignes du bloc.
+
+```bash
+python3 ./create-source-releases.py --all \
+  --notes "Source release for {project} {version}."
+```
+
+```bash
+python3 ./package-all.py --no-publish --out ../dist
+```
+
+### 3. Linux ARM64 - produire les paquets ARM64
+
+Si cette machine est la première et la seule à exécuter le workflow, conserver
+la création des releases source. Sinon, supprimer les deux premières lignes du
+bloc.
+
+```bash
+python3 ./create-source-releases.py --all \
+  --notes "Source release for {project} {version}."
+```
+
+```bash
+python3 ./package-all.py --no-publish --out ../dist
+```
+
+### 4. Réunir les livrables et publier une seule fois
+
+Choisir un `dist` final, puis y réunir les ZIP Windows et les `.deb` Linux. Pour
+chaque livrable, copier aussi son voisin portant le suffixe `.metadata.json`.
+Ne pas modifier ni régénérer ces sidecars. Les dossiers `dist` ne sont pas
+recopiés automatiquement entre workspaces.
+
+Depuis le `morfTools` qui possède ce `dist` final, publier tous les assets :
+
+```powershell
+python .\publish-dist.py --all --out ..\dist
+```
+
+```bash
+python3 ./publish-dist.py --all --out ../dist
+```
+
+Cette unique commande crée ou complète la release de chaque projet avec son
+titre, ses notes automatisées et tous les formats présents dans le `dist` final.
+
+## Parcours rapide - publication au fil des builds
 
 Préparer les versions, changelogs et éventuels `RELEASE-NOTES.md`, puis les
 committer et les pousser avant de commencer. Se placer ensuite dans le dossier
@@ -103,13 +191,13 @@ python3 ./create-source-releases.py --all \
 python3 ./package-all.py --sync --out ../dist
 ```
 
-### 4. Publication finale depuis le `dist` réuni
+### 4. Publication finale depuis le `dist` réuni - uniquement après les builds
 
 Cette dernière étape est facultative après des passages `package-all --sync`,
-car ceux-ci publient déjà chaque asset. Elle est utile pour republier en une
-seule passe un dossier `dist` réuni ou pour vérifier que toutes les releases
-projet reçoivent bien leurs assets et leur description automatique, sans aucun
-rebuild.
+car ceux-ci publient déjà chaque asset. Elle sert à reprendre un `dist` réuni,
+mais ne remplace jamais les trois builds précédents. Avant de la lancer,
+contrôler que `dist` contient au moins un couple `nom-du-paquet` et
+`nom-du-paquet.metadata.json` pour la version concernée.
 
 Sous Windows :
 
@@ -134,6 +222,10 @@ Il n'y a normalement pas de seconde commande de publication à lancer :
 `morfPackages`, puis l'attache à la release utilisateur du projet. Après les
 passages Windows et Linux, le contenu de `dist` est donc déjà publié dans la
 release que les utilisateurs voient en premier.
+
+Ne pas exécuter cette commande juste après `create-source-releases.py` : le
+résultat sera seulement une série de `[SKIP]`, puisque la page GitHub ne contient
+encore aucun fichier et que `dist` ne contient pas les sidecars attendus.
 
 Pour publier en une seule passe les sidecars et binaires déjà réunis dans
 `dist`, sans reconstruire, exécuter depuis `morfTools` :

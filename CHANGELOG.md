@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.34.13] - 2026-08-20
+
+### Ajouté
+
+- `package-all --no-publish` construit les livrables et leurs sidecars sans
+  publication, afin de réunir tous les formats avant une passe unique de
+  `publish-dist`.
+
+### Documentation
+
+- Le workflow fournit le parcours complet du parc sur Windows, Linux AMD64 et
+  Linux ARM64, avec des blocs de commandes homogènes et une publication finale
+  unique.
+
+## [0.34.12] - 2026-08-20
+
+### Documentation
+
+- Le workflow rend explicite que les releases source sont vides et que
+  `publish-dist` exige un livrable et son sidecar produits par `package-all`.
+
 ## [0.34.11] - 2026-08-20
 
 ### Ajouté

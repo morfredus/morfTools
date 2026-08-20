@@ -395,6 +395,8 @@ def main(argv=None) -> int:
                         help="build even a deliverable already present in --out")
     parser.add_argument("--sync", action="store_true",
                         help="download already published assets before local packaging")
+    parser.add_argument("--no-publish", action="store_true",
+                        help="build locally and write metadata without publishing assets")
     parser.add_argument("--release-notes",
                         help="text for a newly created morfPackages release")
     parser.add_argument("--out", type=Path, default=HERE.parent / "dist",
@@ -402,6 +404,9 @@ def main(argv=None) -> int:
     parser.add_argument("--only", nargs="*", default=None, metavar="NAME",
                         help="restrict to these project names")
     args = parser.parse_args(argv)
+
+    if args.sync and args.no_publish:
+        parser.error("--sync cannot be combined with --no-publish")
 
     try:
         ws = Workspace(HERE)
@@ -414,10 +419,13 @@ def main(argv=None) -> int:
     print(f"Platform: {cur_os}-{cur_arch}   Output: {out}"
           + ("   [dry-run]" if args.dry_run else ""))
 
-    preflight = _release_preflight(args.dry_run)
-    print(f"morfPackages preflight -> {preflight}")
-    if preflight.startswith("FAILED") or preflight.startswith("morfPackages script missing"):
-        return 2
+    if args.no_publish:
+        print("morfPackages preflight -> deferred (build-only mode)")
+    else:
+        preflight = _release_preflight(args.dry_run)
+        print(f"morfPackages preflight -> {preflight}")
+        if preflight.startswith("FAILED") or preflight.startswith("morfPackages script missing"):
+            return 2
 
     produced, skipped, failed = 0, 0, 0
     for project in ws.projects():
@@ -483,6 +491,11 @@ def main(argv=None) -> int:
                 artifact = out / expected
                 sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
                 if sidecar.is_file() and _sidecar_matches_target(sidecar, target):
+                    if args.no_publish:
+                        print(f"  {target.name}: already present ({expected}), "
+                              "kept for final publication")
+                        skipped += 1
+                        continue
                     print(f"  {target.name}: already present ({expected}), publishing "
                           "its verified metadata")
                     result = _publish_release(project, version, artifact,
@@ -520,10 +533,12 @@ def main(argv=None) -> int:
                     if error:
                         result = f"FAILED ({error})"
                     else:
-                        result = _publish_release(project, version, artifact,
-                                                  notes, args.dry_run)
+                        result = ("built locally (publication deferred)"
+                                  if args.no_publish else
+                                  _publish_release(project, version, artifact,
+                                                   notes, args.dry_run))
             print(f"    -> {result}")
-            if result in ("published",):
+            if result in ("published", "built locally (publication deferred)"):
                 produced += 1
             elif result.startswith("FAILED"):
                 failed += 1
