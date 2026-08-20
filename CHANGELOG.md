@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.1] - 2026-08-20
+
+### Corrigé
+
+- `create-source-releases.py` vérifie la connexion GitHub avant tout préflight
+  et rapporte les erreurs de commande sans traceback.
+
 ## [0.31.0] - 2026-08-20
 
 ### Modifié
