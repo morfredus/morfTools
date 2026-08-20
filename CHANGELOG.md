@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.14] - 2026-08-20
+
+### Corrigé
+
+- Le guide supprime les commandes historiques contradictoires et conserve un
+  seul parcours vérifié pour Windows, Linux AMD64 et Linux ARM64.
+
 ## [0.34.13] - 2026-08-20
 
 ### Ajouté

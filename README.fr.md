@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.34.13-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.34.14-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
