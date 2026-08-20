@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.15] - 2026-08-20
+
+### Corrigé
+
+- Le guide de démarrage indique le chemin réellement utilisé par les paquets :
+  `/etc/morfsystem/<service>`, et non l'ancien `/etc/<service>`.
+
 ## [0.34.14] - 2026-08-20
 
 ### Corrigé

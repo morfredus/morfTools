@@ -295,7 +295,7 @@ endroit où l'on regarde - et ça a une conséquence pratique : effacer
 | | |
 |---|---|
 | `/opt/<service>/` | le binaire, remplacé à chaque mise à jour |
-| `/etc/<service>/` | sa configuration, **jamais** écrasée |
+| `/etc/morfsystem/<service>/` | sa configuration, **jamais** écrasée |
 | `/etc/morfsystem/` | la configuration partagée, lue par plusieurs programmes |
 
 Modifier un fichier dans le dépôt **ne change rien** tant que vous n'avez pas
