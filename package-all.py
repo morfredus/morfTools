@@ -93,6 +93,13 @@ def _expected_name(project, target, svc: str | None, version: str) -> str | None
     return None
 
 
+def _script_artifact_name(project, target, version: str) -> str:
+    """Canonical shared-dist name for an artifact made by a project script."""
+    fmt = target.package.get("format")
+    arch = target.package.get("architecture") or target.arch
+    return f"{project.name.lower()}-{version}-{target.os}-{arch}.{fmt}"
+
+
 def _run(cmd: list, cwd: Path | None = None) -> int:
     print(f"    $ {' '.join(str(c) for c in cmd)}")
     return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=False).returncode
@@ -171,7 +178,10 @@ def _release_metadata(project, target, artifact: Path, version: str) -> str | No
         "commit": commit.stdout.strip(),
         "dirty": False,
         "target": target.name,
-        "platform": {"os": target.os, "arch": target.arch},
+        # Firmware targets describe their MCU with the OS field only.  It is
+        # still a complete platform identity: use that value for the missing
+        # architecture rather than emitting metadata which publishing rejects.
+        "platform": {"os": target.os, "arch": target.arch or target.os},
         "format": target.package.get("format"),
         "built_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
@@ -206,7 +216,14 @@ def _package_service(project, target, out: Path, dry: bool) -> str:
 
 
 def _package_project_script(project, target, out: Path, dry: bool) -> str:
-    """Run the project's own package script declared on the target."""
+    """Run a project-owned script and collect its one current deliverable.
+
+    Older project scripts deliberately own their local ``dist`` directory.
+    Keeping that convention is useful for direct use, while this conductor
+    copies the matching, current-version artifact into its shared directory.
+    The copy is renamed to the public packaging contract before provenance is
+    written, so both paths remain useful without releasing an ambiguous file.
+    """
     script = target.package.get("script")
     if not script:
         return "no package script declared"
@@ -218,13 +235,26 @@ def _package_project_script(project, target, out: Path, dry: bool) -> str:
     else:
         launcher = ["bash", str(script_path)]
     if dry:
-        print(f"    would run: {' '.join(launcher)}  (output owned by the project)")
+        print(f"    would run: {' '.join(launcher)} then collect its deliverable")
         return "planned"
-    # The script owns its output location; a project is expected to write beside
-    # its build. Collecting it into `out` is left to the script's own convention
-    # or to a later standardisation -- Phase 4 runs it, honestly reporting where
-    # ownership lies.
-    return "ran (project-owned output)" if _run(launcher, project.path) == 0 else "FAILED"
+    if _run(launcher, project.path) != 0:
+        return "FAILED"
+
+    fmt = target.package.get("format")
+    local_dist = project.path / "dist"
+    candidates = sorted(
+        (path for path in local_dist.glob(f"*.{fmt}")
+         if path.is_file() and version in path.name),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    ) if local_dist.is_dir() else []
+    if len(candidates) != 1:
+        return "FAILED (project script did not produce one current deliverable)"
+    out.mkdir(parents=True, exist_ok=True)
+    artifact = out / _script_artifact_name(project, target, version)
+    shutil.copy2(candidates[0], artifact)
+    print(f"    collected: {artifact.name}")
+    return "built"
 
 
 def _package_firmware(project, target, out: Path, version: str, dry: bool) -> str:
@@ -333,9 +363,22 @@ def main(argv=None) -> int:
         for target in native:
             expected = _expected_name(project, target, svc, version)
             if expected and (out / expected).exists() and not args.force:
-                print(f"  {target.name}: already present ({expected}), skipped "
-                      "(--force to rebuild)")
-                skipped += 1
+                artifact = out / expected
+                sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
+                if sidecar.is_file():
+                    print(f"  {target.name}: already present ({expected}), publishing "
+                          "its verified metadata")
+                    result = _publish_release(project, version, artifact,
+                                              args.release_notes, args.dry_run)
+                    print(f"    -> {result}")
+                    if result == "published":
+                        produced += 1
+                    elif result.startswith("FAILED"):
+                        failed += 1
+                else:
+                    print(f"  {target.name}: already present ({expected}), skipped "
+                          "(no provenance sidecar; use --force to rebuild)")
+                    skipped += 1
                 continue
 
             print(f"  {target.name} -> provider {target.provider}, "

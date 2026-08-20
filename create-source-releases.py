@@ -64,10 +64,12 @@ def release_repository(project: Path, fallback_owner: str) -> str:
 
 def require_github_auth() -> None:
     """Fail before touching any project when this machine cannot create releases."""
-    result = subprocess.run(["gh", "auth", "status"], text=True,
+    result = subprocess.run(["gh", "api", "user"], text=True,
                             capture_output=True, check=False)
     if result.returncode:
-        raise RuntimeError("GitHub CLI is not authenticated. Run: gh auth login")
+        raise RuntimeError(
+            "GitHub CLI cannot authenticate to the API. Run: "
+            "gh auth login --hostname github.com --git-protocol ssh --web --scopes repo")
 
 
 def main(argv=None) -> int:

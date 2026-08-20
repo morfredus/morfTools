@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.32.0] - 2026-08-20
+
+### Corrigé
+
+- Les firmwares déclarés avec un seul identifiant matériel produisent désormais
+  une provenance publiable.
+- Les archives déjà construites et vérifiées sont publiées lors d'un nouveau
+  passage, sans reconstruction inutile.
+- Les projets ayant leur propre script de paquet sont centralisés dans le
+  répertoire commun avec un nom conforme avant publication.
+
+## [0.31.2] - 2026-08-20
+
+### Corrigé
+
+- La vérification GitHub interroge maintenant l'API au lieu de se fier à une
+  session locale mémorisée mais devenue invalide.
+
 ## [0.31.1] - 2026-08-20
 
 ### Corrigé
