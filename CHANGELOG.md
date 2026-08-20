@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.2] - 2026-08-20
+
+### Corrigé
+
+- Un firmware déjà présent sans sidecar est reconstruit et reçoit sa provenance
+  au lieu d'être refusé comme livrable ambigu lors de la reprise.
+
 ## [0.34.1] - 2026-08-20
 
 ### Documentation

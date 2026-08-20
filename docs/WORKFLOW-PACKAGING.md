@@ -1,10 +1,9 @@
 # Workflow de packaging multi-plateforme
 
 Ce document décrit le chemin complet entre une version source et ses paquets.
-Je le garde volontairement en deux temps : je décide et publie la version
-source, puis chaque machine produit ce qu'elle sait réellement construire. Le
-dépôt de distribution réunit les plateformes sans que je copie des binaires
-dans Git.
+Suivre volontairement deux temps : décider et publier la version source, puis
+laisser chaque machine produire ce qu'elle sait réellement construire. Le dépôt
+de distribution réunit les plateformes sans copier de binaires dans Git.
 
 ## Les deux releases à ne pas confondre
 
@@ -17,7 +16,7 @@ Chaque version porte deux releases distinctes.
 
 La première est créée dans le même workspace que les sources : la sandbox crée
 des releases privées sur ses remotes privés, la production crée les releases
-canoniques après ma mise à jour manuelle. Elle ne reçoit pas les binaires. La
+canoniques après une mise à jour manuelle. Elle ne reçoit pas les binaires. La
 seconde est créée automatiquement au premier packaging réussi et reçoit les
 `.deb`, `.zip`, firmwares, `manifest.json` et `checksums.sha256`.
 
@@ -35,10 +34,10 @@ résumé de trois éléments au plus, extrait de la section de `CHANGELOG.md` do
 le numéro correspond à `VERSION`. Le changelog complet reste dans le dépôt : la
 release GitHub ne le recopie pas.
 
-Quand une formulation personnelle est souhaitée pour un projet, j'ajoute à sa
-racine un fichier `RELEASE-NOTES.md`. Je peux y employer `{project}` et
-`{version}`. Le marqueur `{{changelog_summary}}` est remplacé par le résumé au
-point exact où je le pose. S'il est absent, le résumé est ajouté à la fin.
+Pour ajouter une formulation personnelle à un projet, créer à sa racine un
+fichier `RELEASE-NOTES.md`. Les variables `{project}` et `{version}` y sont
+disponibles. Le marqueur `{{changelog_summary}}` est remplacé par le résumé à
+l'emplacement choisi. S'il est absent, le résumé est ajouté à la fin.
 
 ```markdown
 ## {project} {version}
@@ -54,14 +53,14 @@ et `{version}`.
 
 ## 1. Préparer une version source
 
-Je choisis les projets concernés. Pour chacun, la commande utilise la version
-déclarée dans son propre fichier `VERSION`. Je vérifie que les sources sont
-propres et je pousse mon dépôt de travail. La
+Choisir les projets concernés. Pour chacun, la commande utilise la version
+déclarée dans son propre fichier `VERSION`. Vérifier que les sources sont
+propres et pousser le dépôt de travail. La
 propagation vers la production reste une action délibérée, hors de
 `package-all`.
 
-Une fois les dépôts source du workspace courant à jour, je crée leurs releases
-d'autorité en une passe depuis son dossier `morfTools` :
+Une fois les dépôts source du workspace courant à jour, créer leurs releases
+d'autorité en une passe depuis le dossier `morfTools` :
 
 ```bash
 python3 ./create-source-releases.py --all \
@@ -75,7 +74,7 @@ python .\create-source-releases.py --all `
   --notes "Source release for {project} {version}."
 ```
 
-Pour ne créer que certains projets, je remplace `--all` :
+Pour ne créer que certains projets, remplacer `--all` :
 
 ```bash
 python3 ./create-source-releases.py --only morfCollector morfNotify morfMonitor \
@@ -121,7 +120,7 @@ gh release create "v${version}" --repo "morfredus/${project}" \
   --title "${project} - v${version}" --notes "$notes"
 ```
 
-Si la release existe déjà, je vérifie au lieu de la recréer :
+Si la release existe déjà, la vérifier au lieu de la recréer :
 
 ```bash
 gh release view "v${version}" --repo "morfredus/${project}"
@@ -133,19 +132,19 @@ n'existe pas.
 ## Parc complet : les commandes en une passe
 
 Il n'y a pas de build global distinct à lancer : `package-all` construit toutes
-les cibles réellement natives de la machine qui l'exécute. Je crée d'abord les
-releases source une seule fois depuis l'une des machines, puis je lance le
-packaging complet sur Windows et sur chaque Linux utile. J'omets volontairement
-`--release-notes` ci-dessous afin que chaque projet utilise son propre résumé
-de changelog ou son éventuel `RELEASE-NOTES.md`.
+les cibles réellement natives de la machine qui l'exécute. Créer d'abord les
+releases source une seule fois depuis l'une des machines, puis lancer le
+packaging complet sur Windows et sur chaque Linux utile. Omettre
+volontairement `--release-notes` ci-dessous afin que chaque projet utilise son
+propre résumé de changelog ou son éventuel `RELEASE-NOTES.md`.
 
 Pour les projets portant un script de packaging propre, la commande lance aussi
 leur configuration et leur build CMake avec le preset déclaré avant le script.
 
 ### 1. Créer les releases source une seule fois
 
-J'exécute cette étape depuis **une seule** des machines du workspace courant,
-Windows ou Linux. Elle est identique quant au résultat : les remotes privés de
+Exécuter cette étape depuis **une seule** des machines du workspace courant,
+Windows ou Linux. Le résultat est identique : les remotes privés de
 la sandbox ou les remotes canoniques de production sont déduits automatiquement.
 
 Sous Windows :
@@ -184,13 +183,13 @@ python3 ./package-all.py --sync --out ../dist
 
 Le premier passage crée une release de distribution par projet. Les suivants
 téléchargent ses assets grâce à `--sync`, puis ajoutent uniquement les formats
-manquants. Je peux relancer sans `--force` après un échec de publication : un
+manquants. Relancer sans `--force` après un échec de publication : un
 livrable déjà construit avec son sidecar est repris et publié sans rebuild.
 
 ## 2. Construire et publier depuis Windows
 
-Je me place dans le dossier `morfTools` de mon workspace de travail. Avant de
-lancer la commande, les projets ciblés doivent être propres et à jour.
+Se placer dans le dossier `morfTools` du workspace de travail. Avant de lancer
+la commande, les projets ciblés doivent être propres et à jour.
 
 ```powershell
 cd C:\Users\frede\Codage\01-Travail\morfTools
@@ -199,7 +198,7 @@ python .\package-all.py --sync --out ..\dist `
   --only morfCollector
 ```
 
-Pour plusieurs projets, j'ajoute simplement leurs noms après `--only` :
+Pour plusieurs projets, ajouter simplement leurs noms après `--only` :
 
 ```powershell
 python .\package-all.py --sync --out ..\dist `
@@ -213,8 +212,9 @@ l'arbre est propre et non divergent, puis applique `pull --ff-only` si besoin.
 
 ## 3. Construire et publier depuis Linux
 
-Je fais la même chose sur la machine Linux AMD64 ou ARM64. Le dossier de sortie
-s'écrit avec des slashs Linux : `../dist`, jamais une barre oblique inversée.
+Effectuer la même opération sur la machine Linux AMD64 ou ARM64. Le dossier de
+sortie s'écrit avec des slashs Linux : `../dist`, jamais une barre oblique
+inversée.
 
 ```bash
 cd ~/Codage/01-Travail/morfTools
@@ -235,14 +235,14 @@ Un firmware est produit sur toute machine qui possède PlatformIO.
 
 ## 4. Réunir les plateformes
 
-Je n'ai pas besoin de transporter un dossier `dist` entre Windows et Linux.
+Il n'est pas nécessaire de transporter un dossier `dist` entre Windows et Linux.
 `--sync` télécharge au début les assets déjà présents dans la release de ce
 projet et de cette version. La machine suivante ajoute seulement son livrable
 manquant. Chaque release morfPackages finit donc par contenir toutes les
 plateformes disponibles.
 
-Je peux néanmoins garder un dossier `dist` commun pour mon contrôle visuel. Il
-est jetable : Git l'ignore et les assets GitHub restent la distribution de
+Un dossier `dist` commun peut néanmoins être conservé pour un contrôle visuel.
+Il est jetable : Git l'ignore et les assets GitHub restent la distribution de
 référence.
 
 ## 5. Publier manuellement un livrable déjà créé
@@ -277,7 +277,7 @@ que ce soit.
 
 ## Contrôles utiles
 
-Avant une production, je peux inspecter le plan sans rien construire ni publier :
+Avant une production, inspecter le plan sans rien construire ni publier :
 
 ```bash
 python3 ./package-all.py --dry-run --sync --out ../dist --only morfCollector

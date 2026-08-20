@@ -451,6 +451,11 @@ def main(argv=None) -> int:
 
         for target in native:
             expected = _expected_name(project, target, svc, version)
+            if declared.type == "firmware":
+                # Firmware names are fully deterministic as well. Keeping an
+                # expected path lets a second run recover a binary produced
+                # before provenance support without treating it as ambiguous.
+                expected = f"{project.name.lower()}-{version}-{target.name}.bin"
             if expected and (out / expected).exists() and not args.force:
                 artifact = out / expected
                 sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
@@ -465,10 +470,10 @@ def main(argv=None) -> int:
                     elif result.startswith("FAILED"):
                         failed += 1
                 else:
-                    print(f"  {target.name}: already present ({expected}), skipped "
-                          "(no provenance sidecar; use --force to rebuild)")
-                    skipped += 1
-                continue
+                    print(f"  {target.name}: already present ({expected}) without provenance; "
+                          "rebuilding it")
+                if sidecar.is_file():
+                    continue
 
             print(f"  {target.name} -> provider {target.provider}, "
                   f"format {target.package.get('format')}")
