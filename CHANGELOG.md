@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.3] - 2026-08-20
+
+### Documentation
+
+- Le workflow de packaging s'adresse désormais à tous les utilisateurs, avec
+  des instructions à l'infinitif plutôt qu'à la première personne.
+
 ## [0.34.2] - 2026-08-20
 
 ### Corrigé
