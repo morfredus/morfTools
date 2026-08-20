@@ -15,20 +15,47 @@ Chaque version porte deux releases distinctes.
 | Autorité de la version source | dépôt du projet | `vX.Y.Z` | `nomProjet - vX.Y.Z` |
 | Distribution des installables | morfPackages | `nomprojet-vX.Y.Z` | `nomProjet - vX.Y.Z` |
 
-La première est créée par moi après ma mise à jour manuelle de la production.
-Elle ne reçoit pas les binaires. La seconde est créée automatiquement au premier
-packaging réussi et reçoit les `.deb`, `.zip`, firmwares, `manifest.json` et
-`checksums.sha256`.
+La première est créée dans le même workspace que les sources : la sandbox crée
+des releases privées sur ses remotes privés, la production crée les releases
+canoniques après ma mise à jour manuelle. Elle ne reçoit pas les binaires. La
+seconde est créée automatiquement au premier packaging réussi et reçoit les
+`.deb`, `.zip`, firmwares, `manifest.json` et `checksums.sha256`.
 
 ## 1. Préparer une version source
 
 Je choisis les projets et une même version pour chaque projet concerné. Je
-vérifie que les sources sont propres, je pousse mon dépôt de travail, puis je
-répercute moi-même le changement vers le dépôt de production. Cette propagation
-reste une action délibérée, hors de `package-all`.
+vérifie que les sources sont propres et je pousse mon dépôt de travail. La
+propagation vers la production reste une action délibérée, hors de
+`package-all`.
 
-Une fois le dépôt source de production à jour, je crée sa release d'autorité.
-Sous Windows ou Linux, les commandes `gh` sont les mêmes :
+Une fois les dépôts source du workspace courant à jour, je crée leurs releases
+d'autorité en une passe depuis son dossier `morfTools` :
+
+```bash
+python3 ./create-source-releases.py --all \
+  --notes "Source release for {project} {version}."
+```
+
+Sous PowerShell, la même commande s'écrit :
+
+```powershell
+python .\create-source-releases.py --all `
+  --notes "Source release for {project} {version}."
+```
+
+Pour ne créer que certains projets, je remplace `--all` :
+
+```bash
+python3 ./create-source-releases.py --only morfCollector morfNotify morfMonitor \
+  --notes "Source release for {project} {version}."
+```
+
+La commande vérifie et avance rapidement chaque clone avant de créer, si besoin,
+le tag `vX.Y.Z`, le titre `nomProjet - vX.Y.Z` et le texte indiqué. Elle lit le
+remote de chaque clone : elle teste donc la chaîne complète sur les remotes
+privés de la sandbox, sans effectuer de synchronisation vers la production.
+
+Pour une release isolée, les commandes `gh` directes restent possibles :
 
 ```text
 projet=morfCollector

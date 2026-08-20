@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.31.0] - 2026-08-20
+
+### Modifié
+
+- Les releases source se créent maintenant aussi depuis la sandbox, sur le
+  remote privé déduit de chaque clone. La production reste une synchronisation
+  manuelle, puis le même workflow sur ses remotes canoniques.
+
+## [0.30.0] - 2026-08-20
+
+### Ajouté
+
+- `create-source-releases.py` : crée en une passe les releases source après la
+  synchronisation manuelle de la production, avec `--all` ou `--only`.
+
 ## [0.29.0] - 2026-08-20
 
 ### Ajouté
