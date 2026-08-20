@@ -243,8 +243,9 @@ def _package_project_script(project, target, out: Path, dry: bool) -> str:
     fmt = target.package.get("format")
     local_dist = project.path / "dist"
     candidates = sorted(
-        (path for path in local_dist.glob(f"*.{fmt}")
-         if path.is_file() and version in path.name),
+        (path for path in local_dist.iterdir()
+         if path.is_file() and path.suffix.lstrip(".").lower() == fmt.lower()
+         and version in path.name),
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     ) if local_dist.is_dir() else []

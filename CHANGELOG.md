@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.1] - 2026-08-20
+
+### Corrigé
+
+- La collecte Linux des scripts de projet reconnaît aussi l'extension
+  `AppImage` utilisée par linuxdeploy.
+
 ## [0.32.0] - 2026-08-20
 
 ### Corrigé
