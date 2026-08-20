@@ -306,13 +306,24 @@ def _package_project_script(project, target, out: Path, dry: bool) -> str:
     script_path = project.path / script
     if not script_path.is_file():
         return f"declared script missing: {script}"
+    preset = target.build.get("preset")
+    if not preset:
+        return "no CMake preset declared for project packaging"
+    cmake = shutil.which("cmake")
+    if cmake is None:
+        return "CMake not on this machine"
     if script.endswith(".ps1"):
         launcher = ["pwsh", "-File", str(script_path)]
     else:
         launcher = ["bash", str(script_path)]
     if dry:
-        print(f"    would run: {' '.join(launcher)} then collect its deliverable")
+        print(f"    would run: {cmake} --preset {preset}; {cmake} --build --preset {preset}; "
+              f"{' '.join(launcher)} then collect its deliverable")
         return "planned"
+    if _run([cmake, "--preset", preset], project.path) != 0:
+        return "FAILED (configure)"
+    if _run([cmake, "--build", "--preset", preset], project.path) != 0:
+        return "FAILED (build)"
     if _run(launcher, project.path) != 0:
         return "FAILED"
 

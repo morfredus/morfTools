@@ -21,6 +21,13 @@ canoniques après ma mise à jour manuelle. Elle ne reçoit pas les binaires. La
 seconde est créée automatiquement au premier packaging réussi et reçoit les
 `.deb`, `.zip`, firmwares, `manifest.json` et `checksums.sha256`.
 
+Avant toute création ou mise à jour de cette seconde release, morfPackages
+résout le tag distant `vX.Y.Z` du dépôt source d'autorité du workspace. Le SHA
+complet désigné par ce tag doit correspondre au commit du sidecar et à tous les
+assets déjà inscrits dans le manifeste. Un écart bloque l'opération avant tout
+upload : une même release de distribution ne peut donc réunir que des paquets
+issus du même commit source.
+
 ## Notes de release par projet
 
 Sans option supplémentaire, la première release de distribution contient un
@@ -47,8 +54,9 @@ et `{version}`.
 
 ## 1. Préparer une version source
 
-Je choisis les projets et une même version pour chaque projet concerné. Je
-vérifie que les sources sont propres et je pousse mon dépôt de travail. La
+Je choisis les projets concernés. Pour chacun, la commande utilise la version
+déclarée dans son propre fichier `VERSION`. Je vérifie que les sources sont
+propres et je pousse mon dépôt de travail. La
 propagation vers la production reste une action délibérée, hors de
 `package-all`.
 
@@ -79,7 +87,11 @@ le tag `vX.Y.Z`, le titre `nomProjet - vX.Y.Z` et le texte indiqué. Elle lit le
 remote de chaque clone : elle teste donc la chaîne complète sur les remotes
 privés de la sandbox, sans effectuer de synchronisation vers la production.
 
-Pour une release isolée, les commandes `gh` directes restent possibles :
+Les commandes `gh` directes ci-dessous sont réservées à la création
+exceptionnelle d'une release sur le dépôt public canonique, après propagation
+volontaire et vérifiée des sources vers la production. Elles ne remplacent pas
+`create-source-releases.py`, qui déduit les remotes du workspace courant et
+permet donc de valider la chaîne sur les dépôts privés :
 
 ```text
 projet=morfCollector
@@ -126,6 +138,9 @@ releases source une seule fois depuis l'une des machines, puis je lance le
 packaging complet sur Windows et sur chaque Linux utile. J'omets volontairement
 `--release-notes` ci-dessous afin que chaque projet utilise son propre résumé
 de changelog ou son éventuel `RELEASE-NOTES.md`.
+
+Pour les projets portant un script de packaging propre, la commande lance aussi
+leur configuration et leur build CMake avec le preset déclaré avant le script.
 
 Sous Windows, depuis le dossier `morfTools` du workspace courant :
 

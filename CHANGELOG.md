@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.34.0] - 2026-08-20
+
+### Corrigé
+
+- Les projets qui possèdent leur script de packaging sont maintenant configurés
+  et compilés par `package-all` avant la création de leur archive.
+
+### Documentation
+
+- Le workflow décrit la barrière stricte entre le commit du tag source et tous
+  les artefacts réunis dans une release de distribution.
+
+## [0.33.2] - 2026-08-20
+
+### Documentation
+
+- Le workflow rappelle que chaque projet conserve sa propre version et distingue
+  les créations directes de release publique des tests sur remotes privés.
+
 ## [0.33.1] - 2026-08-20
 
 ### Documentation
