@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.34.9] - 2026-08-20
+
+### Corrigé
+
+- `create-source-releases.py --all` inclut désormais morfTools, afin que ses
+  versions reçoivent elles aussi leur release GitHub source.
+
+## [0.34.8] - 2026-08-20
+
+### Modifié
+
+- Le workflow présente désormais, dans l'ordre, les commandes complètes pour
+  Windows, Linux AMD64, Linux ARM64 et la publication finale depuis `dist`.
+
+## [0.34.7] - 2026-08-20
+
+### Ajouté
+
+- `publish-dist.py` publie en une passe les livrables déjà réunis dans `dist`
+  et les rend disponibles dans les releases source des projets.
+
+## [0.34.6] - 2026-08-20
+
+### Corrigé
+
+- Les archives collectées depuis un script de projet sont identifiées par leur
+  nom canonique, y compris après une synchronisation préalable de la release.
+
+## [0.34.5] - 2026-08-20
+
+### Corrigé
+
+- Une provenance existante mais incomplète est détectée avant publication et
+  régénérée automatiquement, notamment pour les firmwares ESP32.
+
+## [0.34.4] - 2026-08-20
+
+### Corrigé
+
+- Le collecteur d'archives produites par les scripts de projet reçoit désormais
+  la version attendue et ne s'arrête plus après une archive Windows réussie.
+
 ## [0.34.3] - 2026-08-20
 
 ### Documentation

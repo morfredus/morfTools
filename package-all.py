@@ -267,6 +267,24 @@ def _release_metadata(project, target, artifact: Path, version: str) -> str | No
     return None
 
 
+def _sidecar_matches_target(path: Path, target) -> bool:
+    """Whether an existing sidecar can safely be reused for this target.
+
+    Earlier firmware runs wrote an empty architecture. Treat such a sidecar as
+    stale locally: the artifact is rebuilt and given fresh provenance before it
+    reaches the publisher, rather than repeatedly sending known-invalid JSON.
+    """
+    try:
+        metadata = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    platform_data = metadata.get("platform")
+    expected_arch = target.arch or target.os
+    return (isinstance(platform_data, dict)
+            and platform_data.get("os") == target.os
+            and platform_data.get("arch") == expected_arch)
+
+
 def _new_artifact(out: Path, target, before: set[Path], expected: str | None) -> Path | None:
     """Find exactly the deliverable created for this target, never guess."""
     if expected:
@@ -291,7 +309,7 @@ def _package_service(project, target, out: Path, dry: bool) -> str:
     return "built" if _run(cmd, project.path) == 0 else "FAILED"
 
 
-def _package_project_script(project, target, out: Path, dry: bool) -> str:
+def _package_project_script(project, target, out: Path, version: str, dry: bool) -> str:
     """Run a project-owned script and collect its one current deliverable.
 
     Older project scripts deliberately own their local ``dist`` directory.
@@ -456,10 +474,15 @@ def main(argv=None) -> int:
                 # expected path lets a second run recover a binary produced
                 # before provenance support without treating it as ambiguous.
                 expected = f"{project.name.lower()}-{version}-{target.name}.bin"
+            elif target.provider == "project":
+                # Project-owned scripts are collected under this canonical name.
+                # It remains the authoritative candidate even when --sync just
+                # downloaded an existing asset with the same name.
+                expected = _script_artifact_name(project, target, version)
             if expected and (out / expected).exists() and not args.force:
                 artifact = out / expected
                 sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
-                if sidecar.is_file():
+                if sidecar.is_file() and _sidecar_matches_target(sidecar, target):
                     print(f"  {target.name}: already present ({expected}), publishing "
                           "its verified metadata")
                     result = _publish_release(project, version, artifact,
@@ -469,11 +492,13 @@ def main(argv=None) -> int:
                         produced += 1
                     elif result.startswith("FAILED"):
                         failed += 1
+                    continue
+                if sidecar.is_file():
+                    print(f"  {target.name}: existing provenance is stale or incomplete; "
+                          "rebuilding it")
                 else:
                     print(f"  {target.name}: already present ({expected}) without provenance; "
                           "rebuilding it")
-                if sidecar.is_file():
-                    continue
 
             print(f"  {target.name} -> provider {target.provider}, "
                   f"format {target.package.get('format')}")
@@ -483,7 +508,7 @@ def main(argv=None) -> int:
             elif declared.type == "firmware":
                 result = _package_firmware(project, target, out, version, args.dry_run)
             elif target.provider == "project":
-                result = _package_project_script(project, target, out, args.dry_run)
+                result = _package_project_script(project, target, out, version, args.dry_run)
             else:
                 result = f"no producer for provider '{target.provider}'"
             if result == "built":

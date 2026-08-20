@@ -16,9 +16,9 @@ Chaque version porte deux releases distinctes.
 
 La première est créée dans le même workspace que les sources : la sandbox crée
 des releases privées sur ses remotes privés, la production crée les releases
-canoniques après une mise à jour manuelle. Elle ne reçoit pas les binaires. La
-seconde est créée automatiquement au premier packaging réussi et reçoit les
-`.deb`, `.zip`, firmwares, `manifest.json` et `checksums.sha256`.
+canoniques après une mise à jour manuelle. Après publication, elle reçoit les
+installables validés, leur manifeste et leurs sommes de contrôle. La seconde
+reste l'index de distribution qui réunit exactement les mêmes assets.
 
 Avant toute création ou mise à jour de cette seconde release, morfPackages
 résout le tag distant `vX.Y.Z` du dépôt source d'autorité du workspace. Le SHA
@@ -50,6 +50,164 @@ Cette version consolide le packaging avant les prochains déploiements.
 `--release-notes` reste disponible pour une campagne ponctuelle : il remplace
 alors ces notes pour tous les projets concernés. Il accepte aussi `{project}`
 et `{version}`.
+
+## Parcours rapide - commandes à copier dans l'ordre
+
+Préparer les versions, changelogs et éventuels `RELEASE-NOTES.md`, puis les
+committer et les pousser avant de commencer. Se placer ensuite dans le dossier
+`morfTools` du workspace courant. Les trois blocs ci-dessous ne s'exécutent pas
+sur la même machine : copier chaque bloc sur la plateforme indiquée.
+
+### 1. Windows - créer les releases source et produire les ZIP
+
+Exécuter cette étape de création des releases source une seule fois, ici ou sur
+l'une des machines Linux. Ne pas la répéter sur les deux Linux.
+`--all` inclut aussi morfTools, même s'il ne produit pas lui-même de paquet.
+
+```powershell
+python .\create-source-releases.py --all `
+  --notes "Source release for {project} {version}."
+
+python .\package-all.py --sync --out ..\dist
+```
+
+### 2. Linux AMD64 - produire les paquets AMD64
+
+Si l'étape Windows n'est pas exécutée, créer d'abord les releases source ici,
+une seule fois :
+
+```bash
+python3 ./create-source-releases.py --all \
+  --notes "Source release for {project} {version}."
+```
+
+```bash
+python3 ./package-all.py --sync --out ../dist
+```
+
+### 3. Linux ARM64 - produire les paquets ARM64
+
+Si cette machine est la première et la seule à exécuter le workflow, commencer
+par créer les releases source, une seule fois :
+
+```bash
+python3 ./create-source-releases.py --all \
+  --notes "Source release for {project} {version}."
+```
+
+```bash
+python3 ./package-all.py --sync --out ../dist
+```
+
+### 4. Publication finale depuis le `dist` réuni
+
+Cette dernière étape est facultative après des passages `package-all --sync`,
+car ceux-ci publient déjà chaque asset. Elle est utile pour republier en une
+seule passe un dossier `dist` réuni ou pour vérifier que toutes les releases
+projet reçoivent bien leurs assets et leur description automatique, sans aucun
+rebuild.
+
+Sous Windows :
+
+```powershell
+python .\publish-dist.py --all --out ..\dist
+```
+
+Sous Linux AMD64 ou ARM64 :
+
+```bash
+python3 ./publish-dist.py --all --out ../dist
+```
+
+Ne pas ajouter `--notes` à cette commande pour conserver la description
+automatique par projet : `RELEASE-NOTES.md` est utilisé en priorité, puis le
+résumé de la version courante dans `CHANGELOG.md`.
+
+## Publier les binaires déjà réunis dans `dist`
+
+Il n'y a normalement pas de seconde commande de publication à lancer :
+`package-all.py --sync` attache automatiquement chaque binaire validé à la
+release de distribution correspondante dans `morfPackages`, puis à la release
+source du projet. Après les passages Windows et Linux, le contenu de `dist` est
+donc déjà publié dans la release que les utilisateurs voient en premier.
+
+Pour publier en une seule passe les sidecars et binaires déjà réunis dans
+`dist`, sans reconstruire, exécuter depuis `morfTools` :
+
+```powershell
+python .\publish-dist.py --all --out ..\dist
+```
+
+```bash
+python3 ./publish-dist.py --all --out ../dist
+```
+
+Limiter à certains projets si nécessaire :
+
+```powershell
+python .\publish-dist.py --only morfCollector morfNotify --out ..\dist
+```
+
+La commande valide chaque sidecar, vérifie le tag source et refuse tout conflit
+de commit ou de somme de contrôle avant l'upload. Vérifier par exemple la
+release publique du projet depuis le dossier de celui-ci :
+
+```bash
+gh release view v0.7.0
+```
+
+Pour donner un texte propre à une release de distribution avant sa première
+publication, créer `RELEASE-NOTES.md` à la racine du projet, le committer et le
+pousser avant de créer la release source. La note peut garder le résumé concis
+du changelog :
+
+```markdown
+## {project} {version}
+
+Décrire ici les points utiles à connaître pour cette version.
+
+{{changelog_summary}}
+```
+
+Relancer ensuite le packaging habituel ou `publish-dist.py`. Le premier binaire
+publié crée la release avec ce titre et ce texte ; les passages suivants ajoutent
+les formats Windows ou Linux manquants. La note de la release source est aussi
+mise à jour, afin que la page ouverte par l'utilisateur reste complète.
+
+Pour appliquer exceptionnellement le même texte à tous les projets d'une
+campagne, ajouter `--release-notes` à `package-all.py` :
+
+```powershell
+python .\package-all.py --sync --out ..\dist `
+  --release-notes "Packages for {project} {version}."
+```
+
+Pour modifier le texte d'une release de distribution qui existe déjà, sans
+toucher à ses binaires, exécuter cette commande depuis `morfPackages`. Le tag
+de distribution est en minuscules et ne doit pas être confondu avec le tag
+source `vX.Y.Z` :
+
+```powershell
+$project = "morfCollector"
+$version = "0.7.0"
+$notes = @"
+## morfCollector 0.7.0
+
+Texte personnalisé de la release.
+"@
+
+gh release edit "morfcollector-v$version" `
+  --title "$project - v$version" --notes $notes
+```
+
+```bash
+project="morfCollector"
+version="0.7.0"
+notes=$'## morfCollector 0.7.0\n\nTexte personnalisé de la release.'
+
+gh release edit "morfcollector-v${version}" \
+  --title "${project} - v${version}" --notes "$notes"
+```
 
 ## 1. Préparer une version source
 
@@ -210,11 +368,10 @@ leur sidecar `.metadata.json`, puis les publie automatiquement dans
 morfPackages. Le préflight de morfPackages fait `fetch --prune`, vérifie que
 l'arbre est propre et non divergent, puis applique `pull --ff-only` si besoin.
 
-## 3. Construire et publier depuis Linux
+## 3. Construire et publier depuis Linux AMD64
 
-Effectuer la même opération sur la machine Linux AMD64 ou ARM64. Le dossier de
-sortie s'écrit avec des slashs Linux : `../dist`, jamais une barre oblique
-inversée.
+Effectuer cette opération sur la machine Linux AMD64. Le dossier de sortie
+s'écrit avec des slashs Linux : `../dist`, jamais une barre oblique inversée.
 
 ```bash
 cd ~/Codage/01-Travail/morfTools
@@ -230,10 +387,28 @@ python3 ./package-all.py --sync --out ../dist \
   --only morfCollector morfNotify morfMonitor
 ```
 
-Une machine ARM64 produit les `.deb` ARM64, une machine AMD64 les `.deb` AMD64.
-Un firmware est produit sur toute machine qui possède PlatformIO.
+Cette machine produit les `.deb` AMD64. Un firmware est produit si PlatformIO
+est disponible.
 
-## 4. Réunir les plateformes
+## 4. Construire et publier depuis Linux ARM64
+
+Utiliser la même commande sur la machine ARM64. Elle sélectionne alors les
+cibles ARM64 et produit les `.deb` ARM64 :
+
+```bash
+cd ~/Codage/01-Travail/morfTools
+
+python3 ./package-all.py --sync --out ../dist \
+  --only morfCollector
+```
+
+Pour tout le parc, omettre `--only` :
+
+```bash
+python3 ./package-all.py --sync --out ../dist
+```
+
+## 5. Réunir les plateformes
 
 Il n'est pas nécessaire de transporter un dossier `dist` entre Windows et Linux.
 `--sync` télécharge au début les assets déjà présents dans la release de ce
@@ -245,7 +420,7 @@ Un dossier `dist` commun peut néanmoins être conservé pour un contrôle visue
 Il est jetable : Git l'ignore et les assets GitHub restent la distribution de
 référence.
 
-## 5. Publier manuellement un livrable déjà créé
+## 6. Publier manuellement un livrable déjà créé
 
 Normalement, `package-all` publie lui-même. Cette commande sert seulement à
 reprendre un livrable valide déjà présent dans `dist`, sans reconstruire :
@@ -270,10 +445,10 @@ python3 ./scripts/release.py publish --project morfCollector --version 0.7.0 \
   --notes "Windows and Linux installables for morfCollector 0.7.0."
 ```
 
-La note n'est utilisée que si la release de distribution est créée à cette
-occasion. Les passages suivants ajoutent les assets manquants. Un même nom avec
-un commit ou un SHA-256 différent est un conflit et s'arrête sans écraser quoi
-que ce soit.
+La note crée la description de distribution si nécessaire et met aussi à jour la
+description de la release source. Les passages suivants ajoutent les assets
+manquants. Un même nom avec un commit ou un SHA-256 différent est un conflit et
+s'arrête sans écraser quoi que ce soit.
 
 ## Contrôles utiles
 

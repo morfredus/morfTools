@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "lib"))
 
-from morftools.workspace import Workspace, WorkspaceError  # noqa: E402
+from morftools.workspace import Project, Workspace, WorkspaceError  # noqa: E402
 
 
 def run(command: list[str], cwd: Path, *, capture: bool = False) -> str:
@@ -93,15 +93,20 @@ def main(argv=None) -> int:
     except RuntimeError as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
         return 2
+    # The conductor is deliberately absent from ecosystem.json: it is not a
+    # runtime component. It nevertheless has a VERSION and must therefore be
+    # included in the all-project source release workflow.
+    tool_project = Project(name=HERE.name.split("_", 1)[0], path=HERE)
+    projects = [*workspace.projects(), tool_project]
     requested = set(args.only or [])
-    available = {project.name: project for project in workspace.projects()}
+    available = {project.name: project for project in projects}
     unknown = requested - set(available)
     if unknown:
         print(f"Unknown project(s): {', '.join(sorted(unknown))}", file=sys.stderr)
         return 2
 
     failures = 0
-    for project in workspace.projects():
+    for project in projects:
         if not args.all and project.name not in requested:
             continue
         if not project.exists or not (project.path / ".git").is_dir():
