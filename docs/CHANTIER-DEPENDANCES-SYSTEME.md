@@ -37,7 +37,7 @@ vérifier**.
     "id": "qt-serialport",
     "label": "Qt SerialPort",
     "required_for": ["ld2410c"],
-    "packages": { "debian": ["libqt6serialport6-dev"] },
+    "packages": { "debian": ["qt6-serialport-dev"] },
     "required": false
   }
 ]
@@ -72,7 +72,7 @@ et n'est pas traitée comme un échec.
 ### Reste (à faire/vérifier sur Linux — Pi/Mint)
 
 - **Install apt réelle** : `sudo service.py deps --yes` et `deploy` qui installe
-  réellement `libqt6serialport6-dev` / `libimage-exiftool-perl`, puis vérifie.
+  réellement `qt6-serialport-dev` / `libimage-exiftool-perl`, puis vérifie.
 - **`morf deps`** côté morfTools (orchestration multi-projets) si souhaité, sur le
   modèle de `morf purge` (découverte via `deps --list`, plan agrégé).
 - Étendre aux familles non-debian quand une machine réelle l'exige (dnf/pacman).

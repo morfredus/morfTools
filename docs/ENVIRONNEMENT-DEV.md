@@ -68,14 +68,14 @@ sudo apt install -y \
     git python3 python3-pip \
     cmake ninja-build build-essential pkg-config \
     qt6-base-dev qt6-base-dev-tools \
-    qt6-charts-dev libqt6serialport6-dev \
+    qt6-charts-dev qt6-serialport-dev \
     libssl-dev libssh2-1-dev nlohmann-json3-dev zlib1g-dev \
     libimage-exiftool-perl
 ```
 
 - `qt6-base-dev` fournit Core / Network / Sql / Widgets / Concurrent.
 - `qt6-charts-dev` : requis seulement pour SiteWatch.
-- `libqt6serialport6-dev` : requis pour le driver radar LD2410C de morfSensor
+- `qt6-serialport-dev` : requis pour le driver radar LD2410C de morfSensor
   (sans lui, morfSensor compile sans ce driver — voir sa doc).
 - `libimage-exiftool-perl` : dépendance **runtime** de morfPhoto (métadonnées
   EXIF), pas de compilation.
