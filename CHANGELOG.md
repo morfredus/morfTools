@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.34.16] - 2026-08-23
+
+### Modifié
+
+- `package-all --sync` récupère tous les assets déjà indexés, construit le
+  livrable natif de la machine, puis publie **tous** les sidecars de la version
+  (`.deb` Linux et `.zip` Windows). PhotoHub a un zip Windows. Les scripts
+  `.ps1` s'exécutent avec `pwsh` ou `powershell`.
+
 ## [0.34.15] - 2026-08-20
 
 ### Corrigé

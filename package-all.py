@@ -15,9 +15,13 @@ is assumed), and hands each to the right producer:
     firmware.bin renamed with project and version, when the toolchain is present;
   - packaging.provider none, or no native target -> reported and skipped.
 
-The deliverables land in one shared distribution directory, then the verified
-ones are uploaded to the matching private morfPackages GitHub Release. Git only
-holds the durable scripts and contract: package files are release assets.
+The deliverables land in one shared distribution directory. ``--sync`` first
+retrieves every already-indexed asset (Linux .deb and Windows .zip alike). This
+machine then builds only its native targets. Publication sends **all** sidecars
+present in ``dist`` for that version, so a Windows run still mirrors Linux
+packages already in morfPackages, and a Pi run still mirrors Windows zips
+already indexed.
+
 
     python3 package-all.py [--sync] [--dry-run] [--force] [--out DIR] [--only NAME ...]
 """
@@ -141,18 +145,37 @@ def _release_preflight(dry: bool) -> str:
     return "ready" if _run(cmd, script.parent.parent) == 0 else "FAILED (preflight)"
 
 
-def _publish_release(project, version: str, artifact: Path, notes: str | None, dry: bool) -> str:
-    """Upload an artifact only through its checked morfPackages release."""
+def _publish_release(project, version: str, sidecars: list[Path], notes: str | None,
+                     dry: bool) -> str:
+    """Upload every sidecar of this version in one morfPackages publish."""
     script = _packages_script()
-    sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
+    if not sidecars:
+        return "nothing to publish"
     cmd = [sys.executable, str(script), "publish", "--project", project.name,
-           "--version", version, "--metadata", str(sidecar)]
+           "--version", version]
+    for sidecar in sidecars:
+        cmd += ["--metadata", str(sidecar)]
     if notes:
         cmd += ["--notes", notes]
     if dry:
         print(f"    would publish: {' '.join(str(c) for c in cmd)}")
         return "planned"
     return "published" if _run(cmd, script.parent.parent) == 0 else "FAILED (publish)"
+
+
+def _sidecars_in_dist(out: Path, project, version: str) -> list[Path]:
+    """Provenance files already in the shared dist for this project version."""
+    found = []
+    if not out.is_dir():
+        return found
+    for path in sorted(out.glob("*.metadata.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if data.get("project") == project.name and data.get("version") == version:
+            found.append(path)
+    return found
 
 
 def _latest_changelog_summary(project_path: Path, version: str) -> str | None:
@@ -331,7 +354,11 @@ def _package_project_script(project, target, out: Path, version: str, dry: bool)
     if cmake is None:
         return "CMake not on this machine"
     if script.endswith(".ps1"):
-        launcher = ["pwsh", "-File", str(script_path)]
+        shell = shutil.which("pwsh") or shutil.which("powershell")
+        if shell is None:
+            return "PowerShell not on this machine"
+        launcher = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass",
+                    "-File", str(script_path)]
     else:
         launcher = ["bash", str(script_path)]
     if dry:
@@ -455,15 +482,6 @@ def main(argv=None) -> int:
             return t.os == cur_os and t.arch == cur_arch
 
         native = [t for t in declared.targets.values() if buildable_here(t)]
-        if not native:
-            others = ", ".join(sorted(declared.target_names())) or "(none)"
-            if declared.type == "firmware":
-                print(f"  firmware targets need PlatformIO (absent here). "
-                      f"Declared: {others}")
-            else:
-                print(f"  no target native to {cur_os}-{cur_arch}. Declared: {others}")
-            continue
-
         svc = _service_name(project.path)
         version = _read_first_line(project.path / "VERSION") or "0.0.0"
         notes = _project_release_notes(project, version, args.release_notes)
@@ -475,36 +493,28 @@ def main(argv=None) -> int:
                 failed += 1
                 continue
 
+        if not native:
+            others = ", ".join(sorted(declared.target_names())) or "(none)"
+            if declared.type == "firmware":
+                print(f"  firmware targets need PlatformIO (absent here). "
+                      f"Declared: {others}")
+            else:
+                print(f"  no target native to {cur_os}-{cur_arch}. Declared: {others}")
+            if not args.sync:
+                continue
+
         for target in native:
             expected = _expected_name(project, target, svc, version)
             if declared.type == "firmware":
-                # Firmware names are fully deterministic as well. Keeping an
-                # expected path lets a second run recover a binary produced
-                # before provenance support without treating it as ambiguous.
                 expected = f"{project.name.lower()}-{version}-{target.name}.bin"
             elif target.provider == "project":
-                # Project-owned scripts are collected under this canonical name.
-                # It remains the authoritative candidate even when --sync just
-                # downloaded an existing asset with the same name.
                 expected = _script_artifact_name(project, target, version)
             if expected and (out / expected).exists() and not args.force:
                 artifact = out / expected
                 sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
                 if sidecar.is_file() and _sidecar_matches_target(sidecar, target):
-                    if args.no_publish:
-                        print(f"  {target.name}: already present ({expected}), "
-                              "kept for final publication")
-                        skipped += 1
-                        continue
-                    print(f"  {target.name}: already present ({expected}), publishing "
-                          "its verified metadata")
-                    result = _publish_release(project, version, artifact,
-                                              notes, args.dry_run)
-                    print(f"    -> {result}")
-                    if result == "published":
-                        produced += 1
-                    elif result.startswith("FAILED"):
-                        failed += 1
+                    print(f"  {target.name}: already present ({expected})")
+                    skipped += 1
                     continue
                 if sidecar.is_file():
                     print(f"  {target.name}: existing provenance is stale or incomplete; "
@@ -533,17 +543,27 @@ def main(argv=None) -> int:
                     if error:
                         result = f"FAILED ({error})"
                     else:
-                        result = ("built locally (publication deferred)"
-                                  if args.no_publish else
-                                  _publish_release(project, version, artifact,
-                                                   notes, args.dry_run))
+                        result = "built locally (publication deferred)"
             print(f"    -> {result}")
-            if result in ("published", "built locally (publication deferred)"):
+            if result in ("built locally (publication deferred)",):
                 produced += 1
             elif result.startswith("FAILED"):
                 failed += 1
             elif result in ("planned",):
                 pass
+
+        if args.no_publish:
+            continue
+        sidecars = _sidecars_in_dist(out, project, version)
+        if not sidecars:
+            if native:
+                print("  nothing to publish (no provenance sidecar in dist)")
+            continue
+        print(f"  publishing {len(sidecars)} sidecar(s) for {project.name} {version}")
+        result = _publish_release(project, version, sidecars, notes, args.dry_run)
+        print(f"    -> {result}")
+        if result.startswith("FAILED"):
+            failed += 1
 
     print(f"\n{produced} built, {skipped} already present, {failed} failed"
           + ("  (dry-run: nothing was built)" if args.dry_run else "")

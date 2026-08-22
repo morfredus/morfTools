@@ -163,6 +163,11 @@ python .\create-source-releases.py --all `
 python .\package-all.py --sync --out ..\dist
 ```
 
+Sous Windows, cette commande construit les cibles `windows-x86_64-zip` (services
+morfdeploy et applications : PhotoHub, ComponentHub, SiteWatch), récupère les
+`.deb` déjà indexés, puis publie **tous** les assets de la version (Linux et
+Windows) sur la release GitHub.
+
 ### 2. Linux AMD64 - produire les paquets AMD64
 
 Si l'étape Windows n'est pas exécutée, créer d'abord les releases source ici,
