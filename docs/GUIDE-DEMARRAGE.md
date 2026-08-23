@@ -102,9 +102,13 @@ applications n'est donc qu'un instantané : elle grandira.
 
 ## 2. Ce qu'il vous faut
 
-- **Git**, **Python 3**, **CMake**, un compilateur C++
+- **Git**, **Python 3**, **CMake**, **Ninja**, un compilateur C++
 - **Qt 6** pour la plupart des services (pas pour morfSync)
-- Sur Raspberry Pi : tout est dans les dépôts Raspberry Pi OS
+- **exiftool** (`libimage-exiftool-perl`) : dépendance **runtime** de morfPhoto
+  (sans lui, morfPhoto indexe mais les métadonnées EXIF restent vides)
+- Sur Raspberry Pi : tout est dans les dépôts Raspberry Pi OS ; la ligne `apt`
+  unique qui pose l'ensemble (toolchain + Qt + libs + exiftool) est en
+  [ENVIRONNEMENT-DEV.md](ENVIRONNEMENT-DEV.md) §3.1
 
 Sur une machine neuve, l'installation détaillée par plateforme (Windows, Linux,
 Raspberry Pi) et les bibliothèques non-Qt à prévoir - OpenSSL, libssh2,

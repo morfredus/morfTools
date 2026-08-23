@@ -409,6 +409,57 @@ def check_vendor(root, manifest):
             canonical_root = os.path.join(source, module.get("sourceSubdir", ""))
 
             differences = []
+
+            # `compareRoot` compare l'ARBRE ENTIER du module plutot qu'une liste
+            # nommee de fichiers. Une liste explicite se perime en silence : quand
+            # morfdeploy gagne un fichier (builddeps.py, sysdeps.py, morfproject.py
+            # sont arrives ainsi), il echappe au controle et sa derive passe
+            # inapercue. Comparer tout le dossier couvre d'office les ajouts.
+            if module.get("compareRoot"):
+                # Le fichier VERSION vit un cran au-dessus du dossier vendore cote
+                # source (morfDeploy/VERSION), pas dans morfDeploy/morfdeploy/. Il
+                # n'existe donc que dans la copie du point de vue de l'arbre : on
+                # l'ecarte de la comparaison d'arbre et on le controle a part via
+                # `versionSource` (chemin relatif a la racine du depot source).
+                version_source = module.get("versionSource")
+                copy_only = set(module.get("copyOnly", []))
+                if version_source:
+                    copy_only.add("VERSION")
+
+                for diff in compare_tree(canonical_root, copy):
+                    if diff.startswith("missing from the canonical source: "):
+                        rel = diff.split(": ", 1)[1]
+                        if rel in copy_only:
+                            continue        # fichier legitime, propre a la copie
+                    differences.append(diff)
+
+                if version_source:
+                    src_version = os.path.join(source, version_source)
+                    copy_version = os.path.join(copy, "VERSION")
+                    if not os.path.isfile(src_version):
+                        differences.append(f"missing from the canonical source: {version_source}")
+                    elif not os.path.isfile(copy_version):
+                        differences.append("missing from the copy: VERSION")
+                    elif read_normalised(src_version) != read_normalised(copy_version):
+                        differences.append("content differs: VERSION")
+
+                # Le mode arbre-entier se suffit a lui-meme : on saute la
+                # comparaison par listes ci-dessous.
+                if differences:
+                    print(f"{FAIL} {consumer}/third_party/morf/{name} drifted from {module['source']}:")
+                    for line in differences:
+                        print(f"       {line}")
+                    script = os.path.join(base, "scripts", "sync-morf.sh")
+                    if os.path.isfile(script):
+                        print(f"       resynchronise with: {consumer}/scripts/sync-morf.(sh|ps1)")
+                    else:
+                        print(f"       copy the canonical files from {module['source']} "
+                              f"into {consumer}/third_party/morf/{name}/")
+                    problems += 1
+                else:
+                    print(f"{OK} {consumer}/third_party/morf/{name} matches {module['source']}")
+                continue
+
             for sub in module.get("compare", []):
                 canonical_sub, copy_sub = os.path.join(canonical_root, sub), os.path.join(copy, sub)
                 if not os.path.isdir(canonical_sub):

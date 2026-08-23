@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.34.20] - 2026-08-23
+
+### Modifié
+
+- GUIDE-DEMARRAGE (« Ce qu'il vous faut ») nomme désormais explicitement **Ninja**
+  et **exiftool** (runtime de morfPhoto) dans la liste rapide des prérequis, et
+  renvoie à la ligne `apt` unique de ENVIRONNEMENT-DEV §3.1. Prérequis validés en
+  conditions réelles : primo-installation complète depuis zéro sur pi4dev le
+  2026-08-23 (9 services buildés et démarrés).
+
+## [0.34.19] - 2026-08-23
+
+### Corrigé
+
+- Les étapes de déploiement privilégiées (`sudo python3 service.py ...`)
+  laissaient un cache bytecode `__pycache__/*.pyc` **root:root** dans l'arbre
+  source de l'utilisateur (la copie vendorée morfdeploy). Ces fichiers n'étaient
+  ensuite ni supprimables ni reconstruisibles sans sudo : un `rm -rf ~/Codage`
+  en simple utilisateur (script de remise à blanc) échouait en « Permission
+  denied ». `elevated()` lance désormais Python avec `-B` (pas d'écriture du
+  cache) : l'arbre source reste entièrement à l'utilisateur.
+
+## [0.34.18] - 2026-08-23
+
+### Ajouté
+
+- `morf install/deploy --all` respecte une **priorité de déploiement** déclarée
+  dans `ecosystem.json` (`deployPriority`) : les services fondamentaux
+  (morfBeacon, puis morfUpdate avant morfMonitor) passent en tête pour une
+  première installation prévisible. C'est un simple tri de la sélection, **pas
+  une dépendance** : un service fondamental non sélectionné n'est jamais tiré de
+  force et n'empêche pas les autres de s'installer (morfMonitor tolère l'absence
+  de morfUpdate). L'autonomie de chaque service reste entière.
+
+## [0.34.17] - 2026-08-23
+
+### Corrigé
+
+- `morf doctor` (contrôle des copies vendorées) comparait `morfdeploy` via une
+  liste de fichiers figée : seuls 5 des 12 fichiers du paquet étaient contrôlés.
+  Les fichiers arrivés depuis (`package.py`, `provenance.py`, `builddeps.py`,
+  `configmerge.py`, `morfproject.py`, `record_compile.*`, `sysdeps.py`) et
+  `VERSION` échappaient au contrôle, laissant une dérive de la logique de
+  packaging passer inaperçue. Le manifeste passe en mode `compareRoot` : tout le
+  dossier `morfdeploy` est comparé (couvre d'office les fichiers futurs) et
+  `VERSION` est enfin vérifié, via `versionSource` pour son emplacement décalé.
+
 ## [0.34.16] - 2026-08-23
 
 ### Modifié

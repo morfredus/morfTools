@@ -575,6 +575,16 @@ def run_deploy(workspace: Workspace, args) -> int:
     if any(p.is_cmake for p in selected) and not preset and not args.dry_run:
         preset = choose_preset(workspace)
 
+    # Priorite de deploiement (pas une dependance) : les services fondamentaux
+    # declares dans ecosystem.json passent en tete de la selection, dans l'ordre
+    # de la liste. Tri stable : ce qui n'y figure pas garde son ordre. Rien n'est
+    # ajoute ni bloque -- un service fondamental non selectionne n'empeche pas les
+    # autres de s'installer (morfMonitor tolere l'absence de morfUpdate).
+    priority = workspace.deploy_priority()
+    if priority:
+        rank = {name: index for index, name in enumerate(priority)}
+        selected.sort(key=lambda project: rank.get(project.name, len(rank)))
+
     print("\nDeployment plan:" if args.dry_run else "\nDeploying:")
     for project in selected:
         print(f"  {project.name}  [config {config_mode}]")

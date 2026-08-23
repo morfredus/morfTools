@@ -23,6 +23,11 @@
     "PhotoHub",
     "SiteWatch"
   ],
+  "_comment_deployPriority": "PRIORITE de deploiement, PAS une dependance. Lors de 'morf install/deploy --all', les services listes ici passent en tete, dans cet ordre, pour une premiere installation previsible (le socle de decouverte morfBeacon puis l'agent morfUpdate avant morfMonitor). Ce n'est qu'un tri de ce qui est deja selectionne : un service absent de la selection n'est jamais tire de force, et les autres s'installent normalement sans lui. Aucun service ne depend d'un autre pour fonctionner (morfMonitor tolere l'absence de morfUpdate).",
+  "deployPriority": [
+    "morfBeacon",
+    "morfUpdate"
+  ],
   "_comment_ports": "Ecosystem addressing registry. Single authority over ports: no other file describes the parc plan. Every entry is checked mechanically by 'morf doctor', which reads the port actually declared in 'config' under 'key' and reports any mismatch or collision. Allocate a port HERE first, then write it into the service configuration.",
   "ports": {
     "beaconUdp": 45454,
@@ -180,16 +185,8 @@
         "module": "morfdeploy",
         "source": "morfDeploy",
         "sourceSubdir": "morfdeploy",
-        "compare": [
-          "backends"
-        ],
-        "files": [
-          "__init__.py",
-          "activity.py",
-          "cli.py",
-          "core.py",
-          "manifest.py"
-        ]
+        "compareRoot": true,
+        "versionSource": "VERSION"
       }
     ],
     "consumers": [

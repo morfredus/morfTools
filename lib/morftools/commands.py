@@ -358,6 +358,15 @@ def elevated(args: list) -> list:
     Windows has no sudo: an administrator shell is how it grants rights there,
     and the service backend already refuses clearly when it lacks them.
     """
+    # Python lance en root ecrit son cache bytecode (__pycache__/*.pyc) a cote
+    # des modules importes -- ici la copie vendoree morfdeploy, dans l'arbre
+    # source de l'utilisateur. Ces .pyc root:root ne sont ensuite ni supprimables
+    # ni reconstruisibles sans sudo : un « rm -rf ~/Codage » lance en simple
+    # utilisateur (comme le script de remise a blanc) echoue en « Permission
+    # denied ». -B desactive l'ecriture du cache pour cette execution privilegiee
+    # sans rien changer d'autre (les imports fonctionnent, juste sans cache).
+    if args and args[0] == sys.executable:
+        args = [args[0], "-B", *args[1:]]
     if platform.system() == "Windows":
         return args
     if hasattr(os, "geteuid") and os.geteuid() == 0:

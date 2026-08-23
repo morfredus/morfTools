@@ -167,6 +167,17 @@ class Workspace:
             out.append(Project(name=canonical, path=path))
         return out
 
+    def deploy_priority(self) -> list:
+        """Noms de services a deployer EN TETE quand ils sont selectionnes.
+
+        C'est une PRIORITE de deploiement, pas une dependance : la liste ne fait
+        que reordonner ce qui est deja choisi (morfBeacon, morfUpdate d'abord,
+        pour une premiere install previsible). Un service absent de la selection
+        n'est jamais tire de force, et les autres s'installent normalement sans
+        lui -- l'autonomie de chaque service reste entiere.
+        """
+        return list(self.manifest.get("deployPriority", []))
+
     def all_presets(self) -> list:
         """Presets declared anywhere, with how many projects declare each.
 
