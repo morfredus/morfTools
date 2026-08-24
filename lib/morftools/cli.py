@@ -217,9 +217,16 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
                         str(workspace.root), str(workspace.manifest_path), which])
         reporter.feed(text, group="Écosystème", name=label)
 
-    text = capture([sys.executable, str(scripts / "exec-bits.py"),
-                    str(workspace.root), "--check"])
-    reporter.feed(text, group="Écosystème", name="Bits exécutables")
+    # exec-bits.py --check liste les scripts fautifs SANS marqueur [FAIL] et
+    # signale l'echec par son code de sortie (1 = des bits manquent). capture()
+    # jetait ce code, et le Reporter ne juge que sur les marqueurs : un vrai
+    # echec passait donc pour vert. On relaie le verdict via forced_fail, le
+    # mecanisme prevu pour "un handler echoue en n'imprimant que des OK".
+    execbits = subprocess.run(
+        [sys.executable, str(scripts / "exec-bits.py"), str(workspace.root), "--check"],
+        capture_output=True, text=True, check=False)
+    reporter.feed(execbits.stdout + execbits.stderr, group="Écosystème",
+                  name="Bits exécutables", forced_fail=execbits.returncode != 0)
 
     # Git access: what a fresh machine can actually do, so `clone` is understood
     # before it is run. The cheap local checks always show; the live GitHub tests

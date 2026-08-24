@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.34.21] - 2026-08-25
+
+### Corrigé
+
+- **`morf doctor` était faussement vert sur « Bits exécutables ».** Il appelle
+  `scripts/exec-bits.py --check`, mais celui-ci liste les scripts fautifs sans
+  marqueur `[FAIL]` et signale l'échec par son seul code de sortie ; ce code
+  était ignoré et le rapport ne juge que sur les marqueurs, si bien qu'un vrai
+  manque de bit exécutable passait pour conforme. Le verdict est désormais
+  relayé via `forced_fail`, et un bit manquant ressort bien en échec.
+
 ## [0.34.20] - 2026-08-23
 
 ### Modifié

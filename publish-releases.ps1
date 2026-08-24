@@ -10,6 +10,20 @@ $ErrorActionPreference = 'Stop'
 # en relatif.
 Set-Location -Path $PSScriptRoot
 
+# Pre-vol : sous Windows, un .exe en cours d'execution est verrouille. Le link
+# ou windeployqt echouerait alors en plein build (vu avec PhotoHub reste ouvert),
+# et on chercherait un bug inexistant. On verifie donc, AVANT toute la chaine,
+# que les applis GUI du parc sont fermees, pour s'arreter tout de suite avec un
+# message clair. Ajouter ici toute nouvelle appli a fenetre du parc.
+$guiApps = @('PhotoHub', 'ComponentHub', 'SiteWatch')
+$running = Get-Process -Name $guiApps -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty Name -Unique
+if ($running) {
+    Write-Host "`nApplications GUI encore ouvertes : $($running -join ', ')" -ForegroundColor Yellow
+    Write-Host "Ferme-les d'abord : leur .exe serait verrouille au moment du link." -ForegroundColor Yellow
+    throw "Pre-vol : fermer $($running -join ', ') avant de publier."
+}
+
 # python3 n'existe pas toujours sous Windows : retomber sur python, puis py -3.
 function Resolve-Python {
     foreach ($name in 'python3', 'python') {
