@@ -15,6 +15,10 @@ set -euo pipefail
 # package-all.py et ../dist sont references en relatif.
 cd "$(dirname "$0")"
 
+# Pas de pre-vol "appli ouverte" ici : sous Linux, relinker un executable en
+# cours d'execution ne le verrouille pas (l'ancien inode reste valide). Ce verrou
+# est un piege Windows, traite dans publish-releases.ps1.
+
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$1"; }
 
 step "1/5  git pull (mise a jour de morfTools)"
