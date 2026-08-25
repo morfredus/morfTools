@@ -20,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "lib"))
 
 from morftools.workspace import Project, Workspace, WorkspaceError  # noqa: E402
+from morftools.gitretry import run_git  # noqa: E402
 
 
 def run(command: list[str], cwd: Path, *, capture: bool = False) -> str:
@@ -31,16 +32,33 @@ def run(command: list[str], cwd: Path, *, capture: bool = False) -> str:
     return result.stdout if capture else ""
 
 
+def run_net(command: list[str], cwd: Path) -> None:
+    """git DISTANT : réessaie les hoquets réseau/SSH transitoires (cf. gitretry).
+
+    Un « Connection closed by ... port 22 » sur un fetch/pull ne doit pas faire
+    échouer toute la création des releases source.
+    """
+    print("$ " + " ".join(command))
+    result = run_git(command, cwd=cwd, echo=lambda m: print("  [git] " + m))
+    if result.stdout:
+        sys.stdout.write(result.stdout)
+    if result.stderr:
+        sys.stderr.write(result.stderr)
+    if result.returncode:
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RuntimeError(detail or f"command failed ({result.returncode})")
+
+
 def preflight(project: Path) -> None:
     """Require a clean branch that can only fast-forward before a release."""
-    run(["git", "fetch", "--prune"], project)
+    run_net(["git", "fetch", "--prune"], project)
     if run(["git", "status", "--porcelain"], project, capture=True).strip():
         raise RuntimeError("working tree is dirty")
     counts = run(["git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
                  project, capture=True).split()
     if len(counts) != 2 or counts[1] != "0":
         raise RuntimeError("branch is ahead of or diverges from its upstream")
-    run(["git", "pull", "--ff-only"], project)
+    run_net(["git", "pull", "--ff-only"], project)
 
 
 def version(project: Path) -> str:

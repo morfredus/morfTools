@@ -23,12 +23,31 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from . import morfproject
+from .gitretry import run_git
 from .workspace import Project, Workspace
 
 
 def run(args: list, cwd: Path | None = None, check: bool = True) -> int:
     """Run a command, letting its output through to the terminal."""
     result = subprocess.run(args, cwd=cwd, check=False)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"{' '.join(args[:2])} failed ({result.returncode})")
+    return result.returncode
+
+
+def run_net(args: list, cwd: Path | None = None, check: bool = True) -> int:
+    """Comme run(), mais pour les opérations git DISTANTES (clone/fetch/pull/push).
+
+    Une coupure SSH transitoire (« Connection closed by ... port 22 »...) ne doit
+    pas faire échouer tout un `morf dev pull`/`push` : run_git réessaie ces seuls
+    hoquets de transport. La sortie est capturée pour lire le signal, puis
+    ré-émise pour garder l'affichage habituel.
+    """
+    result = run_git(args, cwd=cwd, echo=lambda m: print(f"  [git] {m}", file=sys.stderr))
+    if result.stdout:
+        sys.stdout.write(result.stdout)
+    if result.stderr:
+        sys.stderr.write(result.stderr)
     if check and result.returncode != 0:
         raise RuntimeError(f"{' '.join(args[:2])} failed ({result.returncode})")
     return result.returncode
@@ -46,12 +65,12 @@ def cmd_clone(workspace: Workspace, project: Project, protocol: str = "ssh") -> 
         print(f"[SKIP] {project.local_name} (already present)")
         return True
     url = workspace.clone_url(project.local_name, protocol)
-    run(["git", "clone", "--branch", workspace.branch, url, str(project.path)])
+    run_net(["git", "clone", "--branch", workspace.branch, url, str(project.path)])
     return True
 
 
 def cmd_fetch(workspace: Workspace, project: Project) -> bool:
-    run(["git", "fetch", "--prune"], cwd=project.path)
+    run_net(["git", "fetch", "--prune"], cwd=project.path)
     return True
 
 
@@ -60,8 +79,8 @@ def cmd_pull(workspace: Workspace, project: Project, dry_run: bool = False) -> b
         # Show what a fast-forward would bring, without merging. The fetch only
         # updates remote-tracking refs (never the working tree or a service), so
         # the preview is honest about what `update` would apply.
-        run(["git", "fetch", "--quiet", "origin", workspace.branch],
-            cwd=project.path, check=False)
+        run_net(["git", "fetch", "--quiet", "origin", workspace.branch],
+                cwd=project.path, check=False)
         incoming = capture(
             ["git", "log", "--oneline", f"HEAD..origin/{workspace.branch}"],
             cwd=project.path)
@@ -71,7 +90,7 @@ def cmd_pull(workspace: Workspace, project: Project, dry_run: bool = False) -> b
         else:
             print(f"[dry-run] already up to date with origin/{workspace.branch}")
         return True
-    run(["git", "pull", "--ff-only", "origin", workspace.branch], cwd=project.path)
+    run_net(["git", "pull", "--ff-only", "origin", workspace.branch], cwd=project.path)
     return True
 
 
@@ -81,7 +100,7 @@ def cmd_status(workspace: Workspace, project: Project) -> bool:
 
 
 def cmd_push(workspace: Workspace, project: Project) -> bool:
-    run(["git", "push", "origin", workspace.branch], cwd=project.path)
+    run_net(["git", "push", "origin", workspace.branch], cwd=project.path)
     return True
 
 

@@ -105,6 +105,16 @@ def _script_artifact_name(project, target, version: str) -> str:
     return f"{project.name.lower()}-{version}-{target.os}-{arch}.{fmt}"
 
 
+def _source_bundle_name(project, version: str) -> str:
+    """Canonical name of a source-bundle deliverable (projet non compilé).
+
+    Un seul artefact, indépendant de l'architecture binaire : archive des
+    fichiers applicatifs distribuables. L'extension .tar.gz diffère du `format`
+    ("source-bundle"), d'où un nom explicite fourni tel quel à _new_artifact.
+    """
+    return f"{project.name.lower()}-{version}-source-bundle.tar.gz"
+
+
 def _run(cmd: list, cwd: Path | None = None) -> int:
     print(f"    $ {' '.join(str(c) for c in cmd)}")
     return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=False).returncode
@@ -505,7 +515,9 @@ def main(argv=None) -> int:
 
         for target in native:
             expected = _expected_name(project, target, svc, version)
-            if declared.type == "firmware":
+            if target.package.get("format") == "source-bundle":
+                expected = _source_bundle_name(project, version)
+            elif declared.type == "firmware":
                 expected = f"{project.name.lower()}-{version}-{target.name}.bin"
             elif target.provider == "project":
                 expected = _script_artifact_name(project, target, version)
@@ -526,7 +538,11 @@ def main(argv=None) -> int:
             print(f"  {target.name} -> provider {target.provider}, "
                   f"format {target.package.get('format')}")
             before = set(out.glob(f"*.{target.package.get('format')}")) if out.exists() else set()
-            if target.provider == "morfdeploy":
+            if target.package.get("format") == "source-bundle":
+                # Projet non compilé : c'est le service.py du projet qui sait
+                # quels fichiers sont distribuables et produit l'archive.
+                result = _package_service(project, target, out, args.dry_run)
+            elif target.provider == "morfdeploy":
                 result = _package_service(project, target, out, args.dry_run)
             elif declared.type == "firmware":
                 result = _package_firmware(project, target, out, version, args.dry_run)

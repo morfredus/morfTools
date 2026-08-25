@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.34.23] - 2026-08-25
+
+### Ajouté
+
+- **`package-all.py` : stratégie de packaging `source-bundle`.** Un projet non
+  compilé (ex. morfDashboard) peut déclarer une cible `format: source-bundle` ;
+  package-all délègue alors à son `service.py package` (le projet sait quels
+  fichiers sont distribuables) et collecte l'archive `<projet>-<version>-source-
+  bundle.tar.gz`. Nom d'artefact dédié (l'extension `.tar.gz` diffère du format).
+  Le flux compilé (.deb/.zip/firmware) est inchangé.
+
+## [0.34.22] - 2026-08-25
+
+### Corrigé
+
+- **Résilience aux coupures SSH/réseau sur les opérations git distantes.** Une
+  connexion GitHub qui saute (« Connection closed by ... port 22 », « closed by
+  remote host », blip DNS...) pendant `morf dev pull`/`push` ou
+  `create-source-releases.py` faisait échouer toute la chaîne de publication. Un
+  nouveau helper `lib/morftools/gitretry.py` réessaie avec backoff **uniquement**
+  ces hoquets de transport transitoires (jamais un vrai refus : auth,
+  non-fast-forward, conflit, clé d'hôte). Utilisé par `commands.py`
+  (clone/fetch/pull/push) et `create-source-releases.py` (fetch/pull).
+
 ## [0.34.21] - 2026-08-25
 
 ### Corrigé
