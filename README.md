@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.34.24-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.34.26-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -104,7 +104,8 @@ Git pull is deprecated in favour of `morf dev pull`.)
 | `uninstall` | `[<project>…]`, `--all`, `--only NAME`, `--purge`, `--backup DIR`, `--dry-run`, `--yes` | Uninstall services: name them, `--all` (or bare) for every one, `--only` for one (compat). `--purge` also removes configuration and data; `--backup DIR` copies the configuration first. `--dry-run` lists what would go without touching anything. Removing services asks to confirm; `--purge` asks for a typed token (`PURGE`, or `PURGE ALL` machine-wide); non-interactive needs `--yes`. |
 | `purge` | `[<project> [<id>…]]`, `--all`, `--dry-run`, `--yes`, `--force` | Erase declared data categories. Each project announces what it can erase (`service.py purge --list`); morfTools never reads a service.json. Bare `morf purge` lists what is purgeable here; `morf purge <project> <id>…` or `--all` targets it; `morf purge --all` sweeps every project on this machine. `--dry-run` previews without removing; a destructive real purge asks for a typed confirmation unless `--yes`. A real purge is refused while the service is running (it may be mid-write); `--force` overrides. |
 | `upgrade` | CMake preset (auto-detected for the platform, else asked), `--gui`, `--force`, `--dry-run` | Pull, rebuild CMake projects, then update the services installed here **and merge the shared `morfsystem.json` contract** (add the clone's new keys, keep every local value; skipped with `--only`). `--force` redeploys and restarts each service even when nothing changed (passed to `service.py update`). `--dry-run` prints the per-project plan (incoming commits, rebuild, service update, shared-config merge) without doing any of it. |
-| `doctor` | `--update`, `--verbose`, `--only` | Check the port registry, vendored copies, active version of installed services, and Git repositories; **`--update`** adds a comparison against `origin/main` (newer version available, morfTools included -- a network step). Run it before `push`. |
+| `doctor` | `--update`, `--verbose`, `--only` | Check the port registry, vendored copies, active version of installed services, and Git repositories; **`--update`** adds a comparison against `origin/main` (newer version available, morfTools included -- a network step). Run it before `push`. Also reports each repo's `origin` protocol and the parc's HTTPS/SSH mix -- coexistence is a supported configuration, not a warning. |
+| `remotes` | `--to ssh\|https`, `--only NAME`, `--dry-run`, `--yes` | Inspect the `origin` protocol of every clone (bare form lists and summarises the mix, touching nothing). `--to` uniformises the parc to one protocol **on explicit request**: the diff is shown, then confirmed (`--yes` to skip), and the real remote repository name is preserved (read from the URL, never the folder). `--only` scopes to one repo; `--dry-run` previews. morfSystem never converts a remote implicitly. |
 | `clean` | none | Remove every build directory (`build`, `build-arm64`, `build-mingw`, …). |
 | `status` | none | Show the short Git status and branch. |
 | `commit` | message (asked when omitted) | Stage all changes and commit when needed. |

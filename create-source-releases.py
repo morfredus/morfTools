@@ -81,9 +81,26 @@ def release_repository(project: Path, fallback_owner: str) -> str:
 
 
 def require_github_auth() -> None:
-    """Fail before touching any project when this machine cannot create releases."""
-    result = subprocess.run(["gh", "api", "user"], text=True,
-                            capture_output=True, check=False)
+    """Fail before touching any project when this machine cannot create releases.
+
+    Deux causes distinctes, deux messages distincts : le binaire `gh` absent
+    (fréquent sous WSL, où GitHub CLI n'est pas installé par défaut) n'est pas la
+    même chose qu'un `gh` présent mais non authentifié. Les releases GitHub
+    passent par l'API de `gh` avec son propre jeton -- indépendant du protocole du
+    remote git (SSH ou HTTPS), qui lui ne sert qu'au pull/push des sources.
+    """
+    try:
+        result = subprocess.run(["gh", "api", "user"], text=True,
+                                capture_output=True, check=False)
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "GitHub CLI (gh) est introuvable sur cette machine. Les releases "
+            "GitHub en ont besoin.\n"
+            "  WSL/Debian/Ubuntu : sudo apt install gh   (ou voir "
+            "https://github.com/cli/cli/blob/trunk/docs/install_linux.md)\n"
+            "  puis : gh auth login --hostname github.com --web --scopes repo\n"
+            "  (gh utilise son propre jeton ; c'est indépendant du protocole du "
+            "remote git.)") from exc
     if result.returncode:
         raise RuntimeError(
             "GitHub CLI cannot authenticate to the API. Run: "

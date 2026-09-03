@@ -13,13 +13,16 @@ import io
 import os
 import subprocess
 import sys
+from collections import Counter
 from contextlib import redirect_stdout
 from pathlib import Path
 
 from . import gitaccess
 from .commands import (COMMANDS, CONFIG_MODES, PRESET_COMMANDS, cmd_doctor,
-                       deploy_one, elevated, is_service_project, purge_catalog,
-                       service_purge, service_uninstall, update_status)
+                       convert_remote_url, deploy_one, elevated,
+                       is_service_project, purge_catalog, remote_protocol,
+                       remote_url, service_purge, service_uninstall,
+                       set_remote_url, update_status)
 from .config import SHARED_CONSUMERS, shared_config_path
 from .report import Reporter
 from .workspace import Workspace, WorkspaceError
@@ -252,6 +255,25 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
     else:
         lines.append("[SKIP] accès GitHub SSH/HTTPS (réseau ; --update)")
     reporter.feed("\n".join(lines), group="Accès Git", name="environnement")
+
+    # Protocole des remotes 'origin' du parc : purement LOCAL (git remote get-url,
+    # aucun reseau). La coexistence HTTPS/SSH est une configuration valide, donc un
+    # [OK] informatif -- jamais un avertissement. Seul un depot sans remote reconnu
+    # merite un [WARN].
+    protos = [remote_protocol(remote_url(p.path)) for p in projects if p.exists]
+    if protos:
+        ssh_n = protos.count("ssh")
+        https_n = protos.count("https")
+        other = sum(1 for x in protos if x not in ("ssh", "https"))
+        detail = f"{ssh_n} SSH, {https_n} HTTPS"
+        if ssh_n and https_n:
+            detail += " (parc mixte -- configuration supportee)"
+        if other:
+            pline = (f"[WARN] {other} depot(s) sans remote 'origin' reconnu ; "
+                     f"origin: {detail}")
+        else:
+            pline = f"[OK] origin: {detail}"
+        reporter.feed(pline, group="Accès Git", name="protocoles origin")
 
     # Build toolchain on Windows: the `mingw` preset pins one machine's paths, so
     # a fresh box needs to know whether ninja, a MinGW compiler and Qt are found
@@ -808,13 +830,120 @@ def resolve_clone_protocol(workspace: Workspace, args) -> str | None:
     return None
 
 
+def run_remotes(workspace: Workspace, args) -> int:
+    """Inspecter -- et, sur décision explicite, uniformiser -- les remotes du parc.
+
+    Sans `--to` : liste le protocole de chaque `origin` et résume la coexistence.
+    Rien n'est modifié. Avec `--to ssh|https` : montre d'abord le diff, puis
+    applique seulement après confirmation (ou `--yes`), en PRESERVANT le nom
+    distant réel lu dans l'URL. morfSystem ne convertit jamais un remote de sa
+    propre initiative : l'uniformisation est un choix de l'administrateur.
+    """
+    projects = workspace.projects()
+    if args.only:
+        wanted = args.only.lower()
+        projects = [p for p in projects if p.name.lower() == wanted]
+        if not projects:
+            print(f"No project named '{args.only}' in the manifest.", file=sys.stderr)
+            return 2
+
+    rows = [(p, remote_url(p.path)) for p in projects if p.exists]
+    if not rows:
+        print("Aucun dépôt cloné sur cette machine.")
+        return 0
+
+    # Liste seule : la vue par défaut ne touche à rien.
+    if args.to is None:
+        width = max(len(p.local_name) for p, _ in rows)
+        tags = {"ssh": "SSH  ", "https": "HTTPS", "other": "?    ", "": "(rien)"}
+        print("Remotes 'origin' du parc :\n")
+        for project, url in rows:
+            proto = remote_protocol(url)
+            shown = url or "(pas de remote origin)"
+            print(f"  {project.local_name:<{width}}  {tags.get(proto, proto)}  {shown}")
+        counts = Counter(remote_protocol(url) for _, url in rows)
+        ssh_n, https_n = counts.get("ssh", 0), counts.get("https", 0)
+        other = counts.get("other", 0) + counts.get("", 0)
+        print()
+        if ssh_n and https_n:
+            print(f"Parc mixte : {ssh_n} SSH, {https_n} HTTPS. "
+                  "C'est une configuration valide et pleinement supportée.")
+        elif https_n:
+            print(f"Parc homogène HTTPS ({https_n} dépôt(s)).")
+        elif ssh_n:
+            print(f"Parc homogène SSH ({ssh_n} dépôt(s)).")
+        if other:
+            print(f"{other} dépôt(s) au protocole non reconnu ou sans remote 'origin'.")
+        print("\nUniformiser volontairement (rien n'est modifié sans cette option "
+              "ET une confirmation) :")
+        print("  morf remotes --to ssh        morf remotes --to https")
+        print("  (ajouter --only <projet> pour un seul dépôt, --dry-run pour "
+              "prévisualiser)")
+        return 0
+
+    # Conversion : construire le plan, en préservant le nom distant réel.
+    target = args.to
+    changes = []
+    for project, url in rows:
+        if not url:
+            print(f"  [SKIP] {project.local_name} : pas de remote 'origin'.")
+            continue
+        new = convert_remote_url(url, target)
+        if new is None:
+            print(f"  [SKIP] {project.local_name} : URL non convertible ({url}).")
+            continue
+        if new != url:
+            changes.append((project, url, new))
+
+    if not changes:
+        print(f"\nTous les remotes convertibles sont déjà en {target.upper()}. "
+              "Rien à faire.")
+        return 0
+
+    print(f"\nConversion des remotes 'origin' vers {target.upper()} "
+          "(nom du dépôt distant préservé) :\n")
+    for project, old, new in changes:
+        print(f"  {project.local_name}")
+        print(f"      {old}")
+        print(f"   -> {new}")
+
+    if args.dry_run:
+        print("\n[dry-run] rien modifié.")
+        return 0
+
+    if not args.yes:
+        if not (sys.stdin and sys.stdin.isatty()):
+            print("\nNon interactif : ajouter --yes pour appliquer, ou --dry-run "
+                  "pour prévisualiser.", file=sys.stderr)
+            return 2
+        reply = prompt(f"\nAppliquer ces {len(changes)} changement(s) ? [o/N] ")
+        if reply is None or reply.strip().lower() not in ("o", "oui", "y", "yes"):
+            print("Annulé.", file=sys.stderr)
+            return 1
+
+    print()
+    failed = []
+    for project, _old, new in changes:
+        rc = set_remote_url(project.path, new)
+        print(f"  {project.local_name:<24} {'OK' if rc == 0 else f'FAILED ({rc})'}")
+        if rc != 0:
+            failed.append(project.local_name)
+
+    if failed:
+        print(f"\n[FAILED] remotes: {' '.join(failed)}", file=sys.stderr)
+        return 1
+    print(f"\n{len(changes)} remote(s) converti(s) en {target.upper()}.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="morf",
         description="Operate on every project declared in ecosystem.json.",
     )
     parser.add_argument("command",
-                        choices=sorted(set(COMMANDS) | {"purge", "dev", "deploy"}),
+                        choices=sorted(set(COMMANDS) | {"purge", "dev", "deploy",
+                                                        "remotes"}),
                         help="What to do (admin surface); or 'dev <subcommand>' for "
                              "the developer surface (git and build)")
     parser.add_argument("targets", nargs="*",
@@ -824,6 +953,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help=f"CMake preset ({', '.join(sorted(PRESET_COMMANDS))} only)")
     parser.add_argument("--protocol", choices=("auto", "ssh", "https"), default="auto",
                         help="clone: Git access protocol (auto detects SSH, else HTTPS)")
+    parser.add_argument("--to", choices=("ssh", "https"), default=None,
+                        help="remotes: convert every 'origin' to this protocol "
+                             "(shown first, then confirmed; the remote repo name "
+                             "is preserved). Without --to, remotes only lists.")
     parser.add_argument("--message", "-m", default="", help="Commit message")
     parser.add_argument("--only", default="",
                         help="Restrict to one project, by canonical name")
@@ -1014,17 +1147,21 @@ def main(argv: list | None = None) -> int:
               file=sys.stderr)
         return 2
     if args.dry_run and args.command not in ("purge", "install", "deploy",
-                                             "uninstall", "pull", "update", "upgrade"):
+                                             "uninstall", "pull", "update", "upgrade",
+                                             "remotes"):
         print("--dry-run only applies to purge, install, deploy, uninstall, "
-              "pull/update and upgrade.", file=sys.stderr)
+              "pull/update, upgrade and remotes.", file=sys.stderr)
         return 2
     if args.yes and args.command not in ("purge", "install", "deploy", "uninstall",
-                                         "clone"):
-        print("--yes only applies to purge, install, deploy, uninstall and clone.",
-              file=sys.stderr)
+                                         "clone", "remotes"):
+        print("--yes only applies to purge, install, deploy, uninstall, clone "
+              "and remotes.", file=sys.stderr)
         return 2
     if args.protocol != "auto" and args.command != "clone":
         print("--protocol only applies to clone.", file=sys.stderr)
+        return 2
+    if args.to is not None and args.command != "remotes":
+        print("--to only applies to remotes.", file=sys.stderr)
         return 2
     if args.config and args.command not in ("install", "deploy"):
         print("--config only applies to install and deploy.", file=sys.stderr)
@@ -1055,6 +1192,12 @@ def main(argv: list | None = None) -> int:
         return run_deploy(workspace, args)
     if args.command == "uninstall":
         return run_uninstall(workspace, args)
+    # Remotes is read-only by default (list) and, with --to, converts after an
+    # explicit confirmation. It resolves its own projects (honouring --only), so
+    # it sits with the other orchestrated commands, before the generic loop and
+    # the COMMANDS lookup (which does not know 'remotes').
+    if args.command == "remotes":
+        return run_remotes(workspace, args)
 
     preset = args.preset
     # A plain `install` (Python deps only) never builds, so it must not ask for a

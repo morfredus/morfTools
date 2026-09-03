@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -35,6 +36,51 @@ def run(args: list, cwd: Path | None = None, check: bool = True) -> int:
     return result.returncode
 
 
+# Signatures d'un ECHEC D'AUTHENTIFICATION (pas de transport : l'accès lui-même
+# est refusé). Sert uniquement à afficher une aide ciblée -- jamais à convertir un
+# remote ni à décider qu'un protocole est « faux » : HTTPS et SSH sont tous deux
+# légitimes, seul l'accès manque dans cet environnement.
+_AUTH_SSH = re.compile(r"permission denied \(publickey\)|"
+                       r"host key verification failed", re.IGNORECASE)
+_AUTH_HTTPS = re.compile(r"authentication failed|could not read username|"
+                         r"could not read password|username for 'https|"
+                         r"password for 'https|terminal prompts disabled|"
+                         r"invalid username or (password|token)|"
+                         r"remote: (support for password authentication|invalid credentials)",
+                         re.IGNORECASE)
+
+
+def _auth_hint(blob: str) -> None:
+    """Aide protocole-consciente après un échec d'ACCES au remote.
+
+    Distingue clairement « accès refusé » de « protocole invalide » : le message
+    ne présente jamais HTTPS comme une erreur ni ne propose de convertir un dépôt
+    automatiquement. Il rappelle seulement quoi préparer (identifiants HTTPS ou
+    clé SSH), et signale que l'uniformisation, si elle est voulue, est une
+    décision explicite via `morf remotes`.
+    """
+    text = blob or ""
+    if _AUTH_HTTPS.search(text):
+        print("  [aide] accès HTTPS refusé : identifiants indisponibles dans cet "
+              "environnement.", file=sys.stderr)
+        print("         WSL/CI n'ont souvent aucun credential helper (Windows en a "
+              "un via Git Credential Manager).", file=sys.stderr)
+        print("         Choix, sans rien réécrire : configurer un credential helper "
+              "HTTPS (ou un jeton PAT),", file=sys.stderr)
+        print("         ou basculer VOLONTAIREMENT ce dépôt en SSH : "
+              "morf remotes --to ssh --only <projet>.", file=sys.stderr)
+        print("         HTTPS reste un protocole valide : c'est l'accès qui manque, "
+              "pas le protocole.", file=sys.stderr)
+    elif _AUTH_SSH.search(text):
+        print("  [aide] accès SSH refusé : aucune clé acceptée par le remote.",
+              file=sys.stderr)
+        print("         Vérifier la clé dans ~/.ssh puis : ssh -T git@github.com.",
+              file=sys.stderr)
+        print("         Ne pas convertir en HTTPS pour contourner : corriger l'accès "
+              "SSH, ou choisir HTTPS volontairement", file=sys.stderr)
+        print("         via morf remotes --to https --only <projet>.", file=sys.stderr)
+
+
 def run_net(args: list, cwd: Path | None = None, check: bool = True) -> int:
     """Comme run(), mais pour les opérations git DISTANTES (clone/fetch/pull/push).
 
@@ -48,6 +94,10 @@ def run_net(args: list, cwd: Path | None = None, check: bool = True) -> int:
         sys.stdout.write(result.stdout)
     if result.stderr:
         sys.stderr.write(result.stderr)
+    if result.returncode != 0:
+        # Un échec d'accès n'est pas un hoquet réseau : on ajoute une aide ciblée
+        # (identifiants HTTPS ou clé SSH) SANS jamais toucher au remote.
+        _auth_hint((result.stderr or "") + (result.stdout or ""))
     if check and result.returncode != 0:
         raise RuntimeError(f"{' '.join(args[:2])} failed ({result.returncode})")
     return result.returncode
@@ -830,7 +880,88 @@ def cmd_doctor(workspace: Workspace, project: Project) -> bool:
         print("[OK] remote name matches")
     else:
         print(f"[WARN] unexpected origin: {remote}")
+    # Le protocole est une propriété du dépôt, pas un défaut : information (visible
+    # sous --verbose), jamais un avertissement. HTTPS et SSH sont tous deux valides.
+    proto = remote_protocol(remote)
+    if proto in ("ssh", "https"):
+        print(f"[INFO] origin protocol: {proto}")
+    elif proto:
+        print(f"[INFO] origin protocol: {proto} (non reconnu)")
     return healthy
+
+
+# -- Remotes : lecture, protocole, conversion volontaire -------------------
+# morfSystem ne choisit JAMAIS le protocole à la place de l'utilisateur. Ces
+# helpers ne font que LIRE le remote existant et, sur demande explicite,
+# proposer/appliquer une conversion qui PRESERVE le nom distant réel (lu dans
+# l'URL, jamais dérivé du nom de dossier -- c'est ce qui protège un dépôt renommé
+# comme morfSync dont l'origin pointe encore vers HomeServerHub).
+
+def remote_url(path: Path) -> str:
+    """URL du remote 'origin' du dépôt, ou chaîne vide s'il n'y en a pas."""
+    return capture(["git", "remote", "get-url", "origin"], cwd=path)
+
+
+def remote_protocol(url: str) -> str:
+    """'ssh', 'https', 'other' selon l'URL ; '' si l'URL est vide."""
+    if not url:
+        return ""
+    if url.startswith("git@") or url.startswith("ssh://"):
+        return "ssh"
+    if url.startswith(("https://", "http://")):
+        return "https"
+    return "other"
+
+
+def _split_remote(url: str):
+    """(host, 'owner/repo(.git)') depuis une URL git, ou None si non reconnue.
+
+    Le chemin distant est repris tel quel : c'est LUI le nom du dépôt distant,
+    qu'on ne reconstruit jamais à partir du dossier local.
+    """
+    if url.startswith("git@") and ":" in url:
+        host, path = url[len("git@"):].split(":", 1)
+        return host, path
+    if url.startswith("ssh://"):
+        rest = url[len("ssh://"):]
+        if rest.startswith("git@"):
+            rest = rest[len("git@"):]
+        host, _, path = rest.partition("/")
+        return host, path
+    if url.startswith(("https://", "http://")):
+        rest = url.split("://", 1)[1]
+        host, _, path = rest.partition("/")
+        if "@" in host:                      # d'éventuels identifiants dans l'URL
+            host = host.split("@", 1)[1]
+        return host, path
+    return None
+
+
+def convert_remote_url(url: str, to: str) -> str | None:
+    """Réécrit l'URL vers 'ssh' ou 'https' en conservant host + owner/repo.
+
+    Retourne None si l'URL n'est pas reconnue (elle est alors laissée intacte par
+    l'appelant, jamais devinée).
+    """
+    parsed = _split_remote(url)
+    if parsed is None:
+        return None
+    host, path = parsed
+    host = host.strip("/")
+    path = path.strip("/")
+    if not host or not path:
+        return None
+    if to == "ssh":
+        return f"git@{host}:{path}"
+    if to == "https":
+        return f"https://{host}/{path}"
+    return None
+
+
+def set_remote_url(path: Path, url: str) -> int:
+    """Applique `git remote set-url origin <url>` ; retourne le code de sortie."""
+    return subprocess.run(["git", "remote", "set-url", "origin", url],
+                          cwd=path, check=False).returncode
 
 
 #: Dispatch table. Commands taking extra arguments receive them by keyword from

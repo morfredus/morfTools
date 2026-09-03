@@ -2,7 +2,7 @@
 
 *Lire dans une autre langue : [English](README.md) · **Français** (ce document).*
 
-[![Version](https://img.shields.io/badge/version-0.34.24-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.34.26-blue)](CHANGELOG.md)
 
 `morfTools` est le projet d'administration de morfSystem. Il peut être déplacé
 ou renommé : les scripts déduisent la racine de l'espace de travail de leur
@@ -100,7 +100,8 @@ profit de `morf dev pull`.)
 | `uninstall` | `[<projet>…]`, `--all`, `--only NAME`, `--purge`, `--backup DIR`, `--dry-run`, `--yes` | Désinstalle des services : les nommer, `--all` (ou forme nue) pour tous, `--only` pour un (compat). `--purge` retire aussi configuration et données ; `--backup DIR` copie d'abord la configuration. `--dry-run` liste ce qui partirait sans rien toucher. Retirer des services demande confirmation ; `--purge` demande un jeton saisi (`PURGE`, ou `PURGE ALL` sur toute la machine) ; le non-interactif exige `--yes`. |
 | `purge` | `[<projet> [<id>…]]`, `--all`, `--dry-run`, `--yes`, `--force` | Efface des catégories de données déclarées. Chaque projet annonce ce qu'il sait effacer (`service.py purge --list`) ; morfTools ne lit jamais un service.json. `morf purge` seul liste ce qui est purgeable ici ; `morf purge <projet> <id>…` ou `--all` cible ; `morf purge --all` balaie tous les projets de la machine. `--dry-run` prévisualise sans rien supprimer ; une purge réelle destructive demande une confirmation saisie sauf `--yes`. Une purge réelle est refusée tant que le service tourne (écriture possible en cours) ; `--force` outrepasse. |
 | `upgrade` | preset CMake (auto-détecté pour la plateforme, sinon demandé), `--gui`, `--force`, `--dry-run` | Tire, recompile les projets CMake, **puis met à jour les services installés ici et fusionne le contrat de config partagée `morfsystem.json`** (ajoute les clés nouvelles du clone, garde toutes les valeurs locales ; sauté avec `--only`). `--force` redéploie et redémarre chaque service même sans changement (transmis à `service.py update`). `--dry-run` affiche le plan par projet (commits entrants, recompilation, mise à jour du service, fusion de config partagée) sans rien exécuter. |
-| `doctor` | `--update`, `--verbose`, `--only` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git ; **`--update`** ajoute la comparaison à `origin/main` (nouvelle version disponible, morfTools compris - un pas réseau). À lancer avant `push`. |
+| `doctor` | `--update`, `--verbose`, `--only` | Vérifie le registre des ports, les copies vendorées, la version active des services installés et les dépôts Git ; **`--update`** ajoute la comparaison à `origin/main` (nouvelle version disponible, morfTools compris - un pas réseau). À lancer avant `push`. Indique aussi le protocole `origin` de chaque dépôt et le mix HTTPS/SSH du parc - la coexistence est une configuration supportée, pas un avertissement. |
+| `remotes` | `--to ssh\|https`, `--only NAME`, `--dry-run`, `--yes` | Inspecte le protocole `origin` de chaque dépôt (forme nue : liste et résume le mix, sans rien modifier). `--to` uniformise le parc vers un protocole **sur demande explicite** : le diff est affiché, puis confirmé (`--yes` pour sauter l'invite), et le nom du dépôt distant est préservé (lu dans l'URL, jamais le dossier). `--only` cible un dépôt ; `--dry-run` prévisualise. morfSystem ne convertit jamais un remote implicitement. |
 | `clean` | aucun | Supprime tous les dossiers de compilation (`build`, `build-arm64`, `build-mingw`…). |
 | `status` | aucun | Affiche l'état Git court et la branche. |
 | `commit` | message (demandé si omis) | Indexe toutes les modifications et valide si nécessaire. |

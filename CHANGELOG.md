@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.34.26] - 2026-09-03
+
+### Changed
+
+- **`create-source-releases.py`** now fails cleanly when the GitHub CLI (`gh`) is
+  not installed, instead of raising an uncaught `FileNotFoundError`. The message
+  gives the install command and `gh auth login`, and states that `gh` uses its own
+  token -- independent of the git remote protocol (SSH or HTTPS). This is the case
+  hit when publishing from a fresh WSL where `gh` is absent.
+
+## [0.34.25] - 2026-09-03
+
+### Added
+
+- **`morf remotes`**: inspect every clone's `origin` protocol across the parc and,
+  only on an explicit `--to ssh|https`, uniformise them. The conversion is shown
+  first, confirmed (or `--yes`), and preserves the real remote repository name read
+  from the URL -- never derived from the local folder, which keeps a renamed repo
+  (e.g. `morfSync` whose origin still points at `HomeServerHub`) correct. `--only`
+  scopes it to one repo; `--dry-run` previews without touching anything.
+
+### Changed
+
+- **`morf doctor`** now reports each repo's `origin` protocol (INFO, shown with
+  `--verbose`) and a parc-wide `origin: N SSH, M HTTPS` line. HTTPS/SSH coexistence
+  is stated as a supported configuration, never a warning: heterogeneity is not a
+  defect. A repo with no recognisable `origin` is the only case that warns.
+- **Remote git operations** (`morf dev pull`/`push`/`clone`) now print a targeted,
+  protocol-aware hint when access is *refused* (missing HTTPS credentials, or an
+  unaccepted SSH key). The hint distinguishes an authentication problem from an
+  invalid protocol -- it never presents HTTPS as an error and never rewrites a
+  remote. Nothing about protocol selection changed: `origin` is used exactly as
+  each repo configures it, so a parc can be all-HTTPS, all-SSH, or mixed.
+
 ## [0.34.24] - 2026-09-03
 
 ### Added
