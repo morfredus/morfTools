@@ -11,6 +11,18 @@
 # finit complete quelle que soit la machine qui termine en dernier.
 set -euo pipefail
 
+# Option : --with-arm64-cross ajoute, en plus des livrables natifs, la
+# cross-compilation Linux arm64 (utile sous WSL x86_64 avec un sysroot prepare,
+# MORF_SYSROOT). package-all.py garde ce drapeau sans effet sur tout autre hote,
+# donc l'invocation reste sure partout. Repli propre sur toute autre option.
+EXTRA_PACKAGE_ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --with-arm64-cross) EXTRA_PACKAGE_ARGS+=(--with-arm64-cross) ;;
+    *) printf 'Option inconnue ignoree : %s\n' "$arg" >&2 ;;
+  esac
+done
+
 # Toujours travailler depuis la racine de morfTools : create-source-releases.py,
 # package-all.py et ../dist sont references en relatif.
 cd "$(dirname "$0")"
@@ -35,6 +47,6 @@ python3 ./create-source-releases.py --all \
   --notes "Source release for {project} {version}."
 
 step "5/5  package-all.py --sync (livrables de cette machine)"
-python3 ./package-all.py --sync --out ../dist
+python3 ./package-all.py --sync --out ../dist "${EXTRA_PACKAGE_ARGS[@]}"
 
 printf '\n\033[1;32mTermine : releases publiees.\033[0m\n'

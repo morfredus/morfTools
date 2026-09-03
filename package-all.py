@@ -5,7 +5,8 @@ Deliberately OUTSIDE morf.py: packaging is its own job, and morfTools stays the
 conductor -- it holds no packaging recipe. Each project declares, in
 morfproject.json, its type and its targets; this script reads those declarations,
 keeps only the targets NATIVE to the current OS+architecture (no cross-compilation
-is assumed), and hands each to the right producer:
+is assumed unless ``--with-arm64-cross`` opts in, see below), and hands each to the
+right producer:
 
   - packaging.provider morfdeploy -> the project's `service.py package`, which
     builds a provenance-checked binary and produces the .deb / .zip;
@@ -24,6 +25,13 @@ already indexed.
 
 
     python3 package-all.py [--sync] [--dry-run] [--force] [--out DIR] [--only NAME ...]
+                           [--with-arm64-cross]
+
+``--with-arm64-cross`` additionally cross-builds each project's Linux arm64 target
+from an x86_64 Linux host (WSL): it widens the selection, and the project's own
+service.py package routes the named non-native arm64 target to the linux-arm64-cross
+CMake preset. It needs a prepared sysroot (MORF_SYSROOT); on any other host it is a
+declared no-op, so the same publish-releases invocation is safe everywhere.
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -60,6 +69,24 @@ def current_platform() -> tuple:
         arch = machine or "unknown"
     plat = "linux" if system == "Linux" else system.lower()
     return plat, arch
+
+
+def _cross_targets(declared, cur_os: str, cur_arch: str) -> list:
+    """The arm64 morfdeploy targets to cross-build, when the host can.
+
+    Opt-in only (the caller gates on --with-arm64-cross). Cross-compilation to
+    Linux arm64 is possible only from an x86_64 Linux host (WSL included) with a
+    prepared sysroot (MORF_SYSROOT set). On any other host this returns nothing, so
+    the switch is a harmless no-op there. The build itself is done by the project's
+    own service.py package (morfdeploy routes a named non-native arm64 target to the
+    linux-arm64-cross preset); this only widens the selection.
+    """
+    if not (cur_os == "linux" and cur_arch == "x86_64"):
+        return []
+    if not os.environ.get("MORF_SYSROOT"):
+        return []
+    return [t for t in declared.targets.values()
+            if t.provider == "morfdeploy" and t.os == "linux" and t.arch == "arm64"]
 
 
 def _read_first_line(path: Path) -> str | None:
@@ -440,6 +467,10 @@ def main(argv=None) -> int:
                         help="shared distribution directory (default: <workspace>/dist)")
     parser.add_argument("--only", nargs="*", default=None, metavar="NAME",
                         help="restrict to these project names")
+    parser.add_argument("--with-arm64-cross", action="store_true",
+                        help="ALSO cross-build each project's Linux arm64 target from "
+                             "an x86_64 Linux host (WSL). Needs a prepared sysroot "
+                             "(MORF_SYSROOT); a no-op on any other host.")
     args = parser.parse_args(argv)
 
     if args.sync and args.no_publish:
@@ -455,6 +486,22 @@ def main(argv=None) -> int:
     out = args.out.resolve()
     print(f"Platform: {cur_os}-{cur_arch}   Output: {out}"
           + ("   [dry-run]" if args.dry_run else ""))
+
+    # ARM64 cross-build is opt-in and only real on an x86_64 Linux host with a
+    # sysroot. Say plainly, once, why it is on or off, so the switch is never
+    # silently ignored on the wrong machine.
+    if args.with_arm64_cross:
+        if cur_os == "linux" and cur_arch == "x86_64":
+            sysroot = os.environ.get("MORF_SYSROOT")
+            if sysroot:
+                print(f"ARM64 cross-build: enabled (sysroot {sysroot}).")
+            else:
+                print("ARM64 cross-build requested but MORF_SYSROOT is unset: skipped. "
+                      "Build the sysroot once "
+                      "(morfDeploy/scripts/build-arm64-sysroot.sh), then export it.")
+        else:
+            print(f"ARM64 cross-build requested but this host is {cur_os}-{cur_arch}, "
+                  "not x86_64 Linux (WSL): skipped.")
 
     if args.no_publish:
         print("morfPackages preflight -> deferred (build-only mode)")
@@ -492,6 +539,11 @@ def main(argv=None) -> int:
             return t.os == cur_os and t.arch == cur_arch
 
         native = [t for t in declared.targets.values() if buildable_here(t)]
+        # Opt-in : add the arm64 cross target(s), never duplicating a native one
+        # (on a real arm64 host it is already native). Empty unless the host can cross.
+        cross = _cross_targets(declared, cur_os, cur_arch) if args.with_arm64_cross else []
+        cross = [t for t in cross if t not in native]
+        to_build = native + cross
         svc = _service_name(project.path)
         version = _read_first_line(project.path / "VERSION") or "0.0.0"
         notes = _project_release_notes(project, version, args.release_notes)
@@ -503,7 +555,7 @@ def main(argv=None) -> int:
                 failed += 1
                 continue
 
-        if not native:
+        if not to_build:
             others = ", ".join(sorted(declared.target_names())) or "(none)"
             if declared.type == "firmware":
                 print(f"  firmware targets need PlatformIO (absent here). "
@@ -513,7 +565,7 @@ def main(argv=None) -> int:
             if not args.sync:
                 continue
 
-        for target in native:
+        for target in to_build:
             expected = _expected_name(project, target, svc, version)
             if target.package.get("format") == "source-bundle":
                 expected = _source_bundle_name(project, version)
@@ -572,7 +624,7 @@ def main(argv=None) -> int:
             continue
         sidecars = _sidecars_in_dist(out, project, version)
         if not sidecars:
-            if native:
+            if to_build:
                 print("  nothing to publish (no provenance sidecar in dist)")
             continue
         print(f"  publishing {len(sidecars)} sidecar(s) for {project.name} {version}")

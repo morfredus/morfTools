@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.34.24] - 2026-09-03
+
+### Added
+
+- **`package-all.py --with-arm64-cross`**: opt-in, additionally cross-builds each
+  project's Linux arm64 target from an x86_64 Linux host (WSL). It widens the target
+  selection; the project's own `service.py package` routes the named non-native arm64
+  target to the `linux-arm64-cross` CMake preset (morfdeploy). Needs a prepared
+  sysroot (`MORF_SYSROOT`); a declared no-op on any other host, so the same
+  invocation stays safe everywhere.
+- **`publish-releases.sh --with-arm64-cross` / `publish-releases.ps1 -WithArm64Cross`**:
+  forward the switch through the release chain, for multi-arch publishing (win64 +
+  linux-x64 + linux-arm64) from a single PC.
+
 ## [0.34.23] - 2026-08-25
 
 ### Ajouté

@@ -4,6 +4,13 @@
 # pour ajouter les livrables Windows a des releases dont le Pi fournit la part
 # Linux (package-all.py --sync recupere ce qui est deja publie). Au moindre
 # echec on s'arrete, pour ne jamais publier depuis un build incomplet.
+#
+# -WithArm64Cross : symetrique de l'option de publish-releases.sh. La
+# cross-compilation Linux arm64 n'a lieu que sur un hote Linux x86_64 (WSL) avec un
+# sysroot ; package-all.py l'annonce alors comme ignoree sous Windows. Le drapeau
+# existe ici pour la parite des deux scripts, sans effet reel sur cette machine.
+param([switch] $WithArm64Cross)
+
 $ErrorActionPreference = 'Stop'
 
 # Se placer a la racine de morfTools : les scripts et ..\dist sont references
@@ -48,6 +55,8 @@ Invoke-Step '1/5  git pull (mise a jour de morfTools)' @('git', 'pull')
 Invoke-Step '2/5  morf dev pull (mise a jour de tous les projets)' ($py + @('morf.py', 'dev', 'pull'))
 Invoke-Step '3/5  morf dev build (preparation des compilations)'   ($py + @('morf.py', 'dev', 'build'))
 Invoke-Step '4/5  create-source-releases.py --all (releases source)' ($py + @('.\create-source-releases.py', '--all', '--notes', 'Source release for {project} {version}.'))
-Invoke-Step '5/5  package-all.py --sync (livrables de cette machine)' ($py + @('.\package-all.py', '--sync', '--out', '..\dist'))
+$packageArgs = @('.\package-all.py', '--sync', '--out', '..\dist')
+if ($WithArm64Cross) { $packageArgs += '--with-arm64-cross' }
+Invoke-Step '5/5  package-all.py --sync (livrables de cette machine)' ($py + $packageArgs)
 
 Write-Host "`nTermine : releases publiees." -ForegroundColor Green
