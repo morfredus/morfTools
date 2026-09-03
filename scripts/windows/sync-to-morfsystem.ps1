@@ -53,7 +53,7 @@ if (-not $Sandbox) {
     throw 'Run this deployment script from the sandbox project morfTools_travail.'
 }
 
-$ExcludeDirs = @('.git', '.pio', 'build', 'build-mingw', 'dist', '.vscode', '.agents', '.claude', '.vs', 'out')
+$ExcludeDirs = @('.git', '.pio', 'build', 'build-mingw', 'build-arm64', 'build-arm64-cross', 'dist', '.vscode', '.agents', '.claude', '.codex', '.vs', 'out')
 $Projects = @($Manifest.projects | ForEach-Object { [string]$_ })
 if (-not $SkipToolProject) {
     # morfTools itself is intentionally not in ecosystem.json: the manifest

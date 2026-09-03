@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.34.28] - 2026-09-03
+
+### Fixed
+
+- **`scripts/windows/sync-to-morfsystem.ps1`**: exclude `build-arm64` and
+  `build-arm64-cross` (and `.codex`) from the robocopy consolidation. These CMake
+  build trees were copied sandbox -> production, carrying absolute paths from the
+  sandbox in their `CMakeCache.txt`, so a later `cmake --preset linux-arm64-cross`
+  in production failed ("source does not match", "directory is different"). Build
+  directories must be rebuilt in place, never mirrored; `build` and `build-mingw`
+  were already excluded, the arm64 ones were missing.
+
 ## [0.34.27] - 2026-09-03
 
 ### Changed
