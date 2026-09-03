@@ -140,7 +140,7 @@ def main(argv=None) -> int:
         print(f"Unknown project(s): {', '.join(sorted(unknown))}", file=sys.stderr)
         return 2
 
-    failures = 0
+    failures: list[tuple[str, str]] = []      # (projet, raison), pour le récap final
     for project in projects:
         if not args.all and project.name not in requested:
             continue
@@ -166,9 +166,29 @@ def main(argv=None) -> int:
             else:
                 run(command, project.path)
         except (RuntimeError, ValueError) as exc:
-            failures += 1
+            failures.append((project.name, str(exc)))
             print(f"[REFUSED] {exc}", file=sys.stderr)
-    return 1 if failures else 0
+
+    # Récapitulatif final explicite : la cause d'un refus ne doit pas se perdre
+    # dans la masse de la sortie. La chaîne de publication est en set -e, donc ce
+    # code de retour non nul arrête tout AVANT le packaging (dont l'arm64) : on le
+    # dit clairement, avec la liste des dépôts à corriger.
+    if failures:
+        bar = "=" * 72
+        print(f"\n{bar}", file=sys.stderr)
+        print(f"  RELEASES SOURCE : {len(failures)} depot(s) non publiable(s)",
+              file=sys.stderr)
+        print(bar, file=sys.stderr)
+        for name, reason in failures:
+            print(f"  - {name} : {reason}", file=sys.stderr)
+        print("  Corrige chaque depot (commit/nettoyer un working tree sale, ou",
+              file=sys.stderr)
+        print("  aligner une branche en avance sur origin), puis relance.",
+              file=sys.stderr)
+        print("  La chaine s'arrete ici : le packaging (dont arm64) n'a pas tourne.",
+              file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

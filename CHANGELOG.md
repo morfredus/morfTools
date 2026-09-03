@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.34.27] - 2026-09-03
+
+### Changed
+
+- **`publish-releases.sh`** now prints a clear red banner when the chain aborts
+  (it runs under `set -e`), naming the failing step and reminding that the later
+  steps -- the arm64 packaging included -- did not run. It no longer lets the real
+  cause drown in the verbose output.
+- **`publish-releases.sh` step 3** notes, when `--with-arm64-cross` is set, that
+  the arm64 cross-build is produced at step 5 (packaging), not here: the
+  `auto-detected ... : linux` line only concerns the native warm-up and was being
+  misread as "arm64 skipped".
+- **`create-source-releases.py`** ends with an explicit summary of every repo it
+  refused (dirty working tree, or a branch ahead of origin) and states that the
+  chain stops before packaging, so a single blocked repo is obvious rather than
+  buried mid-run.
+
 ## [0.34.26] - 2026-09-03
 
 ### Changed
