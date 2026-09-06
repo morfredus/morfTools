@@ -138,7 +138,12 @@ if [ "$STEP_RECONNECT" -gt 0 ] && [ "$count" -eq "$STEP_RECONNECT" ]; then
         nmcli connection up "$CONN" 2>&1 | logger -t morfnetwatchdog
     else
         log "palier 1 : reconnexion de l'interface ${IFACE}"
-        nmcli device reconnect "$IFACE" 2>&1 | logger -t morfnetwatchdog
+        # 'nmcli device connect' est le verbe portable ; 'device reconnect'
+        # n'existe pas sur certains nmcli (rejete sur pi4dev : "argument
+        # 'reconnect' not understood"). 'connect' remonte le device via sa
+        # connexion autoconnect, sans le risque de 'disconnect' (qui laisserait
+        # l'interface bloquee hors ligne si la remontee echoue).
+        nmcli device connect "$IFACE" 2>&1 | logger -t morfnetwatchdog
     fi
 fi
 

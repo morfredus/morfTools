@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.35.1] - 2026-09-06
+
+### Fixed
+
+- **`scripts/host/wifi-stability/morfNetWatchdog.sh`**: step 1 (reconnect) used
+  `nmcli device reconnect`, which some NetworkManager builds reject ("argument
+  'reconnect' not understood", seen on pi4dev). Replaced with the portable
+  `nmcli device connect <iface>` (also safer: no `disconnect` that could leave the
+  interface stuck offline if the bring-up fails). The first real run on pi4dev
+  otherwise validated the mechanism end to end: LAN loss counted every minute,
+  escalation all the way to the step-4 reboot (~12 min), and after the reboot the
+  watchdog auto-detected the link back over `eth0` (gateway 192.168.1.1) --
+  confirming the monitoring is not tied to `wlan0`.
+
 ## [0.35.0] - 2026-09-06
 
 ### Added
