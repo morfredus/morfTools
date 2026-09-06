@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.35.4] - 2026-09-06
+
+### Added
+
+- **`scripts/host/wifi-stability/morfNetInstall.sh`**: `--reset-config` flag to
+  overwrite `/etc/morfsystem/morfnetwatchdog.conf` with the repo default when
+  updating a host, instead of removing the file by hand (the installer still
+  preserves an existing config by default). Argument parsing reworked to accept
+  it alongside `--uninstall`.
+
 ## [0.35.3] - 2026-09-06
 
 ### Fixed

@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # morfNetInstall.sh
 # Installe le watchdog reseau morfNet (script + config admin + units systemd) et
-# l'active. Idempotent : relancable sans casse. La config /etc n'est ecrite que
-# si absente, pour ne pas ecraser les reglages propres a l'hote (doctrine FS
-# morfSystem).
+# l'active. Idempotent : relancable sans casse. Par defaut la config /etc n'est
+# ecrite que si absente, pour ne pas ecraser les reglages propres a l'hote
+# (doctrine FS morfSystem) ; `--reset-config` force la reecriture avec la config
+# par defaut du depot.
 #
 # Convention : le service systemd est en minuscules (morfnetwatchdog), le script
 # installe garde son nom morfNet* (morfNetWatchdog.sh).
 #
 # Usage :
-#   sudo ./morfNetInstall.sh            # installe et active le timer
-#   sudo ./morfNetInstall.sh --uninstall
+#   sudo ./morfNetInstall.sh                  # installe/met a jour, config preservee
+#   sudo ./morfNetInstall.sh --reset-config   # idem mais ecrase la config /etc
+#   sudo ./morfNetInstall.sh --uninstall      # retire script + units (config conservee)
 
 set -euo pipefail
 
@@ -20,9 +22,22 @@ CONF_DIR="/etc/morfsystem"
 CONF="${CONF_DIR}/morfnetwatchdog.conf"
 UNIT_DIR="/etc/systemd/system"
 
+ACTION="install"
+FORCE_CONFIG="no"
+
+# --- Analyse des arguments -------------------------------------------------
+for arg in "$@"; do
+    case "$arg" in
+        --uninstall)    ACTION="uninstall" ;;
+        --reset-config) FORCE_CONFIG="yes" ;;
+        -h|--help)      grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *)              echo "Option inconnue : $arg" >&2; exit 2 ;;
+    esac
+done
+
 [ "$(id -u)" -eq 0 ] || { echo "A lancer en root (sudo)." >&2; exit 1; }
 
-if [ "${1:-}" = "--uninstall" ]; then
+if [ "$ACTION" = "uninstall" ]; then
     systemctl disable --now morfnetwatchdog.timer 2>/dev/null || true
     rm -f "${UNIT_DIR}/morfnetwatchdog.timer" "${UNIT_DIR}/morfnetwatchdog.service" "$SBIN"
     systemctl daemon-reload
@@ -33,10 +48,13 @@ fi
 # Script principal.
 install -m 0755 "${SRC_DIR}/morfNetWatchdog.sh" "$SBIN"
 
-# Config admin : deposee seulement si absente, jamais ecrasee.
+# Config admin : preservee par defaut, reecrite seulement avec --reset-config.
 install -d -m 0755 "$CONF_DIR"
-if [ -f "$CONF" ]; then
-    echo "Config existante conservee : ${CONF}"
+if [ -f "$CONF" ] && [ "$FORCE_CONFIG" = "no" ]; then
+    echo "Config existante conservee : ${CONF} (--reset-config pour l'ecraser)"
+elif [ -f "$CONF" ]; then
+    install -m 0644 "${SRC_DIR}/morfnetwatchdog.conf" "$CONF"
+    echo "Config par defaut reecrite (--reset-config) : ${CONF}"
 else
     install -m 0644 "${SRC_DIR}/morfnetwatchdog.conf" "$CONF"
     echo "Config par defaut installee : ${CONF}"

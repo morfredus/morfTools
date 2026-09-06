@@ -61,6 +61,11 @@ L'installation copie le script dans `/usr/local/sbin/morfNetWatchdog.sh`, depose
 la config dans `/etc/morfsystem/morfnetwatchdog.conf` (sans ecraser une config
 existante), installe les units systemd et active le timer.
 
+Pour **mettre a jour** un hote deja equipe, relancer simplement `morfNetInstall.sh`
+(idempotent : script et units sont rafraichis, config preservee). Pour repartir de
+la config par defaut du depot, ajouter `--reset-config` (ecrase `/etc/.../morfnetwatchdog.conf`).
+`--uninstall` retire script et units (config et etat conserves).
+
 Escalade, sur le nombre d'echecs consecutifs (timer = 60 s) :
 
 | Palier | Delai | Action |
