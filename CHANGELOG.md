@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.35.2] - 2026-09-06
+
+### Changed
+
+- **`scripts/host/wifi-stability/morfNetWatchdog.sh`**: step 3 (Wi-Fi driver
+  reload) now only runs when the monitored interface is actually wireless.
+  It is a driver-specific action and must not fire just because some interface
+  lost connectivity: on an Ethernet host the pi4dev test showed the auto-detected
+  driver would be `eth0`'s, so an unguarded step 3 would bounce Ethernet. The
+  interface type is read from sysfs (`wireless` dir or `phy80211` link), so the
+  guard depends on neither `brcmfmac` nor `iw`, and the driver stays
+  auto-detected. A non-Wi-Fi interface logs `palier 3 ignore : <iface> n'est pas
+  une interface Wi-Fi` and the escalation moves on.
+
 ## [0.35.1] - 2026-09-06
 
 ### Fixed

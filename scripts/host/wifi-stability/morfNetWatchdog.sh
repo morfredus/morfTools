@@ -85,9 +85,25 @@ link_ok() {
     return 1
 }
 
+# --- L'interface est-elle du Wi-Fi ? ---------------------------------------
+# Teste le sysfs, present quel que soit le pilote : `wireless` (wext + cfg80211)
+# ou le lien `phy80211` (cfg80211, dont brcmfmac). Aucune dependance a un nom de
+# module ni a l'outil `iw` : le garde-fou determine le TYPE d'interface, il ne
+# suppose jamais brcmfmac ni wlan0.
+is_wifi_iface() {
+    [ -d "/sys/class/net/${IFACE}/wireless" ] || [ -e "/sys/class/net/${IFACE}/phy80211" ]
+}
+
 # --- Rechargement du pilote Wi-Fi (palier cible avant reboot) ---------------
 reload_wifi_driver() {
     local drv rdeps
+    # Palier explicitement dedie au pilote Wi-Fi : ne jamais recharger un module
+    # parce qu'une interface non-wifi (ex. eth0) a perdu la connectivite. Sur un
+    # hote Ethernet, ce palier est simplement saute, l'escalade passe au suivant.
+    if ! is_wifi_iface; then
+        log "palier 3 ignore : ${IFACE} n'est pas une interface Wi-Fi"
+        return
+    fi
     if [ "$WIFI_MODULES" = "auto" ] || [ -z "$WIFI_MODULES" ]; then
         drv="$(detect_driver)"
     else
