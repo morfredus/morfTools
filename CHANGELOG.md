@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.35.3] - 2026-09-06
+
+### Fixed
+
+- **`scripts/host/wifi-stability/morfNetWatchdog.sh`**: `WATCHDOG_IFACE="auto"`
+  derived the interface from the default route, which vanishes during a *total*
+  outage -- exactly when the watchdog needs to act -- leaving the interface empty
+  (step 1 targets nothing, step 3 is skipped as "not Wi-Fi"). The watchdog now
+  remembers the interface that last had connectivity (persisted in
+  `/var/lib/morfnetwatchdog/last-iface` on every "link OK") and falls back to it
+  when there is no default route, then to the first Wi-Fi interface present as a
+  cold-boot last resort. `auto` is therefore reliable through a full outage on a
+  Wi-Fi host (e.g. a frozen `brcmfmac` on `wlan0`): step 3 still knows which
+  driver to reload, without pinning `WATCHDOG_IFACE`. The sysfs-based interface
+  detection keeps its no-`brcmfmac`, no-`iw` dependency.
+
 ## [0.35.2] - 2026-09-06
 
 ### Changed

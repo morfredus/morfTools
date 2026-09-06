@@ -94,7 +94,11 @@ Rien n'est code en dur. L'adaptation a un autre hote passe uniquement par
 
 - **Interface et passerelle** : `WATCHDOG_IFACE="auto"` et `WATCHDOG_GATEWAY="auto"`
   detectent la route par defaut. Aucun reglage pour un hote a une seule interface.
-  Forcer une valeur (`WATCHDOG_IFACE="wlp2s0"`) sur un hote multi-interfaces.
+  En coupure totale (plus de route par defaut), `auto` retombe sur la derniere
+  interface qui avait la connectivite (memorisee dans `/var/lib/morfnetwatchdog`),
+  puis a froid sur la premiere interface Wi-Fi presente - le palier 3 sait donc
+  toujours quel pilote recharger. Forcer une valeur (`WATCHDOG_IFACE="wlp2s0"`)
+  reste possible sur un hote multi-interfaces.
 - **Pilote Wi-Fi** : `WATCHDOG_WIFI_MODULES="auto"` lit le pilote de l'interface.
   Sur un materiel ou l'auto-detection ne suffit pas, donner la liste exacte
   (ex. Pi recent : `"brcmfmac_cyw brcmfmac"`, dans l'ordre de dechargement).

@@ -47,6 +47,7 @@ STATE_DIR="/run/morfnetwatchdog"              # etat volatil (efface au reboot)
 COUNT_FILE="${STATE_DIR}/count"                # compteur d'echecs consecutifs
 PERSIST_DIR="/var/lib/morfnetwatchdog"        # etat persistant (survit au reboot)
 LAST_REBOOT_FILE="${PERSIST_DIR}/last-reboot"  # horodatage du dernier reboot force
+LAST_IFACE_FILE="${PERSIST_DIR}/last-iface"    # derniere interface ayant eu le lien
 
 # Journalise dans le journal systemd (logger) et sur stdout.
 log() { logger -t morfnetwatchdog -- "$*"; echo "morfnetwatchdog: $*"; }
@@ -54,10 +55,30 @@ log() { logger -t morfnetwatchdog -- "$*"; echo "morfnetwatchdog: $*"; }
 mkdir -p "$STATE_DIR" "$PERSIST_DIR"
 
 # --- Auto-detections -------------------------------------------------------
-# Interface de la route par defaut (ex. wlan0, wlp2s0) si IFACE vaut "auto".
+# Interface a surveiller quand IFACE vaut "auto". Piege : pendant une coupure
+# TOTALE il n'y a plus de route par defaut, donc la deduire de cette route
+# donnerait du vide - precisement quand on en a besoin. On retombe alors sur la
+# derniere interface qui avait la connectivite (memorisee a chaque "lien OK"),
+# puis, a froid, sur la premiere interface Wi-Fi presente (pour que le palier 3
+# puisse recharger le pilote meme sans lien depuis le boot).
 detect_iface() {
-    ip route show default 2>/dev/null \
-        | awk '{for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit }}'
+    local dev d
+    # 1. Cas nominal : interface de la route par defaut.
+    dev="$(ip route show default 2>/dev/null \
+        | awk '{for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit }}')"
+    if [ -n "$dev" ]; then printf '%s' "$dev"; return; fi
+    # 2. Coupure : derniere interface connue, si elle existe toujours.
+    if [ -r "$LAST_IFACE_FILE" ]; then
+        dev="$(cat "$LAST_IFACE_FILE" 2>/dev/null)"
+        if [ -n "$dev" ] && [ -e "/sys/class/net/${dev}" ]; then printf '%s' "$dev"; return; fi
+    fi
+    # 3. A froid : premiere interface Wi-Fi presente (phy80211 ou wireless).
+    for d in /sys/class/net/*; do
+        [ -e "${d}/phy80211" ] || [ -d "${d}/wireless" ] || continue
+        printf '%s' "$(basename "$d")"; return
+    done
+    # 4. Rien de mieux : vide (le lien sera juste declare perdu, escalade au reboot).
+    printf ''
 }
 # Passerelle de la route par defaut si GATEWAY vaut "auto".
 detect_gateway() {
@@ -133,6 +154,9 @@ case "$count" in ''|*[!0-9]*) count=0 ;; esac
 
 # --- Cas nominal : le lien repond -----------------------------------------
 if link_ok; then
+    # Memoriser l'interface qui porte la connectivite : c'est elle que detect_iface
+    # reutilisera en coupure totale, quand la route par defaut aura disparu.
+    [ -n "$IFACE" ] && printf '%s\n' "$IFACE" > "$LAST_IFACE_FILE" 2>/dev/null
     if [ "$count" -ne 0 ]; then
         log "lien LAN retabli (${IFACE:-?} via ${GATEWAY:-?}) apres ${count} echec(s)"
     fi
