@@ -1,0 +1,13 @@
+[Unit]
+Description=morfNet watchdog (filet de securite reseau, independant des services morf*)
+Documentation=file:/usr/local/sbin/morfNetWatchdog.sh
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+# Config admin optionnelle (le prefixe "-" evite l'echec si le fichier manque).
+EnvironmentFile=-/etc/morfsystem/morfnetwatchdog.conf
+ExecStart=/usr/local/sbin/morfNetWatchdog.sh
+# Le script gere lui-meme son escalade ; on lui laisse le temps sans le tuer.
+TimeoutStartSec=120

@@ -1,0 +1,12 @@
+[Unit]
+Description=Declenche le morfNet watchdog toutes les minutes
+
+[Timer]
+# Laisse le reseau se monter au boot avant de commencer a surveiller.
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

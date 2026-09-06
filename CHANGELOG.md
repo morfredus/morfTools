@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.35.0] - 2026-09-06
+
+### Added
+
+- **`scripts/host/wifi-stability/`**: host-hardening kit for a Wi-Fi machine that
+  must stay reachable. It answers a real incident on a Raspberry Pi: the Broadcom
+  `brcmfmac` driver froze during a mesh roam (802.11v band steering), leaving the
+  host powered on but offline for hours. Two independent parts, installed once per
+  host, fully parameterised (nothing hard-coded to a given interface, SSID,
+  gateway or BSSID). Naming follows the parc convention: `morfNet`-prefixed
+  scripts, lowercase systemd service (`morfnetwatchdog`):
+  - `morfNetStabilize.sh` applies the NetworkManager settings that curb the
+    driver lock-up (disable power save, optionally pin band/BSSID); connection is
+    auto-detected or passed as an argument.
+  - `morfNetWatchdog.sh` plus its systemd `.service`/`.timer` add a progressive
+    network watchdog, independent of the morf\* services (systemd + `nmcli` +
+    `modprobe` only). It tests the LAN gateway every minute and escalates on
+    consecutive failures: reconnect -> restart NetworkManager -> reload the Wi-Fi
+    driver -> reboot as a last resort (with a 30 min anti-loop guard). Each step
+    is configurable through `/etc/morfsystem/morfnetwatchdog.conf` and can be
+    disabled by setting it to `0`.
+  - `morfNetInstall.sh` deploys and enables the watchdog (idempotent; the `/etc`
+    config is never overwritten), or removes it with `--uninstall`.
+
 ## [0.34.28] - 2026-09-03
 
 ### Fixed
