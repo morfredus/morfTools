@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.35.6] - 2026-09-08
+
+### Changed
+
+- **Reverted the `on_demand` doctor suppression (0.35.5).** morfUpdate is in fact a
+  persistent service (`morfupdate.service`, `Type=simple`, `Restart=always`, enabled,
+  listening on 127.0.0.1:8794) that the per-host "update" button depends on. Treating
+  it as on-demand hid the very signal that warns morfUpdate is actually down (the
+  update path would then fail silently). `doctor` checks it again like any service, so
+  a truly unavailable update agent is surfaced, not masked. The `on_demand` mechanism
+  is removed entirely - no suppression path remains.
+
 ## [0.35.5] - 2026-09-08
 
 ### Fixed
