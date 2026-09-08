@@ -377,6 +377,16 @@ def cmd_install(workspace: Workspace, project: Project,
         # binary and installs it without rebuilding as root.
         if project.is_cmake and not skip_gui(project, False):
             cmake_build(project, preset)
+        # A supervisor that declares it needs the shared parc configuration must
+        # find it in place, or morfdeploy will (correctly) refuse to register it.
+        # The shared file has ONE owner -- `config.py shared` -- so we run that
+        # here, BEFORE the elevated service install, rather than letting
+        # morfdeploy create a file it must never own. `merge` initialises it on a
+        # fresh machine and adds new contract keys on an existing one, without
+        # ever touching local choices. A bare `service.py install` skips this and
+        # is stopped by morfdeploy's prerequisite check with the same command.
+        if _requires_shared_config(project):
+            _install_shared_config(workspace)
         run(elevated([sys.executable, str(entry), "install"]), cwd=project.path)
         return True
 
@@ -397,6 +407,41 @@ def cmd_install(workspace: Workspace, project: Project,
     else:
         print("[SKIP] no generic install definition")
     return True
+
+
+def _requires_shared_config(project: Project) -> bool:
+    """True when the project's service.json declares the shared parc config a
+    prerequisite. Read here so `morf install` can place that file first; the
+    same flag drives morfdeploy's refusal to register without it.
+    """
+    manifest = project.path / "service.json"
+    if not manifest.is_file():
+        return False
+    try:
+        return bool(json.loads(manifest.read_text(encoding="utf-8-sig"))
+                    .get("requires_shared_config", False))
+    except (OSError, ValueError):
+        return False
+
+
+def _install_shared_config(workspace: Workspace) -> None:
+    """Place/upgrade /etc/morfsystem/morfsystem.json via its single owner,
+    `config.py shared`, elevated exactly like the service install that follows.
+
+    Invoked as a subprocess rather than by calling shared() in-process because
+    writing under /etc needs root on Linux, and `elevated` is how every other
+    privileged step in this file crosses that line. `merge` is idempotent: a
+    first run installs the example as the initial parc description, later runs
+    only add keys new to the contract and keep every local choice.
+    """
+    config_py = Path(__file__).resolve().parents[2] / "config.py"
+    if not config_py.is_file():
+        print(f"[WARN] cannot find config.py at {config_py}; shared config not "
+              "provisioned. Run './config.py shared merge' from the morfTools clone.")
+        return
+    print("[shared config] ensuring /etc/morfsystem/morfsystem.json (config.py shared merge)")
+    run(elevated([sys.executable, str(config_py), "shared", "merge"]),
+        cwd=config_py.parent)
 
 
 def _requirements_has_packages(path: Path) -> bool:

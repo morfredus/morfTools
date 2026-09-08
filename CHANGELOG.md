@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.35.7] - 2026-09-08
+
+### Changed
+
+- **`morf install` now provisions the shared parc configuration before installing a
+  service that requires it.** When a project's `service.json` sets
+  `requires_shared_config`, `morf install` runs `config.py shared merge` (elevated,
+  the same way the service install is elevated) first, so `/etc/morfsystem/morfsystem.json`
+  is in place before morfdeploy checks for it. `merge` is idempotent: it installs the
+  example as the initial parc description on a fresh machine and only adds new contract
+  keys on an existing one, never touching local choices. This closes the fresh-install
+  gap where morfMonitor could not register on a machine that had no shared config yet.
+  The shared file keeps its single owner (`config.py shared`); `morf install` invokes
+  that owner rather than duplicating its work. A bare `service.py install` (no
+  morfTools) is unaffected here and is instead stopped by morfdeploy's own prerequisite
+  check, which names the same command.
+
 ## [0.35.6] - 2026-09-08
 
 ### Changed
