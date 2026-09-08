@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.35.5] - 2026-09-08
+
+### Fixed
+
+- **`doctor` no longer flags on-demand tools as a down service.** morfUpdate is not
+  a persistent daemon - it is invoked on demand by the desktop projects - so its
+  `status_url` normally does not answer, which produced a misleading
+  `[WARN] service installed but not running`. A project can now declare
+  `"on_demand": true` in its `service.json`; `doctor` then skips the "must be
+  running" active-version check for it (morfUpdate declares it). Declarative, no
+  service name hardcoded in morfTools.
+
 ## [0.35.4] - 2026-09-06
 
 ### Added

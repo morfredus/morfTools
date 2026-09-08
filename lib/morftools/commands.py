@@ -770,6 +770,16 @@ def cmd_active_version(project: Project) -> bool:
         print(f"[WARN] active version check unavailable: {exc}")
         return True
 
+    # Outil A LA DEMANDE (ex. morfUpdate) : il n'est pas un daemon persistant, il
+    # est invoque ponctuellement par les projets desktop (bouton mettre a jour /
+    # relancer). Son endpoint ne repond donc pas en temps normal : exiger qu'il
+    # tourne produirait un faux « installed but not running ». Le projet le declare
+    # dans son service.json ; on saute alors le controle « doit tourner ».
+    if manifest.get("on_demand"):
+        print(f"[SKIP] active version check ({project.name}: outil a la demande, "
+              "pas un service persistant)")
+        return True
+
     if not status_url:
         print("[SKIP] active version check (no status_url declared)")
         return True
