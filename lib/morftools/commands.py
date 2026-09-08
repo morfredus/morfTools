@@ -386,7 +386,7 @@ def cmd_install(workspace: Workspace, project: Project,
         # ever touching local choices. A bare `service.py install` skips this and
         # is stopped by morfdeploy's prerequisite check with the same command.
         if _requires_shared_config(project):
-            _install_shared_config(workspace)
+            _install_shared_config()
         run(elevated([sys.executable, str(entry), "install"]), cwd=project.path)
         return True
 
@@ -424,15 +424,17 @@ def _requires_shared_config(project: Project) -> bool:
         return False
 
 
-def _install_shared_config(workspace: Workspace) -> None:
+def _install_shared_config() -> None:
     """Place/upgrade /etc/morfsystem/morfsystem.json via its single owner,
     `config.py shared`, elevated exactly like the service install that follows.
 
     Invoked as a subprocess rather than by calling shared() in-process because
     writing under /etc needs root on Linux, and `elevated` is how every other
-    privileged step in this file crosses that line. `merge` is idempotent: a
-    first run installs the example as the initial parc description, later runs
-    only add keys new to the contract and keep every local choice.
+    privileged step in this file crosses that line. config.py locates the
+    workspace (and the morfMonitor clone that holds the example) on its own, so
+    nothing needs to be passed here. `merge` is idempotent: a first run installs
+    the example as the initial parc description, later runs only add keys new to
+    the contract and keep every local choice.
     """
     config_py = Path(__file__).resolve().parents[2] / "config.py"
     if not config_py.is_file():
@@ -712,8 +714,12 @@ def deploy_one(project: Project, preset: str, config_mode: str,
     entry = project.path / "service.py"
     steps = []
     builds = project.is_cmake and not skip_gui(project, False)
+    needs_shared = _requires_shared_config(project)
     if builds:
         steps.append(f"build (preset {preset or 'default'})")
+    if needs_shared:
+        # Shown in the plan too, so a dry-run makes the provisioning visible.
+        steps.append("shared config")
     steps.append("install")
     if config_mode != "keep":
         steps.append(f"config {config_mode}")
@@ -731,6 +737,13 @@ def deploy_one(project: Project, preset: str, config_mode: str,
         if service_build_deps(project, dry_run=False, assume_yes=assume_yes) != 0:
             raise RuntimeError("build dependencies not satisfied")
         cmake_build(project, preset)
+    # A supervisor that needs the shared parc config must find it in place, or
+    # morfdeploy refuses to register it. Provision it first through its single
+    # owner (config.py shared merge), so a blank machine installs first-try
+    # without a manual step -- rather than letting morfdeploy own a file it must
+    # not. Idempotent: initialises on a fresh machine, additive afterwards.
+    if needs_shared:
+        _install_shared_config()
     rc = subprocess.run(elevated([sys.executable, str(entry), "install"]),
                         cwd=project.path).returncode
     if rc != 0:

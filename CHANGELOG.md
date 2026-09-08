@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.35.8] - 2026-09-08
+
+### Fixed
+
+- **The shared-config provisioning added in 0.35.7 now actually runs on `morf
+  install`.** It was wired into `cmd_install` (the legacy generic-loop handler), but
+  `morf install` deploys through `deploy_one`, so the provisioning never fired for the
+  real blank-install path -- a fresh machine would still hit morfdeploy's prerequisite
+  refusal on the first try. The `config.py shared merge` step is now in `deploy_one`
+  (and appears in the `--dry-run` plan as a "shared config" step), so a blank install
+  of a service that declares `requires_shared_config` places the shared file first and
+  registers first-try, with no manual step.
+
 ## [0.35.7] - 2026-09-08
 
 ### Changed
