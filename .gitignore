@@ -17,6 +17,12 @@ config.json
 # Fichier et dossiers sensibles spécifiques à l'utilisateur
 .morfredus/
 
+# Sorties de l'assistant tinytuya : contiennent les local keys des appareils Tuya
+devices.json
+tinytuya.json
+tuya-raw.json
+snapshot.json
+
 # Clés de sécurité et certificats (filet de sécurité)
 *.pem
 *.key
