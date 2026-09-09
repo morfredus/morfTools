@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.35.11] - 2026-09-09
+
+### Changed
+
+- **`docs/ENVIRONNEMENT-DEV.md` states the minimum Qt version: 6.4.** The parc
+  floor is the Linux system Qt (Debian / Ubuntu 24.04, `qt6-base-dev` = 6.4), not
+  the newer MSYS2 Qt on Windows (6.9). Any API added later (e.g.
+  `QStyleHints::colorScheme()`, Qt 6.5) must sit behind a `QT_VERSION_CHECK`
+  guard with a portable fallback. Recorded after a Windows-only build hid a Qt
+  6.5 API that broke the native Linux build.
+
 ## [0.35.10] - 2026-09-09
 
 ### Fixed

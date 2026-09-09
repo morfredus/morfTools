@@ -30,6 +30,15 @@ Composants Qt 6 utilisés dans le parc : **Core**, **Network** (partout), **Sql*
 (ComponentHub, PhotoHub, SiteWatch), **Charts** (SiteWatch), **SerialPort**
 (morfSensor, pour le driver LD2410C).
 
+> **Version Qt minimale : 6.4.** Le plancher du parc est le Qt du système Linux
+> (Debian / Ubuntu 24.04 : `qt6-base-dev` = Qt 6.4), PAS le Qt plus récent de
+> MSYS2 sous Windows (6.9). Tout code C++/Qt doit donc compiler avec Qt 6.4. Une
+> API arrivée plus tard - par ex. `QStyleHints::colorScheme()` /
+> `Qt::ColorScheme`, introduites en 6.5 - doit être gardée derrière
+> `#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)` avec un repli portable. Compiler
+> seulement sous Windows (MSYS2, Qt récent) ne prouve pas la portabilité : c'est
+> le build Linux/Pi de la chaîne de publication qui la révèle.
+
 > `morf doctor` (section « Toolchain build (Windows) ») indique si Ninja, le
 > compilateur MinGW et Qt sont trouvés sur la machine.
 
