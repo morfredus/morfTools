@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.35.10] - 2026-09-09
+
+### Fixed
+
+- **`publish-releases.ps1` pre-flight now also covers LanAtlas.** The Windows
+  publish refuses to start while a parc GUI app is running, because its `.exe`
+  would be locked at link/`windeployqt` time and the build would fail mid-chain
+  for a phantom reason. LanAtlas (a windowed app) was missing from that list; it
+  is added next to PhotoHub, ComponentHub and SiteWatch. LanAtlas is otherwise
+  already handled by the release chain: `create-source-releases.py` and
+  `package-all.py` enumerate it from `ecosystem.json` and build its declared
+  targets (`windows-x86_64-zip`, `linux-amd64-deb`).
+
+## [0.35.9] - 2026-09-09
+
+### Changed
+
+- **`ecosystem.json` now registers LanAtlas** as an ecosystem application: added to
+  `projects` (so `clone` and the Robocopy sync treat it like any other project), given
+  a port allocation (8883, `app: true`, in the 8880-8899 app range), and listed among
+  the vendored consumers (its `third_party/morf/{beacon,update,morfdeploy}` copies are
+  now checked by `morf doctor`). LanAtlas is an autonomous desktop application, not a
+  parc service: no systemd unit, no required heartbeat or permanent port, and its
+  absence from a machine is never treated as a fault.
+
 ## [0.35.8] - 2026-09-08
 
 ### Fixed

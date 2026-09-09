@@ -22,7 +22,7 @@ Set-Location -Path $PSScriptRoot
 # et on chercherait un bug inexistant. On verifie donc, AVANT toute la chaine,
 # que les applis GUI du parc sont fermees, pour s'arreter tout de suite avec un
 # message clair. Ajouter ici toute nouvelle appli a fenetre du parc.
-$guiApps = @('PhotoHub', 'ComponentHub', 'SiteWatch')
+$guiApps = @('PhotoHub', 'ComponentHub', 'SiteWatch', 'LanAtlas')
 $running = Get-Process -Name $guiApps -ErrorAction SilentlyContinue |
     Select-Object -ExpandProperty Name -Unique
 if ($running) {

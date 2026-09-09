@@ -5,6 +5,7 @@
   "projects": [
     "ComponentHub",
     "GatewayLab",
+    "LanAtlas",
     "MeteoHub",
     "morfAnalytics",
     "morfBeacon",
@@ -144,6 +145,14 @@
         "key": null,
         "app": true,
         "note": "Application de bureau, PAS un service du parc. Client de morfPhoto : decouvre le service par capacite et dialogue avec son API. Annonce desormais sa presence morfbeacon/1 et expose /status comme ComponentHub et SiteWatch ; le port vit dans le code (src/main.cpp, beaconCfg.statusPort), sans fichier de configuration. Reserve dans l'appRange (8880-8899)."
+      },
+      {
+        "project": "LanAtlas",
+        "http": 8883,
+        "config": null,
+        "key": null,
+        "app": true,
+        "note": "Application de bureau, PAS un service du parc. Cartographie du reseau local (Livebox, mesh Deco, clients ; capacite morfBeacon 'network_map') et pilotage des appareils connectes qui le permettent (Tuya). Annonce morfbeacon/1 et expose /status ; le port vit dans le code (src/main.cpp, beaconCfg.statusPort), sans fichier de configuration. Reserve dans l'appRange (8880-8899). Fonctionne seule, sans aucun composant morfSystem."
       }
     ]
   },
@@ -191,6 +200,7 @@
     ],
     "consumers": [
       "ComponentHub",
+      "LanAtlas",
       "morfCollector",
       "PhotoHub",
       "SiteWatch",
