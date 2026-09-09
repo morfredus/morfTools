@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.35.12] - 2026-09-10
+
+### Fixed — WSL cross-build now produces the arm64 .deb of desktop apps, not just services
+
+- `package-all.py --with-arm64-cross` cross-built only `provider: morfdeploy`
+  targets, so the desktop apps (`provider: project`, packaged by their own
+  `package-deb.sh`) silently produced no arm64 from an x86_64 WSL host — their
+  arm64 came only from a native build on an arm64 Pi. `_cross_targets` now also
+  selects a project-script arm64 target when the project declares a
+  `linux-arm64-cross` preset, and `_package_project_script` builds it with that
+  preset (into `build-arm64-cross/`) and points the package script there. The
+  collected `.deb` is disambiguated by architecture, so a single WSL run can carry
+  both the amd64 and the arm64 `.deb`. Native Linux, native arm64 (Pi) and Windows
+  builds are unchanged: the cross path is inert off an x86_64 Linux host with a
+  prepared sysroot. Each app's `package-deb.sh` must be cross-aware (label arm64,
+  resolve Depends from the sysroot); done for LanAtlas, ComponentHub, SiteWatch.
+
 ## [0.35.11] - 2026-09-09
 
 ### Changed

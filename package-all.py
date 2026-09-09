@@ -71,22 +71,64 @@ def current_platform() -> tuple:
     return plat, arch
 
 
-def _cross_targets(declared, cur_os: str, cur_arch: str) -> list:
-    """The arm64 morfdeploy targets to cross-build, when the host can.
+# Le preset de compilation croisee arm64, par convention du parc. Un projet qui
+# sait produire un binaire aarch64 depuis un hote x86_64 le declare (sysroot Debian
+# + qemu pour les outils Qt) ; les autres ne l'ont pas et ne sont simplement pas
+# cross-compilables, comme un projet est ignore pour une cible qu'il ne vise pas.
+CROSS_ARM64_PRESET = "linux-arm64-cross"
 
-    Opt-in only (the caller gates on --with-arm64-cross). Cross-compilation to
-    Linux arm64 is possible only from an x86_64 Linux host (WSL included) with a
-    prepared sysroot (MORF_SYSROOT set). On any other host this returns nothing, so
-    the switch is a harmless no-op there. The build itself is done by the project's
-    own service.py package (morfdeploy routes a named non-native arm64 target to the
-    linux-arm64-cross preset); this only widens the selection.
+
+def _host_can_cross_arm64() -> bool:
+    """Vrai sur un hote x86_64 Linux (WSL inclus) avec un sysroot prepare.
+
+    Ailleurs -- Windows, ou un vrai hote arm64, ou sans MORF_SYSROOT -- la
+    cross-compilation n'a pas lieu, donc le drapeau --with-arm64-cross reste un
+    no-op sans risque.
     """
-    if not (cur_os == "linux" and cur_arch == "x86_64"):
+    cur_os, cur_arch = current_platform()
+    return (cur_os == "linux" and cur_arch == "x86_64"
+            and bool(os.environ.get("MORF_SYSROOT")))
+
+
+def _is_project_cross_target(target) -> bool:
+    """Une cible projet linux/arm64 batie sur un hote x86_64 = build croise.
+
+    Le preset natif `linux-arm64` produirait un binaire x86_64 dans build-arm64/ ;
+    c'est le preset `linux-arm64-cross` (toolchain aarch64 + sysroot) qu'il faut,
+    et son binaire atterrit dans build-arm64-cross/ ou package-deb.sh le trouve.
+    """
+    return (target.os == "linux" and target.arch == "arm64"
+            and _host_can_cross_arm64())
+
+
+def _cross_targets(project, declared) -> list:
+    """The arm64 targets to cross-build from an x86_64 Linux host, when it can.
+
+    Opt-in only (the caller gates on --with-arm64-cross) and real only on an x86_64
+    Linux host with a prepared sysroot (MORF_SYSROOT). Two kinds are eligible:
+
+      - a morfdeploy target: its own `service.py package` routes the arm64 build to
+        the linux-arm64-cross preset and resolves Depends from the sysroot;
+      - a project-script target that declares a linux-arm64-cross preset: package-all
+        builds it here with that preset, and the project's package-deb.sh -- finding
+        an aarch64 binary on an x86_64 host -- labels the .deb arm64 and reads its
+        Depends from the sysroot (via the vendored morfdeploy cross_depends).
+
+    A project without the linux-arm64-cross preset is not cross-compilable and is
+    left out, exactly as it is skipped by a native build it does not target.
+    """
+    if not _host_can_cross_arm64():
         return []
-    if not os.environ.get("MORF_SYSROOT"):
-        return []
-    return [t for t in declared.targets.values()
-            if t.provider == "morfdeploy" and t.os == "linux" and t.arch == "arm64"]
+    presets = set(project.presets())
+    eligible = []
+    for t in declared.targets.values():
+        if t.os != "linux" or t.arch != "arm64":
+            continue
+        if t.provider == "morfdeploy":
+            eligible.append(t)
+        elif t.provider == "project" and CROSS_ARM64_PRESET in presets:
+            eligible.append(t)
+    return eligible
 
 
 def _read_first_line(path: Path) -> str | None:
@@ -384,7 +426,11 @@ def _package_project_script(project, target, out: Path, version: str, dry: bool)
     script_path = project.path / script
     if not script_path.is_file():
         return f"declared script missing: {script}"
-    preset = target.build.get("preset")
+    # Cross arm64 : forcer le preset croise (le natif linux-arm64 sortirait un
+    # binaire x86_64) et pointer package-deb.sh sur build-arm64-cross/, sans quoi il
+    # trouverait d'abord le binaire x86_64 natif de build/ et etiquetterait amd64.
+    cross = _is_project_cross_target(target)
+    preset = CROSS_ARM64_PRESET if cross else target.build.get("preset")
     if not preset:
         return "no CMake preset declared for project packaging"
     cmake = shutil.which("cmake")
@@ -398,6 +444,8 @@ def _package_project_script(project, target, out: Path, version: str, dry: bool)
                     "-File", str(script_path)]
     else:
         launcher = ["bash", str(script_path)]
+    if cross:
+        launcher += ["--build", str(project.path / "build-arm64-cross")]
     if dry:
         print(f"    would run: {cmake} --preset {preset}; {cmake} --build --preset {preset}; "
               f"{' '.join(launcher)} then collect its deliverable")
@@ -410,11 +458,16 @@ def _package_project_script(project, target, out: Path, version: str, dry: bool)
         return "FAILED"
 
     fmt = target.package.get("format")
+    # Un .deb declare son architecture ; filtrer dessus, car un run WSL peut produire
+    # deux .deb pour la meme version (amd64 natif + arm64 croise) et « exactement un »
+    # deviendrait faux. package-deb.sh nomme <cmd>_<version>_<arch>.deb.
+    arch = target.package.get("architecture")
     local_dist = project.path / "dist"
     candidates = sorted(
         (path for path in local_dist.iterdir()
          if path.is_file() and path.suffix.lstrip(".").lower() == fmt.lower()
-         and version in path.name),
+         and version in path.name
+         and (arch is None or f"_{arch}." in path.name)),
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     ) if local_dist.is_dir() else []
@@ -541,7 +594,7 @@ def main(argv=None) -> int:
         native = [t for t in declared.targets.values() if buildable_here(t)]
         # Opt-in : add the arm64 cross target(s), never duplicating a native one
         # (on a real arm64 host it is already native). Empty unless the host can cross.
-        cross = _cross_targets(declared, cur_os, cur_arch) if args.with_arm64_cross else []
+        cross = _cross_targets(project, declared) if args.with_arm64_cross else []
         cross = [t for t in cross if t not in native]
         to_build = native + cross
         svc = _service_name(project.path)
