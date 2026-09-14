@@ -167,6 +167,25 @@ class Workspace:
             out.append(Project(name=canonical, path=path))
         return out
 
+    def extras(self) -> list:
+        """Companion repos declared under 'extras': followed by the Git surface
+        and promoted to production, but NOT ecosystem components.
+
+        They are deliberately kept out of 'projects' so 'morf doctor' never sees
+        them (no port, no vendored copy, no deploy manifest is expected). Built
+        exactly like projects() so the Git commands treat them identically.
+        """
+        out = []
+        for canonical in self.manifest.get("extras", []):
+            local = self.local_name(canonical)
+            path = self.root / local
+            if not path.is_dir():
+                alternative = self.root / canonical
+                if alternative.is_dir():
+                    path = alternative
+            out.append(Project(name=canonical, path=path))
+        return out
+
     def deploy_priority(self) -> list:
         """Noms de services a deployer EN TETE quand ils sont selectionnes.
 

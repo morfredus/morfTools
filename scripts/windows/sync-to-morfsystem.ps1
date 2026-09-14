@@ -99,6 +99,42 @@ foreach ($CanonicalName in $Projects) {
     }
 }
 
+# --- Companion repos (extras): promoted like projects, but NOT ecosystem members
+# Declared under "extras" in ecosystem.json (never "projects"), so 'morf doctor'
+# ignores them entirely while they still follow the same '_travail' -> prod
+# promotion as the projects. Same excludes, same dry-run/WhatIf handling; the
+# destination .git is preserved. MeteoHubSensor is such a repo: an extension of
+# MeteoHub (ESP-NOW outdoor probe), neither a service nor a parc brick.
+$Extras = @($Manifest.extras | ForEach-Object { [string]$_ })
+foreach ($CanonicalName in $Extras) {
+    $SandboxName = "${CanonicalName}_travail"
+    $SourceProject = Join-Path $SourceRoot $SandboxName
+    $DestinationProject = Join-Path $DestinationRoot $CanonicalName
+
+    if (-not (Test-Path -LiteralPath $SourceProject -PathType Container)) {
+        Write-Warning "[SKIP] $SandboxName is absent from the sandbox."
+        continue
+    }
+
+    Write-Host "[extra: $CanonicalName] $SourceProject -> $DestinationProject"
+    if ($DryRun) {
+        Write-Host '  [DRY RUN] Content would be copied; destination .git would be preserved.'
+        continue
+    }
+    if (-not $PSCmdlet.ShouldProcess($DestinationProject, "Synchronize $CanonicalName")) { continue }
+
+    New-Item -ItemType Directory -Force -Path $DestinationProject | Out-Null
+    $RobocopyArgs = @(
+        $SourceProject, $DestinationProject,
+        '/E', '/FFT', '/MT:16', '/R:2', '/W:1', '/COPY:DAT',
+        '/XD'
+    ) + $ExcludeDirs + @('/NFL', '/NDL', '/NP')
+    & robocopy @RobocopyArgs | Out-Null
+    if ($LASTEXITCODE -ge 8) {
+        throw "Robocopy failed for $CanonicalName (exit code $LASTEXITCODE). No further extras were processed."
+    }
+}
+
 # --- Personal notes tree: .morfredus_travail -> .morfredus -------------------
 # Not a project in ecosystem.json, so promoted here explicitly: a personal folder
 # (session logs, working notes) that follows the same '_travail' -> prod naming as

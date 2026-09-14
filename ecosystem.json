@@ -24,6 +24,10 @@
     "PhotoHub",
     "SiteWatch"
   ],
+  "_comment_extras": "Depots COMPAGNONS suivis par le workflow (dev clone/fetch/pull/status/push/commit + recopie vers la prod) mais qui NE sont PAS des composants du parc : morf doctor les ignore totalement (aucun port, aucune copie vendoree, aucun manifeste de deploiement attendu). A reserver aux extensions d'un projet existant. MeteoHubSensor : la sonde exterieure, extension de MeteoHub (firmware ESP-NOW), ni service ni brique morfSystem.",
+  "extras": [
+    "MeteoHubSensor"
+  ],
   "_comment_deployPriority": "PRIORITE de deploiement, PAS une dependance. Lors de 'morf install/deploy --all', les services listes ici passent en tete, dans cet ordre, pour une premiere installation previsible (le socle de decouverte morfBeacon puis l'agent morfUpdate avant morfMonitor). Ce n'est qu'un tri de ce qui est deja selectionne : un service absent de la selection n'est jamais tire de force, et les autres s'installent normalement sans lui. Aucun service ne depend d'un autre pour fonctionner (morfMonitor tolere l'absence de morfUpdate).",
   "deployPriority": [
     "morfBeacon",

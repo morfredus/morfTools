@@ -1215,6 +1215,16 @@ def main(argv: list | None = None) -> int:
 
     handler = COMMANDS[args.command]
     projects = workspace.projects()
+
+    # Depots compagnons (extras) : suivis par la SEULE surface Git (clone, fetch,
+    # pull, status, push, commit) et jamais par doctor ni les commandes de service
+    # -- ce ne sont pas des composants du parc. On les ajoute donc uniquement pour
+    # ces commandes, avant le filtre --only (pour pouvoir en cibler un) et avant la
+    # branche doctor (qui n'est pas dans cet ensemble, donc ne les verra jamais).
+    GIT_SURFACE_WITH_EXTRAS = {"clone", "fetch", "pull", "status", "push", "commit"}
+    if args.command in GIT_SURFACE_WITH_EXTRAS:
+        projects = projects + workspace.extras()
+
     if args.only:
         wanted = args.only.lower()
         projects = [p for p in projects if p.name.lower() == wanted]

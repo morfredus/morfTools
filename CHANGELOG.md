@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.36.0] - 2026-09-14
+
+### Added
+
+- **Companion repos ("extras") in the manifest.** New `extras` array in
+  `ecosystem.json` for repos that follow the same `_travail` -> prod promotion and
+  ride the Git surface (`dev clone/fetch/pull/status/push/commit`) but are NOT
+  ecosystem components. `morf doctor` ignores them entirely (no port, no vendored
+  copy, no deploy manifest expected), so listing one never turns doctor red.
+  `Workspace.extras()` builds them like projects; the CLI adds them only for the
+  Git commands; `sync-to-morfsystem.ps1` promotes them in a dedicated block.
+  First extra: **MeteoHubSensor** (the outdoor probe, an extension of MeteoHub).
+
 ## [0.35.12] - 2026-09-10
 
 ### Fixed — WSL cross-build now produces the arm64 .deb of desktop apps, not just services
