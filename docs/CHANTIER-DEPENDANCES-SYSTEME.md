@@ -69,7 +69,7 @@ et n'est pas traitée comme un échec.
   (plan), gating obligatoire/optionnel, refus non-interactif sans `--yes`, garde
   root (sudo requis pour installer), plateforme sans gestionnaire signalée.
 
-### Reste (à faire/vérifier sur Linux — Pi/Mint)
+### Reste (à faire/vérifier sur Linux - Pi/Mint)
 
 - **Install apt réelle** : `sudo service.py deps --yes` et `deploy` qui installe
   réellement `qt6-serialport-dev` / `libimage-exiftool-perl`, puis vérifie.

@@ -85,7 +85,7 @@ sudo apt install -y \
 - `qt6-base-dev` fournit Core / Network / Sql / Widgets / Concurrent.
 - `qt6-charts-dev` : requis seulement pour SiteWatch.
 - `qt6-serialport-dev` : requis pour le driver radar LD2410C de morfSensor
-  (sans lui, morfSensor compile sans ce driver — voir sa doc).
+  (sans lui, morfSensor compile sans ce driver - voir sa doc).
 - `libimage-exiftool-perl` : dépendance **runtime** de morfPhoto (métadonnées
   EXIF), pas de compilation.
 
@@ -98,7 +98,7 @@ interactif).
 
 Deux approches, selon la toolchain choisie.
 
-#### Option A — MSYS2 / MinGW64 (recommandée : cohérente, tout au même endroit)
+#### Option A - MSYS2 / MinGW64 (recommandée : cohérente, tout au même endroit)
 
 Installer [MSYS2](https://www.msys2.org/), puis dans un shell **MINGW64** :
 
@@ -117,7 +117,7 @@ pacman -S --needed \
 Compilateur, Qt et toutes les bibliothèques proviennent de la même source : c'est
 la configuration la plus simple pour compiler l'intégralité du parc.
 
-#### Option B — Qt officiel + bibliothèques ajoutées
+#### Option B - Qt officiel + bibliothèques ajoutées
 
 La toolchain de l'installeur Qt officiel (Qt + MinGW + Ninja + CMake sous
 `C:\Qt\...`) suffit pour les services **Qt-only** (morfAnalytics, morfMonitor,

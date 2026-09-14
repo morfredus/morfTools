@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.36.3] - 2026-09-14
+
+### Documentation
+
+- **SCRIPTS.md documents the companion repos ("extras").** Explains that an
+  `extras` entry in `ecosystem.json` is followed by the git surface and promoted
+  to prod and releases, yet stays out of `morf doctor` scope (first case:
+  MeteoHubSensor). Removed stray em dashes across the docs (house style). No
+  behaviour change.
+
 ## [0.36.2] - 2026-09-14
 
 ### Changed

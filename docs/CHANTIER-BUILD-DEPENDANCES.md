@@ -38,6 +38,6 @@ résout l'écart avant le build, l'utilisateur reste maître de toute installati
   « contrat de projet » (build/package pour non-services), déféré dans l'audit.
 - **Détection sur toolchain sans gestionnaire** : aujourd'hui on annonce (CMake
   filet). Une sonde `find_package` réelle par toolchain pourrait vérifier la
-  présence — à **concevoir et éprouver sur l'Asus** (banc d'essai voulu par Fred),
+  présence - à **concevoir et éprouver sur l'Asus** (banc d'essai voulu par Fred),
   sans y installer les libs à la main pour préserver le cas de test.
 - Étendre le registre (autres libs, familles) au fil des besoins réels.

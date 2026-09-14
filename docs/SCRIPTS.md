@@ -31,6 +31,15 @@ Chaque commande n'opère que sur les projets déclarés dans `ecosystem.json`. L
 preset accepte `-p/--preset <nom>` ou une valeur en position simple (`mingw`,
 `linux`, `linux-arm64`...).
 
+> **Dépôts compagnons (`extras`).** À côté de la liste `projects`, `ecosystem.json`
+> peut déclarer une liste `extras` : des dépôts qui ne sont **pas** des composants du
+> parc (donc **ignorés par `morf doctor`**), mais qui suivent quand même la surface
+> Git (`clone`, `fetch`, `pull`, `status`, `push`, `commit`), la recopie vers la prod
+> et les releases (`package-all.py`, `create-source-releases.py`). C'est fait pour une
+> **extension** d'un projet existant. Exemple : `MeteoHubSensor` (la sonde extérieure,
+> extension de MeteoHub). Concrètement, un extra est cloné, mis à jour, poussé et
+> publié comme un projet, mais ne compte pas dans les vérifications de conformité.
+
 ### Dépôts et Git
 
 | Commande | Action | Options |

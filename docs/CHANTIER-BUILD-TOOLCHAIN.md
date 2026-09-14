@@ -43,14 +43,14 @@ configurer, comme pour le reste du chantier.
 - **Compilation confirmée sur l'Asus (2026-08-18)** : machine Windows fraîche,
   toolchain Qt officielle (`C:\Qt\Tools\Ninja`, `mingw1310_64`, `C:\Qt\6.11.1\
   mingw_64`) sur le PATH. `morf build` détecte cette toolchain, surcharge les
-  chemins MSYS2 figés du preset, et compile — sans édition des presets. L'objectif
+  chemins MSYS2 figés du preset, et compile - sans édition des presets. L'objectif
   du chantier est atteint : morfTools est indépendant de l'environnement du poste
   principal.
 
 ## Reste (non urgent)
 
 - Éventuel nettoyage des presets `mingw` figés (pour que `cmake --preset mingw`
-  direct, hors morfTools, soit aussi portable) — chantier distinct.
+  direct, hors morfTools, soit aussi portable) - chantier distinct.
 - Risque de toolchains mélangées sur le PATH (msys64 + Qt officielle) : la
   détection suit l'ordre du PATH ; sur une machine bien configurée, cohérent (le
   cas Asus l'a confirmé).
