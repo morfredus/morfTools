@@ -132,7 +132,11 @@ def main(argv=None) -> int:
     # runtime component. It nevertheless has a VERSION and must therefore be
     # included in the all-project source release workflow.
     tool_project = Project(name=HERE.name.split("_", 1)[0], path=HERE)
-    projects = [*workspace.projects(), tool_project]
+    # Companion repos ("extras", cf. ecosystem.json) get a source release like the
+    # projects: a firmware extra (MeteoHubSensor) needs its source tag so the later
+    # .bin publish passes the provenance check. They stay out of `projects`, so
+    # 'morf doctor' is unaffected.
+    projects = [*workspace.projects(), *workspace.extras(), tool_project]
     requested = set(args.only or [])
     available = {project.name: project for project in projects}
     unknown = requested - set(available)

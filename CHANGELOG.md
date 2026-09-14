@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.36.2] - 2026-09-14
+
+### Changed
+
+- **`create-source-releases.py` now includes the companion repos ("extras") too**
+  (`[*workspace.projects(), *workspace.extras(), tool_project]`), so a firmware
+  extra gets its source release/tag — required for its later `.bin` publish to pass
+  the provenance check. Completes the release parity started in 0.36.1. Extras stay
+  out of `projects`, so `morf doctor` is unaffected.
+
+## [0.36.1] - 2026-09-14
+
+### Changed
+
+- **`package-all.py` now builds and publishes the companion repos ("extras") too**,
+  alongside the projects (`[*ws.projects(), *ws.extras()]`). An extra with a
+  `morfproject.json` is released like any project; one without is ignored. Extras
+  stay out of `projects`, so `morf doctor` is unaffected. First case: MeteoHubSensor
+  firmware (`supermini` + `c3oled` .bin).
+
 ## [0.36.0] - 2026-09-14
 
 ### Added

@@ -565,7 +565,12 @@ def main(argv=None) -> int:
             return 2
 
     produced, skipped, failed = 0, 0, 0
-    for project in ws.projects():
+    # Les extras (depots compagnons, cf. ecosystem.json) sont publies COMME les
+    # projets : ils ont leur propre morfproject.json et leur repo GitHub. Ils
+    # restent hors de `projects`, donc invisibles a 'morf doctor', mais participent
+    # bien aux releases. Un extra sans morfproject.json est simplement ignore plus
+    # bas (morfproject.load renvoie None).
+    for project in [*ws.projects(), *ws.extras()]:
         if args.only and project.name not in args.only:
             continue
         if not project.exists:
