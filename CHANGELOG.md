@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.6] - 2026-09-27
+
+### Changed
+
+- `docs/SCRIPTS.md`: the last per-project `deploy-config` scripts (morfMonitor) are
+  now marked removed, as of morfMonitor 0.24.6.
+
 ## [0.36.5] - 2026-09-27
 
 ### Fixed

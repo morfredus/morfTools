@@ -194,18 +194,16 @@ config d'un service, donc **à conserver**.
 ## 7. Scripts redondants (déploiement de config)
 
 Depuis l'unification du déploiement de config dans morfdeploy
-(`service.py config push --force`, §3), les `deploy-config` par projet font
-doublon.
+(`service.py config push --force`, §3), les `deploy-config` par projet faisaient
+doublon ; ils ont été retirés.
 
 | Fichier | Statut | Remplacé par |
 |---|---|---|
 | `morfPhoto/scripts/linux/deploy-config.sh` | retiré | `service.py config push --force` |
 | `morfAnalytics/scripts/linux/deploy-config.sh` | retiré | `service.py config push --force` |
-| `morfMonitor/scripts/linux/deploy-config.sh` | à retirer | `service.py config push --force` |
-| `morfMonitor/scripts/windows/deploy-config.ps1` | à retirer | `service.py config push --force` (Windows) |
+| `morfMonitor/scripts/linux/deploy-config.sh` | retiré (morfMonitor 0.24.6) | `service.py config push --force` |
+| `morfMonitor/scripts/windows/deploy-config.ps1` | retiré (morfMonitor 0.24.6) | `service.py config push --force` (Windows) |
 
-> Les `README` de morfMonitor (FR + EN) et les commentaires de ses
-> `config/*.example.json` pointent déjà vers `service.py config push --force`
-> (morfMonitor 0.24.2) : il ne reste qu'à supprimer les deux scripts. Ses
-> `config-tool` / `merge-config` / `check-config` (§5) sont d'un autre rôle et
+> Tous les `deploy-config` par projet sont retirés. Les `config-tool` /
+> `merge-config` / `check-config` de morfMonitor (§5) sont d'un autre rôle et
 > **restent**.
