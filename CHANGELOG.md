@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.36.5] - 2026-09-27
+
+### Fixed
+
+- **Two vendored copies escaped `morf doctor`.** The check derives the folder from
+  the module name, so morfMonitor's `third_party/morf/morfupdate` (not `update`) was
+  never compared, and morfUpdate, which vendors morfdeploy, was not listed as a
+  consumer. Both are now in the `vendored` registry; morfMonitor's copy had indeed
+  stayed at 0.5.3 while morfUpdate reached 0.8.1, unnoticed.
+
+## [0.36.4] - 2026-09-27
+
+### Fixed
+
+- **Docs still described the removed shell dispatchers.** `CONTRIBUTING.md`
+  explained adding a command to `morf.sh` and `morf.ps1`, checking their syntax and
+  passing `--hint-style`; `docs/ECOSYSTEM-CHECKS.md` said the check was called by
+  both; the README used `config.sh` / `config.ps1` and said `shared-config.sh` still
+  worked. All now describe the single `morf.py` / `config.py` entry points.
+- **`config.py deploy` documented as delegating to `deploy-config`.** It runs the
+  project's `service.py config push --force`; the README says so.
+- **Registry note for morfUpdate** still said its API required a dedicated token
+  (dropped in morfUpdate 0.4.0).
+
+### Removed
+
+- **Dead code:** the `scripts/linux/deploy-config.sh` fallback of
+  `config.py deploy` (every project with a config has a `service.py`, which always
+  won) and the unused `Target.build_preset` property.
+
+### Changed
+
+- Em dashes replaced by `-` in the project's own files.
+
 ## [0.36.3] - 2026-09-14
 
 ### Documentation
@@ -16,7 +50,7 @@
 
 - **`create-source-releases.py` now includes the companion repos ("extras") too**
   (`[*workspace.projects(), *workspace.extras(), tool_project]`), so a firmware
-  extra gets its source release/tag — required for its later `.bin` publish to pass
+  extra gets its source release/tag - required for its later `.bin` publish to pass
   the provenance check. Completes the release parity started in 0.36.1. Extras stay
   out of `projects`, so `morf doctor` is unaffected.
 
@@ -45,11 +79,11 @@
 
 ## [0.35.12] - 2026-09-10
 
-### Fixed — WSL cross-build now produces the arm64 .deb of desktop apps, not just services
+### Fixed - WSL cross-build now produces the arm64 .deb of desktop apps, not just services
 
 - `package-all.py --with-arm64-cross` cross-built only `provider: morfdeploy`
   targets, so the desktop apps (`provider: project`, packaged by their own
-  `package-deb.sh`) silently produced no arm64 from an x86_64 WSL host — their
+  `package-deb.sh`) silently produced no arm64 from an x86_64 WSL host - their
   arm64 came only from a native build on an arm64 Pi. `_cross_targets` now also
   selects a project-script arm64 target when the project declares a
   `linux-arm64-cross` preset, and `_package_project_script` builds it with that
@@ -681,7 +715,7 @@
   parc C++ n'a aucun `requirements.txt` : un `morf install` nu affichait
   « [SKIP] no generic install definition » pour chaque projet, sans dire quoi
   faire. Un projet portant un `service.py` (hors template) affiche désormais
-  « [SKIP] service — run 'morf install --services' to deploy it », qui pointe la
+  « [SKIP] service - run 'morf install --services' to deploy it », qui pointe la
   commande qui l'installe réellement.
 
 ## [0.23.0] - 2026-08-19
@@ -795,7 +829,7 @@
   `'…/ninja.exe' failed with: no such file or directory` sur les 15 projets.
   morfTools **détecte** désormais ninja, le compilateur MinGW (g++/gcc) et le
   préfixe Qt (via `CMAKE_PREFIX_PATH`/`Qt6_DIR`/`qmake` sur le PATH) et
-  **surcharge** les valeurs figées du preset avec des `-D` — sans éditer les 13
+  **surcharge** les valeurs figées du preset avec des `-D` - sans éditer les 13
   presets. Un élément manquant est signalé clairement une fois (pas 13 échecs
   cryptiques). Détection mise en cache (une fois par run).
 - **PlatformIO absent géré proprement** : `morf build` saute le firmware ESP32
@@ -1008,11 +1042,11 @@
 - **Émetteur d'événements de compilation (morfDeploy → morfAnalytics Monitor).** Le
   build (`build_as_user`, backends systemd et Windows) signale désormais chaque
   compilation au domaine Monitor de morfAnalytics : projet, machine, début/fin,
-  résultat (succès/échec), preset. morfDeploy sait ce qu'il compile — c'est la source
+  résultat (succès/échec), preset. morfDeploy sait ce qu'il compile - c'est la source
   exacte des événements, sans rien faire deviner. **Best-effort et sans dépendance** :
   émis seulement si `MORFANALYTICS_ACTIVITY_URL` est défini (ex.
   `http://pi4fred:8799/api/monitor/activity`), jamais bloquant si morfAnalytics est
-  injoignable — une télémétrie muette ne doit pas faire échouer un build. Nouveau
+  injoignable - une télémétrie muette ne doit pas faire échouer un build. Nouveau
   module `lib/morfdeploy/activity.py`. À re-vendorer dans les projets (chantier suivant).
 
 ## [0.9.2] - 2026-08-15

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# reset-parc.sh — wipe the installed morfSystem state from this machine.
+# reset-parc.sh - wipe the installed morfSystem state from this machine.
 #
 # Stops and unregisters every parc service, then removes their binaries (/opt),
 # their configurations (/etc) and the locations earlier conventions left behind

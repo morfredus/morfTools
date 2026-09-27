@@ -402,7 +402,7 @@ def cmd_install(workspace: Workspace, project: Project,
         # Reached only through `morf setup` (the generic per-language step): a
         # service has nothing to do here (no requirements.txt). It is installed by
         # `morf install`, which builds it and places its configuration in one pass.
-        print("[SKIP] service — installed by 'morf install' (this is 'setup': "
+        print("[SKIP] service - installed by 'morf install' (this is 'setup': "
               "generic dependencies only)")
     else:
         print("[SKIP] no generic install definition")
@@ -914,7 +914,7 @@ def update_status(path: Path, branch: str, remedy: str, note: str = "") -> str:
     message = (f"nouvelle version disponible : {count} commit{plural} "
                f"en retard sur origin/{branch}")
     if note:
-        message += f" — {note}"
+        message += f" - {note}"
     lines = [f"[UPDATE] {message}"]
     lines += [f"       {line}" for line in remedy.splitlines()]
     return "\n".join(lines) + "\n"

@@ -204,7 +204,8 @@ doublon.
 | `morfMonitor/scripts/linux/deploy-config.sh` | à retirer | `service.py config push --force` |
 | `morfMonitor/scripts/windows/deploy-config.ps1` | à retirer | `service.py config push --force` (Windows) |
 
-> **Avant de retirer ceux de morfMonitor** : son `README` (FR + EN) et son
-> `CHANGELOG` renvoient vers `deploy-config.sh` (table de dépannage), à repointer
-> vers `service.py config push --force`. Ses `config-tool` / `merge-config` /
-> `check-config` (§5) sont d'un autre rôle et **restent**.
+> Les `README` de morfMonitor (FR + EN) et les commentaires de ses
+> `config/*.example.json` pointent déjà vers `service.py config push --force`
+> (morfMonitor 0.24.2) : il ne reste qu'à supprimer les deux scripts. Ses
+> `config-tool` / `merge-config` / `check-config` (§5) sont d'un autre rôle et
+> **restent**.

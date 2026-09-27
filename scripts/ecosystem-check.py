@@ -349,7 +349,7 @@ def check_versions(root, manifest):
 
         version_file = os.path.join(base, "VERSION")
         if not os.path.isfile(version_file):
-            print(f"{WARN} {project}: no VERSION file — the parc inventory cannot include it")
+            print(f"{WARN} {project}: no VERSION file - the parc inventory cannot include it")
             problems += 1
             continue
 
@@ -470,7 +470,7 @@ def check_vendor(root, manifest):
                     differences += compare_tree(canonical_sub, copy_sub)
 
             # `files` compares named files rather than whole trees, so a copy may
-            # legitimately carry extra ones — the vendored README explaining that
+            # legitimately carry extra ones - the vendored README explaining that
             # the directory must not be edited has no place upstream.
             # `filename`, not `name`: the outer loop already binds `name` to the
             # module, and shadowing it made the report cite a file where the

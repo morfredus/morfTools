@@ -31,9 +31,11 @@ s'arrête pas.
 
 ### Ajouter une commande
 
-Une commande vit dans les deux dispatchers, `morf.sh` et `morf.ps1`, et se
-comporte à l'identique. Ajouter une commande d'un seul côté crée une asymétrie
-que personne ne remarque avant de changer de machine.
+Une commande vit une seule fois, dans `morf.py` : le point d'entrée délègue à
+`lib/morftools/cli.py`, qui analyse les arguments, et les commandes elles-mêmes
+vivent dans `lib/morftools/commands.py`. Les anciens dispatchers `morf.sh` et
+`morf.ps1` faisaient la même chose deux fois ; les remplacer par un seul programme
+Python a supprimé toute possibilité d'asymétrie entre Linux et Windows.
 
 Les commandes opèrent projet par projet, dans la boucle du manifeste. Une
 vérification qui porte sur une ressource **partagée** (ports, copies vendorées)
@@ -44,18 +46,13 @@ invisible depuis l'intérieur d'un projet.
 
 | Nature | Où | Pourquoi |
 | --- | --- | --- |
-| Orchestration, Git, CMake | `morf.sh` **et** `morf.ps1` | Chaque plateforme utilise ses outils natifs. |
-| Manipulation de JSON, comparaisons | `scripts/*.py` | Python est le seul langage identique sur Windows, Linux et Raspberry Pi. |
+| Orchestration, Git, CMake | `lib/morftools/` (appelé par `morf.py`) | Un seul code pour toutes les plateformes ; seuls les outils appelés diffèrent. |
+| Contrôles d'écosystème autonomes | `scripts/*.py` | Lançables seuls, et appelés par `morf doctor`. |
 
-Cette séparation n'est pas un détail de goût. Réécrire une comparaison ou une
-fusion JSON en Bash *et* en PowerShell donnerait deux implémentations libres de
-se contredire - exactement le problème que `morf doctor` sert à détecter
-ailleurs. Les scripts Python sont donc appelés tels quels par les deux
-dispatchers.
-
-Quand un script Python affiche un conseil citant une commande, l'appelant lui
-indique l'outillage à mentionner (`--hint-style sh|ps1`). Se fier à `os.name`
-ne suffit pas : il décrit l'interpréteur, pas le shell de l'utilisateur.
+Python est le seul langage qui tourne à l'identique sous Windows, Linux et
+Raspberry Pi. Réécrire une comparaison ou une fusion JSON en Bash *et* en
+PowerShell donnerait deux implémentations libres de se contredire - exactement le
+problème que `morf doctor` sert à détecter ailleurs.
 
 ### Sortie des scripts
 
@@ -84,20 +81,12 @@ interrompre les projets restants.
 ```bash
 python3 morf.py doctor                  # contrôles d'écosystème + état des dépôts
 python3 morf.py status                  # état Git de chaque projet
-bash -n morf.sh              # syntaxe Bash
-python3 -m py_compile scripts/*.py
+python3 -m py_compile morf.py lib/morftools/*.py scripts/*.py
 ```
 
-Sous Windows, vérifier aussi la syntaxe PowerShell :
-
-```powershell
-[System.Management.Automation.Language.Parser]::ParseFile(
-    (Resolve-Path .\morf.ps1), [ref]$null, [ref]$errors)
-```
-
-Une modification touchant `morf.sh` **ou** `morf.ps1` doit être vérifiée des
-deux côtés, même si un seul fichier a changé : la parité est la propriété que
-ces deux fichiers existent pour tenir.
+Un seul programme sert toutes les plateformes, mais les outils qu'il appelle
+(Git, CMake, systemd ou le gestionnaire de services Windows) diffèrent : une
+modification qui touche l'un d'eux se vérifie sous Linux **et** sous Windows.
 
 ## 5. Licence
 

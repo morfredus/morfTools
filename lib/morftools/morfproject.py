@@ -71,10 +71,6 @@ class Target:
         return self.package.get("provider") or self.default_provider
 
     @property
-    def build_preset(self) -> str | None:
-        return self.build.get("preset")
-
-    @property
     def os(self) -> str | None:
         return self.platform.get("os")
 

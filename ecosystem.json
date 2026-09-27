@@ -109,7 +109,7 @@
         "http": 8794,
         "config": "config/morfupdate.example.json",
         "key": "http_port",
-        "note": "Local-only verified package update agent. Its write API binds to loopback and requires a dedicated token."
+        "note": "Local-only verified package update agent. Its API binds to loopback only (no token since 0.4.0); morfMonitor relays requests from the same machine."
       },
       {
         "project": "morfAnalytics",
@@ -187,6 +187,13 @@
         ]
       },
       {
+        "_comment": "Meme bibliotheque que 'update', vendoree sous le nom de dossier 'morfupdate' (morfMonitor). Le controle derive le dossier du nom du module : sans cette entree, cette copie echappait au controle.",
+        "module": "morfupdate",
+        "source": "morfUpdate",
+        "compare": ["src", "include"],
+        "files": ["VERSION"]
+      },
+      {
         "module": "beacon-arduino",
         "source": "morfBeacon",
         "sourceSubdir": "arduino",
@@ -216,7 +223,8 @@
       "morfPhoto",
       "morfSensor",
       "morfTemplateService",
-      "morfSync"
+      "morfSync",
+      "morfUpdate"
     ]
   }
 }

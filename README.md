@@ -2,7 +2,7 @@
 
 *Read in another language: **English** (this document) · [Français](README.fr.md).*
 
-[![Version](https://img.shields.io/badge/version-0.36.3-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.36.5-blue)](CHANGELOG.md)
 
 `morfTools` is the administration project for morfSystem. The project can be moved or renamed: scripts derive the workspace root from their own location and never rely on an absolute path.
 
@@ -261,14 +261,11 @@ Two kinds of configuration exist, and they do not belong in the same place.
 
 ```bash
 python3 ./morfTools/config.py shared install     # the shared parc file
-./morfTools/config.sh deploy morfMonitor # one project's own file
-./morfTools/config.sh deploy             # list the projects that support it
+python3 ./morfTools/config.py deploy morfMonitor # one project's own file
+python3 ./morfTools/config.py deploy             # list the projects that support it
 ```
 
-```powershell
-.\morfTools\config.ps1 shared Install
-.\morfTools\config.ps1 deploy morfMonitor
-```
+The same `config.py` runs on Windows (`python .\morfTools\config.py ...`).
 
 **Shared** is `/etc/morfsystem/morfsystem.json` (`%ProgramData%\morfSystem\` on
 Windows). It describes *what is supervised* and is read by morfMonitor **and**
@@ -276,8 +273,8 @@ morfDashboard. No component owns it, so morfTools does - the same reasoning
 that moved the port registry into `ecosystem.json`.
 
 **Deploy** handles a project's own configuration, and **delegates** to that
-project's `deploy-config` script rather than knowing its install directory or
-service name. `morf build` delegates to each project's build system instead of
+project's `service.py config push --force` rather than knowing its install
+directory or service name. `morf build` delegates to each project's build system instead of
 learning CMake and PlatformIO; this is the same rule. The consequence is worth
 keeping: a project cloned on its own still deploys its configuration without
 morfTools.
@@ -290,8 +287,6 @@ Both read the **real** configuration when the clone carries one
 (`config/morfsystem.json`, `config/morfmonitor.json`) and the `.example` file
 otherwise. Every write is preceded by a dated backup and shows a capped diff of
 what changes.
-
-`shared-config.sh` still works and points at the current entry point.
 
 ### Details
 

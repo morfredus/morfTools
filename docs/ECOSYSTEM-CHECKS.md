@@ -232,11 +232,10 @@ partial workspace is a normal state, not an error.
 
 ## Implementation note
 
-The logic lives in one Python script called by both `morf.sh` and `morf.ps1`.
-`morf.sh` already depends on `python3` for manifest parsing, and `morf.ps1` uses
-`python` for `install`, so this introduces no new dependency. Reimplementing the
-comparison in PowerShell would create two checkers free to disagree - which is
-the same duplication problem the `vendor` check exists to detect.
+The logic lives in one Python script, `scripts/ecosystem-check.py`, which
+`morf.py doctor` runs and which also works on its own. Keeping it in a single
+Python program is what prevents two checkers from disagreeing - the same
+duplication problem the `vendor` check exists to detect.
 
 ## Out of scope: the service skeleton
 

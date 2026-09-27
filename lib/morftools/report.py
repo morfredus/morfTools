@@ -205,7 +205,7 @@ class Reporter:
 
 
 def _print_problem(area: _Area, problem: _Problem):
-    print(f"  {MARK[problem.kind]} {_short(area.name)} — {problem.message}")
+    print(f"  {MARK[problem.kind]} {_short(area.name)} - {problem.message}")
     if problem.kind == "update":
         # The update remedy is fully formed by update_status -- one or two lines
         # already carrying their own arrows -- so it is printed verbatim rather
@@ -248,7 +248,7 @@ def _action(area: _Area, problem: _Problem) -> str | None:
     if "differs from project" in m:
         return f"python3 morf.py upgrade --only {canonical}"
     if "does not answer" in m or "active service" in m:
-        return "le service devrait tourner mais ne répond pas — vérifier son état"
+        return "le service devrait tourner mais ne répond pas - vérifier son état"
     if any(k in m for k in ("allocated to", "allocated twice", "template range",
                             "absent from the registry", "registry allocates",
                             "key '", "configuration not found", "unreadable configuration")):

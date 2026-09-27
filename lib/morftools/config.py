@@ -276,21 +276,14 @@ def shared(workspace: Workspace, action: str) -> int:
 # -- deploy ----------------------------------------------------------------
 
 def deploy_entry_point(workspace, project) -> Path | None:
-    """A project's own configuration deployment, whatever form it takes.
+    """A project's own configuration deployment: its service.py.
 
-    service.py is preferred where a project has been converted; the shell
-    script is still honoured for those that have not. Both are listed rather
-    than one being assumed, because the parc is mid-migration and a tool that
-    only knows the new shape would report perfectly working projects as
-    missing.
+    The per-project deploy-config.sh scripts it used to fall back on are all
+    superseded by `service.py config push --force`, so service.py is the only
+    entry point left.
     """
-    for candidate in (
-        project.path / "service.py",
-        project.path / "scripts" / "linux" / "deploy-config.sh",
-    ):
-        if candidate.is_file():
-            return candidate
-    return None
+    candidate = project.path / "service.py"
+    return candidate if candidate.is_file() else None
 
 
 def deploy(workspace: Workspace, target: str, extra: list) -> int:
@@ -302,7 +295,7 @@ def deploy(workspace: Workspace, target: str, extra: list) -> int:
                 print(f"    {project.name}")
                 found = True
         if not found:
-            print("    (none — clone a project first)")
+            print("    (none - clone a project first)")
         print()
         # A project name is required rather than defaulting to "all": this
         # overwrites deployed configurations, and doing that everywhere because
@@ -320,22 +313,19 @@ def deploy(workspace: Workspace, target: str, extra: list) -> int:
         script = deploy_entry_point(workspace, project)
         if script is None:
             print(f"No deployment entry point for '{target}'.", file=sys.stderr)
-            print(f"Expected {project.local_name}/service.py or "
-                  f"scripts/linux/deploy-config.sh", file=sys.stderr)
+            print(f"Expected {project.local_name}/service.py", file=sys.stderr)
             return 1
         print(f"[{project.name}] {script}")
-        if script.suffix == ".py":
-            # Voie unifiee : le coeur de deploiement (morfdeploy, via service.py)
-            # sait remplacer la config deployee depuis le depot, sur toute
-            # plateforme et avec une sauvegarde horodatee -- ce que faisaient les
-            # anciens scripts bash deploy-config.sh, un par projet. On invoque
-            # l'action `config` : par defaut `push --force` (ecrasement) ; `extra`
-            # fournit sinon le mode/flags (p. ex. `-- merge` pour n'ajouter que les
-            # cles nouvelles sans ecraser).
-            config_args = ["config", *extra] if extra else ["config", "push", "--force"]
-            return subprocess.run([sys.executable, str(script), *config_args],
-                                  check=False).returncode
-        return subprocess.run(["bash", str(script), *extra], check=False).returncode
+        # Voie unifiee : le coeur de deploiement (morfdeploy, via service.py)
+        # sait remplacer la config deployee depuis le depot, sur toute
+        # plateforme et avec une sauvegarde horodatee -- ce que faisaient les
+        # anciens scripts bash deploy-config.sh, un par projet. On invoque
+        # l'action `config` : par defaut `push --force` (ecrasement) ; `extra`
+        # fournit sinon le mode/flags (p. ex. `-- merge` pour n'ajouter que les
+        # cles nouvelles sans ecraser).
+        config_args = ["config", *extra] if extra else ["config", "push", "--force"]
+        return subprocess.run([sys.executable, str(script), *config_args],
+                              check=False).returncode
 
     print(f"No project named '{target}' in the manifest.", file=sys.stderr)
     return 2

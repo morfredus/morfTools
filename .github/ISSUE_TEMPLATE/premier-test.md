@@ -42,7 +42,7 @@ et masque ainsi l'endroit où un vrai utilisateur serait parti.
 <!--
 Le document demande de NE PAS demander d'aide, et de noter les questions à la
 place : une question posée à l'auteur est une information perdue. Aucune n'est
-naïve — une question « bête » qui vient à l'esprit d'un lecteur est un défaut de
+naïve - une question « bête » qui vient à l'esprit d'un lecteur est un défaut de
 la documentation, jamais du lecteur.
 -->
 
