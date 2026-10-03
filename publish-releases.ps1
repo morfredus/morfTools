@@ -9,7 +9,11 @@
 # cross-compilation Linux arm64 n'a lieu que sur un hote Linux x86_64 (WSL) avec un
 # sysroot ; package-all.py l'annonce alors comme ignoree sous Windows. Le drapeau
 # existe ici pour la parite des deux scripts, sans effet reel sur cette machine.
-param([switch] $WithArm64Cross)
+#
+# -Only NOM : limite toute la chaine a UN projet (nom canonique exact, casse
+# comprise : SiteWatch, pas sitewatch). Les etapes 4 et 5 l'exigent telle quelle ;
+# morf dev pull/build, lui, ignore la casse.
+param([switch] $WithArm64Cross, [string] $Only = '')
 
 $ErrorActionPreference = 'Stop'
 
@@ -52,10 +56,13 @@ function Invoke-Step {
 }
 
 Invoke-Step '1/5  git pull (mise a jour de morfTools)' @('git', 'pull')
-Invoke-Step '2/5  morf dev pull (mise a jour de tous les projets)' ($py + @('morf.py', 'dev', 'pull'))
-Invoke-Step '3/5  morf dev build (preparation des compilations)'   ($py + @('morf.py', 'dev', 'build'))
-Invoke-Step '4/5  create-source-releases.py --all (releases source)' ($py + @('.\create-source-releases.py', '--all', '--notes', 'Source release for {project} {version}.'))
+$morfOnly   = if ($Only) { @('--only', $Only) } else { @() }
+$sourceArgs = if ($Only) { @('--only', $Only) } else { @('--all') }
+Invoke-Step '2/5  morf dev pull (mise a jour de tous les projets)' ($py + @('morf.py', 'dev', 'pull') + $morfOnly)
+Invoke-Step '3/5  morf dev build (preparation des compilations)'   ($py + @('morf.py', 'dev', 'build') + $morfOnly)
+Invoke-Step "4/5  create-source-releases.py $($sourceArgs -join ' ') (releases source)" ($py + @('.\create-source-releases.py') + $sourceArgs + @('--notes', 'Source release for {project} {version}.'))
 $packageArgs = @('.\package-all.py', '--sync', '--out', '..\dist')
+if ($Only) { $packageArgs += @('--only', $Only) }
 if ($WithArm64Cross) { $packageArgs += '--with-arm64-cross' }
 Invoke-Step '5/5  package-all.py --sync (livrables de cette machine)' ($py + $packageArgs)
 

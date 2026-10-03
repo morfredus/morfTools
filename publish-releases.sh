@@ -15,14 +15,32 @@ set -euo pipefail
 # cross-compilation Linux arm64 (utile sous WSL x86_64 avec un sysroot prepare,
 # MORF_SYSROOT). package-all.py garde ce drapeau sans effet sur tout autre hote,
 # donc l'invocation reste sure partout. Repli propre sur toute autre option.
+#
+# Option : --only NOM limite toute la chaine a UN projet (nom canonique exact,
+# casse comprise : SiteWatch, pas sitewatch). Les etapes 4 et 5 l'exigent telle
+# quelle ; morf dev pull/build, lui, ignore la casse.
 EXTRA_PACKAGE_ARGS=()
 WITH_ARM64_CROSS=0
-for arg in "$@"; do
-  case "$arg" in
+ONLY=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     --with-arm64-cross) EXTRA_PACKAGE_ARGS+=(--with-arm64-cross); WITH_ARM64_CROSS=1 ;;
-    *) printf 'Option inconnue ignoree : %s\n' "$arg" >&2 ;;
+    --only)
+      [ $# -ge 2 ] || { printf '%s\n' '--only attend un nom de projet.' >&2; exit 2; }
+      ONLY="$2"; shift ;;
+    --only=*) ONLY="${1#--only=}" ;;
+    *) printf 'Option inconnue ignoree : %s\n' "$1" >&2 ;;
   esac
+  shift
 done
+if [ -n "$ONLY" ]; then
+  MORF_ONLY=(--only "$ONLY")          # morf dev pull / build
+  SOURCE_SCOPE=(--only "$ONLY")       # create-source-releases.py (remplace --all)
+  EXTRA_PACKAGE_ARGS+=(--only "$ONLY")
+else
+  MORF_ONLY=()
+  SOURCE_SCOPE=(--all)
+fi
 
 # Toujours travailler depuis la racine de morfTools : create-source-releases.py,
 # package-all.py et ../dist sont references en relatif.
@@ -60,7 +78,7 @@ step "1/5  git pull (mise a jour de morfTools)"
 git pull
 
 step "2/5  morf dev pull (mise a jour de tous les projets)"
-python3 morf.py dev pull
+python3 morf.py dev pull "${MORF_ONLY[@]}"
 
 step "3/5  morf dev build (preparation des compilations)"
 # morf dev build ne prepare QUE le build natif (x86_64) : le message
@@ -69,10 +87,10 @@ if [ "$WITH_ARM64_CROSS" = "1" ]; then
   printf '\033[1;33m    [arm64] Le build croise arm64 est produit a l'"'"'etape 5/5 (packaging),\n'
   printf '            pas ici. Cette etape 3/5 ne prepare que le natif.\033[0m\n'
 fi
-python3 morf.py dev build
+python3 morf.py dev build "${MORF_ONLY[@]}"
 
-step "4/5  create-source-releases.py --all (releases source)"
-python3 ./create-source-releases.py --all \
+step "4/5  create-source-releases.py ${SOURCE_SCOPE[*]} (releases source)"
+python3 ./create-source-releases.py "${SOURCE_SCOPE[@]}" \
   --notes "Source release for {project} {version}."
 
 step "5/5  package-all.py --sync (livrables de cette machine)"

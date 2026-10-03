@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.37.0] - 2026-10-03
+
+### Added
+
+- `publish-releases.sh --only NAME` / `publish-releases.ps1 -Only NAME`: run the whole
+  release chain for a single project. The name is forwarded to `morf dev pull/build`,
+  `create-source-releases.py` (instead of `--all`) and `package-all.py`. Use the exact
+  canonical name (case-sensitive): steps 4 and 5 require it.
+
 ## [0.36.6] - 2026-09-27
 
 ### Changed
