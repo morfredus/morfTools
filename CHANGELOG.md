@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.1] - 2026-10-03
+
+### Fixed
+
+- `publish-releases.ps1`: `--only NAME` (double dash, as in the .sh) failed with
+  "argument --only: expected one argument". PowerShell bound `--only` to `-Only` and left
+  the name in `$args`; both spellings (`-Only`, `--only`) and `--with-arm64-cross` are now accepted.
+
 ## [0.37.0] - 2026-10-03
 
 ### Added

@@ -13,7 +13,18 @@
 # -Only NOM : limite toute la chaine a UN projet (nom canonique exact, casse
 # comprise : SiteWatch, pas sitewatch). Les etapes 4 et 5 l'exigent telle quelle ;
 # morf dev pull/build, lui, ignore la casse.
+#
+# Parite avec le .sh : les formes `--only NOM` et `--with-arm64-cross` sont aussi
+# acceptees. PowerShell ne les reconnait pas comme parametres (un seul tiret) : `--only`
+# atterrit alors dans $Only et le nom dans $args, d'ou le re-decodage ci-dessous.
 param([switch] $WithArm64Cross, [string] $Only = '')
+
+if ($Only -eq '--only') {
+    if ($args.Count -lt 1) { throw "--only attend un nom de projet." }
+    $Only = [string] $args[0]
+    $args = @($args | Select-Object -Skip 1)
+}
+if ($args -contains '--with-arm64-cross') { $WithArm64Cross = [switch] $true }
 
 $ErrorActionPreference = 'Stop'
 
