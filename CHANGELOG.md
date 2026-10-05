@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.2] - 2026-10-06
+
+### Fixed
+
+- `morf dev build --only <extra>` (e.g. `MeteoHubSensor`) failed with "No project named ... in the
+  manifest", which stopped `publish-releases` at step 3/5. Companion firmware extras have no native
+  build: the command now says so and exits 0, `package-all.py` compiles them at the packaging step.
+
 ## [0.37.1] - 2026-10-03
 
 ### Fixed
