@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.37.3] - 2026-10-06
+
+### Fixed
+
+- `morf dev pull|build --only morfTools` failed with "No project named 'morfTools' in the manifest",
+  which stopped `publish-releases --only morfTools` at step 2/5. The conductor is absent from the
+  manifest by design: both commands now explain that it is updated by the first `git pull` and
+  has no native build, and exit 0.
+
 ## [0.37.2] - 2026-10-06
 
 ### Fixed

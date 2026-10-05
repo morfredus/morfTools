@@ -1228,11 +1228,19 @@ def main(argv: list | None = None) -> int:
     # Un extra est un firmware PlatformIO : il n'a pas de build natif cmake. Le
     # cibler avec `build --only` (chaine publish-releases) n'est pas une erreur,
     # package-all.py le compile a l'etape de packaging. On sort donc proprement.
-    if args.command == "build" and args.only and not any(
+    # Meme logique pour le chef d'orchestre (morfTools) : absent du manifeste par
+    # conception, deja mis a jour par le `git pull` de publish-releases (etape 1/5)
+    # et sans build natif a preparer.
+    if args.command in ("build", "pull") and args.only and not any(
             p.name.lower() == args.only.lower() for p in projects):
-        if any(p.name.lower() == args.only.lower() for p in workspace.extras()):
+        if args.command == "build" and any(
+                p.name.lower() == args.only.lower() for p in workspace.extras()):
             print(f"{args.only} is a companion firmware (extra): no native build "
                   "step, compiled by package-all.py.")
+            return 0
+        if args.only.lower() == "morftools":
+            print("morfTools is the conductor: not in the manifest, nothing to "
+                  f"{args.command} here (updated by the first git pull).")
             return 0
 
     if args.only:
