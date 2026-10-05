@@ -10,6 +10,7 @@ matching GitHub source release when it does not yet exist.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import re
 import subprocess
 import sys
@@ -107,13 +108,26 @@ def require_github_auth() -> None:
             "gh auth login --hostname github.com --git-protocol ssh --web --scopes repo")
 
 
+def default_notes(project: Project, current: str) -> str:
+    """Texte par defaut d'une release : meme en-tete + resume CHANGELOG que package-all.py.
+
+    morfTools n'a aucun livrable : package-all.py ne reecrit jamais ses notes, il
+    faut donc les poser correctement des la creation de la release.
+    """
+    spec = importlib.util.spec_from_file_location("package_all", HERE / "package-all.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module._project_release_notes(project, current, None)
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Create source releases from current workspace clones.")
     choice = parser.add_mutually_exclusive_group(required=True)
     choice.add_argument("--all", action="store_true", help="release every declared project with VERSION")
     choice.add_argument("--only", nargs="+", metavar="PROJECT", help="release these canonical projects")
-    parser.add_argument("--notes", default="Source release for {project} {version}.",
-                        help="release text; {project} and {version} are expanded")
+    parser.add_argument("--notes", default=None,
+                        help="release text; {project} and {version} are expanded "
+                             "(default: header + CHANGELOG summary, as package-all.py)")
     parser.add_argument("--owner", default="morfredus", help="GitHub repository owner")
     parser.add_argument("--dry-run", action="store_true", help="show the release plan without GitHub writes")
     args = parser.parse_args(argv)
@@ -162,7 +176,8 @@ def main(argv=None) -> int:
             if seen.returncode == 0:
                 print(f"already released: {repo} {tag}")
                 continue
-            notes = args.notes.format(project=project.name, version=current)
+            notes = (args.notes.format(project=project.name, version=current) if args.notes
+                     else default_notes(project, current))
             command = ["gh", "release", "create", tag, "--repo", repo,
                        "--title", f"{project.name} - v{current}", "--notes", notes]
             if args.dry_run:

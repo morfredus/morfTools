@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.37.4] - 2026-10-06
+
+### Fixed
+
+- morfTools releases had no header and no changelog summary, unlike the other projects: the
+  conductor has no deliverable, so `package-all.py` never rewrote the generic "Source release for..."
+  text. `create-source-releases.py` now builds the default notes with the same helper as
+  `package-all.py` (`## <project> <version>` + CHANGELOG summary), and `publish-releases.sh/.ps1` no
+  longer force the generic `--notes`. An explicit `--notes` still wins.
+
 ## [0.37.3] - 2026-10-06
 
 ### Fixed

@@ -71,7 +71,7 @@ $morfOnly   = if ($Only) { @('--only', $Only) } else { @() }
 $sourceArgs = if ($Only) { @('--only', $Only) } else { @('--all') }
 Invoke-Step '2/5  morf dev pull (mise a jour de tous les projets)' ($py + @('morf.py', 'dev', 'pull') + $morfOnly)
 Invoke-Step '3/5  morf dev build (preparation des compilations)'   ($py + @('morf.py', 'dev', 'build') + $morfOnly)
-Invoke-Step "4/5  create-source-releases.py $($sourceArgs -join ' ') (releases source)" ($py + @('.\create-source-releases.py') + $sourceArgs + @('--notes', 'Source release for {project} {version}.'))
+Invoke-Step "4/5  create-source-releases.py $($sourceArgs -join ' ') (releases source)" ($py + @('.\create-source-releases.py') + $sourceArgs)
 $packageArgs = @('.\package-all.py', '--sync', '--out', '..\dist')
 if ($Only) { $packageArgs += @('--only', $Only) }
 if ($WithArm64Cross) { $packageArgs += '--with-arm64-cross' }

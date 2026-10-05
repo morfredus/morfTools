@@ -90,8 +90,7 @@ fi
 python3 morf.py dev build "${MORF_ONLY[@]}"
 
 step "4/5  create-source-releases.py ${SOURCE_SCOPE[*]} (releases source)"
-python3 ./create-source-releases.py "${SOURCE_SCOPE[@]}" \
-  --notes "Source release for {project} {version}."
+python3 ./create-source-releases.py "${SOURCE_SCOPE[@]}"
 
 step "5/5  package-all.py --sync (livrables de cette machine)"
 python3 ./package-all.py --sync --out ../dist "${EXTRA_PACKAGE_ARGS[@]}"
