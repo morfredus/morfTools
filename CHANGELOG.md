@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.5] - 2026-10-06
+
+### Changed
+
+- Documentation wording: removed first-name attributions ("decision of ...") from
+  `docs/CHANTIER-AUDIT-CAPACITES.md` and `docs/CHANTIER-BUILD-DEPENDANCES.md`; the text is now impersonal.
+
 ## [0.37.4] - 2026-10-06
 
 ### Fixed

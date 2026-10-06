@@ -202,7 +202,7 @@ commande d'admin et la bibliothèque.
 
 ---
 
-## 8. Décisions arrêtées (Fred)
+## 8. Décisions arrêtées
 
 Tranchages retenus pour la suite du chantier :
 
@@ -255,8 +255,8 @@ Tranchages retenus pour la suite du chantier :
    `--all`/interactive numérotée, `--dry-run`, résumé, garde `replace`.
 9. Blocs `purge` réels : **morfPhoto** (`database`) déclaré (0.7.1). Pour les
    chemins **configurables**, morfDeploy 0.5.0 ajoute **`from_config`** (lit le
-   vrai emplacement dans la config déployée, repli sur le défaut) - décision de
-   Fred. **morfCollector** (0.4.4) déclare `vault` (`vault_root`) et `data`
+   vrai emplacement dans la config déployée, repli sur le défaut) - décision
+   arrêtée. **morfCollector** (0.4.4) déclare `vault` (`vault_root`) et `data`
    (`storage_root`). **morfAnalytics** (historiques dans un dossier configurable,
    granularité par fichier) et **morfSync** (change-stores par domaine) restent à
    déclarer et **vérifier sur le Pi** : morfAnalytics demandera un from_config
@@ -279,7 +279,7 @@ Tranchages retenus pour la suite du chantier :
 13. Transition `update`/`upgrade` (§17) - **fait** (morfTools 0.17.0) : `morf
     update` (git) déprécié → `morf dev pull`, réservé au futur sens « composants
     installés » ; `upgrade` = maj machine complète.
-14. `from_config` pour chemins configurables (décision de Fred) - **fait**
+14. `from_config` pour chemins configurables (décision arrêtée) - **fait**
     (morfDeploy 0.5.0) ; appliqué à **morfCollector** (0.4.4).
 
 15. Extension `from_config` **dossier + sous-chemin** (`from_config_kind: dir` +
@@ -298,7 +298,7 @@ Tranchages retenus pour la suite du chantier :
 - Ces deux cas exigent un sous-`purge` dans le binaire C++ concerné : à faire et
   éprouver sur le Pi avec le vrai service.
 - Sens définitif de `morf update` (« mettre à jour les composants installés ») une
-  fois la période de dépréciation écoulée - décision à prendre par Fred, et à
+  fois la période de dépréciation écoulée - décision à prendre, et à
   définir en cohérence avec le chantier « dépendances système » (voir
   `CHANTIER-DEPENDANCES-SYSTEME.md`).
 
