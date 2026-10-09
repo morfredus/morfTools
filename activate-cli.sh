@@ -191,8 +191,14 @@ load_manifests() {
         warn "$project/$MANIFEST_NAME : ligne mal formee, ignoree : $line"
         continue
       fi
-      if [ "$mode" != "direct" ] && [ "$mode" != "project" ]; then
-        warn "$project/$MANIFEST_NAME : mode inconnu '$mode' pour '$name' (attendu direct|project), ignore"
+      # Regle du parc : une commande qui doit ABSOLUMENT s'executer dans le dossier
+      # de son projet n'est pas exposee en CLI. Seul le mode direct est accepte.
+      if [ "$mode" = "project" ]; then
+        warn "$project/$MANIFEST_NAME : '$name' est en mode project (depend du dossier du projet) : non exposee en CLI, ignoree"
+        continue
+      fi
+      if [ "$mode" != "direct" ]; then
+        warn "$project/$MANIFEST_NAME : mode inconnu '$mode' pour '$name' (attendu direct), ignore"
         continue
       fi
       if [ -n "${SEEN[$name]:-}" ]; then

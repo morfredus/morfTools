@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.37.7] - 2026-10-09
+
+### Changed
+
+- `docs/ACTIVATE-CLI.md`: the PATH section now explains how to check for `~/.local/bin`, add it
+  permanently, apply it to the current shell and the non-interactive SSH caveat.
+
+## [0.37.6] - 2026-10-09
+
+### Changed
+
+- `activate-cli.sh` now ignores `project`-mode manifest lines (with a warning): a command that
+  must run inside its project folder is not exposed as a CLI. Only `direct` is accepted.
+
 ## [0.37.5] - 2026-10-06
 
 ### Changed

@@ -141,6 +141,11 @@ screenctl   direct   screenctl.py
 
 ---
 
+> **Règle du parc** : une commande qui doit absolument s'exécuter dans le dossier de
+> son projet n'est **pas** exposée en CLI. `activate-cli.sh` ignore (avec un avertissement)
+> toute ligne en mode `project` ; seul le mode `direct` est accepté. Rendre le script
+> indépendant du répertoire courant (`__file__`) ou le laisser hors CLI.
+
 ## Choisir le mode : `direct` ou `project`
 
 La question n'est pas « le script utilise-t-il des ressources de son projet ? »
@@ -251,12 +256,48 @@ proprement ces commandes sans jamais toucher à un fichier étranger.
 
 ### Le PATH
 
-`~/.local/bin` doit être dans votre `PATH`. Si le script vous avertit qu'il ne
-l'est pas, ajoutez à votre `~/.bashrc` :
+`~/.local/bin` doit figurer dans le `PATH`, sinon le shell ne trouve pas les
+commandes (`morf: command not found`) alors que les liens existent bien.
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
+1. Vérifier si le dossier est déjà présent :
+
+   ```bash
+   echo "$PATH" | tr ':' '
+' | grep -x "$HOME/.local/bin"
+   ```
+
+   Une ligne affichée signifie que c'est bon. Aucune sortie signifie qu'il manque.
+
+2. L'ajouter de façon permanente, une seule fois (le `PATH` est alors reconstruit à
+   chaque ouverture de session, donc après chaque reboot) :
+
+   ```bash
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+   ```
+
+3. L'appliquer au terminal déjà ouvert (les nouveaux terminaux le feront seuls) :
+
+   ```bash
+   source ~/.bashrc
+   ```
+
+4. Contrôler :
+
+   ```bash
+   command -v morf
+   ```
+
+   Le chemin attendu est `~/.local/bin/morf`.
+
+Notes :
+
+- Sur Debian et Raspberry Pi OS, le `~/.profile` standard ajoute déjà
+  `~/.local/bin` au `PATH` **si le dossier existe à l'ouverture de session**. Après
+  la toute première activation, fermer puis rouvrir la session (ou `source ~/.profile`)
+  suffit souvent, sans rien éditer.
+- Une session SSH non interactive (commande lancée directement par `ssh hôte cmd`)
+  ne lit pas `~/.bashrc` : y utiliser le chemin complet, `~/.local/bin/morf`.
+- Éviter d'ajouter la ligne plusieurs fois : le `PATH` s'allonge de doublons inutiles.
 
 ---
 
