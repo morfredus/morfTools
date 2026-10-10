@@ -211,20 +211,20 @@ def shared(workspace: Workspace, action: str) -> int:
         current = {} if first_deploy else json.loads(
             target.read_text(encoding="utf-8-sig"))
 
-        # Backup horodate SYSTEMATIQUE, meme si le merge ne change rien : le
-        # mecanisme reste previsible, et le cout est negligeable.
         target.parent.mkdir(parents=True, exist_ok=True)
-        if target.is_file():
-            backup = target.with_name(
-                f"{target.name}.bak-{datetime.now():%Y%m%d-%H%M%S}")
-            shutil.copy2(target, backup)
-            print(f"backup: {backup}")
 
         merged = copy.deepcopy(current)
         added, obsolete = merge_defaults(src, merged)
         changed = first_deploy or bool(added)
 
         if changed:
+            # Sauvegarde horodatee seulement quand le fichier va changer : un merge
+            # sans effet ne laisse plus de copie identique a l'original.
+            if target.is_file():
+                backup = target.with_name(
+                    f"{target.name}.bak-{datetime.now():%Y%m%d-%H%M%S}")
+                shutil.copy2(target, backup)
+                print(f"backup: {backup}")
             target.write_text(
                 json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8")
@@ -255,7 +255,8 @@ def shared(workspace: Workspace, action: str) -> int:
             return 1
 
         target.parent.mkdir(parents=True, exist_ok=True)
-        if target.is_file():
+        # Pas de sauvegarde d'un fichier deja identique a la source.
+        if target.is_file() and target.read_bytes() != source.read_bytes():
             backup = target.with_name(
                 f"{target.name}.bak-{datetime.now():%Y%m%d-%H%M%S}")
             shutil.copy2(target, backup)

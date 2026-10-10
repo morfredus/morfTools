@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.8] - 2026-10-10
+
+### Fixed
+
+- **`config merge/install/apply` of the shared `morfsystem.json` back up only when the file
+  changes.** The "systematic backup" left one identical `.bak-*` per run (five on pi4fred).
+
 ## [0.37.7] - 2026-10-09
 
 ### Changed
