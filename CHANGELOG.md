@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.9] - 2026-10-10
+
+### Fixed
+
+- **EXPLOITATION.md**: the health route is `/healthz` (the page named `/api/health`, which no
+  service other than morfSync ever served).
+
 ## [0.37.8] - 2026-10-10
 
 ### Fixed
