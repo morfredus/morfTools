@@ -361,12 +361,12 @@ the reserved ranges, and how to resolve reported drift.
 
 ## Deployment synchronization
 
-`scripts/windows/sync-to-morfsystem.ps1` is a Windows-specific deployment helper. It reads `ecosystem.json` and copies component content to a production root without copying or deleting destination `.git` directories. It never performs a global text replacement.
+`scripts\morfSystem\sync-to-morfsystem.ps1` (in `Codage\scripts`, outside the morfTools repository) is a Windows-specific deployment helper (PowerShell 7). It reads `ecosystem.json` and copies component content from the sandbox (`Codage\01-Travail`) to production (`Codage\morfSystem`) without copying or deleting destination `.git` directories. Nothing is deleted in production by default (it holds files that exist only there, such as local git-ignored files); `-Prune` also deletes the files removed from the sandbox, so always check `-DryRun -Prune` first. It never performs a global text replacement.
 
-Use a dry run first:
+Use a dry run first (add `-Prune` to list the files that would be deleted):
 
 ```powershell
-.\scripts\windows\sync-to-morfsystem.ps1 -DestinationRoot ..\..\morfSystem -DryRun
+.\scripts\morfSystem\sync-to-morfsystem.ps1 -DryRun
 ```
 
-When run from the sandbox workspace, the destination defaults to the sibling `morfSystem` directory. An explicit relative `-DestinationRoot morfSystem` is resolved from the parent of the sandbox workspace. Then run the same command without `-DryRun`. `-SkipToolProject` omits deployment of morfTools itself.
+Then run the same command without `-DryRun`. `-SkipToolProject` omits deployment of morfTools itself; `-SourceRoot` and `-DestinationRoot` change the roots (a relative path is resolved from the parent of the sandbox workspace).

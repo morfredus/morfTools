@@ -281,21 +281,22 @@ registres, les plages réservées et la marche à suivre en cas de dérive.
 
 ## Synchronisation de déploiement
 
-`scripts/windows/sync-to-morfsystem.ps1` est un utilitaire de déploiement
-spécifique à Windows. Il lit `ecosystem.json` et copie le contenu des composants
-vers une racine de production, sans copier ni supprimer les dossiers `.git` de
-destination. Il n'effectue jamais de remplacement de texte global.
+`scripts\morfSystem\sync-to-morfsystem.ps1` (dans `Codage\scripts`, hors du dépôt morfTools) est un
+utilitaire de déploiement spécifique à Windows (PowerShell 7). Il lit `ecosystem.json` et copie le contenu des
+composants du bac à sable (`Codage\01-Travail`) vers la production (`Codage\morfSystem`), sans copier ni
+supprimer les dossiers `.git` de destination. Par défaut rien n'est supprimé en production (elle contient des fichiers
+qui n'existent que là, par exemple des fichiers locaux ignorés par git) ; `-Prune` supprime aussi les fichiers retirés du bac à sable,
+à vérifier d'abord avec `-DryRun -Prune`. Il n'effectue jamais de remplacement de texte global.
 
-Commencer par une simulation :
+Commencer par une simulation (ajouter `-Prune` pour lister les fichiers qui seraient supprimés) :
 
 ```powershell
-.\scripts\windows\sync-to-morfsystem.ps1 -DestinationRoot ..\..\morfSystem -DryRun
+.\scripts\morfSystem\sync-to-morfsystem.ps1 -DryRun
 ```
 
-Lancé depuis l'espace bac à sable, la destination par défaut est le dossier
-`morfSystem` voisin. Un `-DestinationRoot morfSystem` relatif est résolu depuis
-le parent de l'espace bac à sable. Relancer ensuite la même commande sans
-`-DryRun`. `-SkipToolProject` exclut le déploiement de morfTools lui-même.
+Relancer ensuite la même commande sans `-DryRun`. `-SkipToolProject` exclut le déploiement de morfTools
+lui-même ; `-SourceRoot` et `-DestinationRoot` changent les racines (un chemin relatif est résolu depuis le
+parent du bac à sable).
 
 ## Licence
 
