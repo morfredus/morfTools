@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.10] - 2026-10-18
+
+### Changed
+
+- **`sync-to-morfsystem.ps1` moved out of the repository** to `Codage\scripts\morfSystem\` (it is a
+  workstation tool, not part of morfTools). The deployment sections of `README.md` and
+  `README.fr.md` now describe the new location, `-Prune` and the default roots.
+
 ## [0.37.9] - 2026-10-10
 
 ### Fixed
