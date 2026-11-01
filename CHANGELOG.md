@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.37.11] - 2026-11-01
+
+### Changed
+
+- **`publish-releases.sh` builds arm64 by default** on a Linux x86_64 host (WSL), like the Ant
+  Renamer Qt release scripts. `--no-arm64-cross` opts out; `--with-arm64-cross` is kept.
+  `MORF_SYSROOT` defaults to `~/morf-sysroots/trixie-arm64`, and a missing sysroot now stops the
+  chain instead of silently skipping the arm64 packages.
+
 ## [0.37.10] - 2026-10-18
 
 ### Changed

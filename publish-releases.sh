@@ -19,12 +19,20 @@ set -euo pipefail
 # Option : --only NOM limite toute la chaine a UN projet (nom canonique exact,
 # casse comprise : SiteWatch, pas sitewatch). Les etapes 4 et 5 l'exigent telle
 # quelle ; morf dev pull/build, lui, ignore la casse.
+#
+# Comme pour Ant Renamer Qt, l'arm64 est produit PAR DEFAUT des qu'on est sur un
+# hote Linux x86_64 (WSL) : plus besoin de penser au drapeau. --no-arm64-cross le
+# desactive. Ailleurs (Pi arm64, autre hote) le natif suffit, rien a croiser.
 EXTRA_PACKAGE_ARGS=()
 WITH_ARM64_CROSS=0
 ONLY=""
+if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
+  WITH_ARM64_CROSS=1
+fi
 while [ $# -gt 0 ]; do
   case "$1" in
-    --with-arm64-cross) EXTRA_PACKAGE_ARGS+=(--with-arm64-cross); WITH_ARM64_CROSS=1 ;;
+    --with-arm64-cross) WITH_ARM64_CROSS=1 ;;
+    --no-arm64-cross) WITH_ARM64_CROSS=0 ;;
     --only)
       [ $# -ge 2 ] || { printf '%s\n' '--only attend un nom de projet.' >&2; exit 2; }
       ONLY="$2"; shift ;;
@@ -33,6 +41,18 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+if [ "$WITH_ARM64_CROSS" = "1" ]; then
+  # Meme emplacement par defaut que publish-arm64.sh (build-arm64-sysroot.sh).
+  export MORF_SYSROOT="${MORF_SYSROOT:-$HOME/morf-sysroots/trixie-arm64}"
+  # Sysroot absent = package-all.py sauterait l'arm64 sans erreur : on prefere
+  # s'arreter net plutot que publier une release sans arm64 sans le savoir.
+  if [ "$(uname -m)" != "x86_64" ] || [ ! -d "$MORF_SYSROOT" ]; then
+    printf 'arm64 demande mais sysroot introuvable (%s) ou hote non x86_64.\n' "$MORF_SYSROOT" >&2
+    printf 'Construire le sysroot (morfDeploy/scripts/build-arm64-sysroot.sh) ou passer --no-arm64-cross.\n' >&2
+    exit 2
+  fi
+  EXTRA_PACKAGE_ARGS+=(--with-arm64-cross)
+fi
 if [ -n "$ONLY" ]; then
   MORF_ONLY=(--only "$ONLY")          # morf dev pull / build
   SOURCE_SCOPE=(--only "$ONLY")       # create-source-releases.py (remplace --all)
