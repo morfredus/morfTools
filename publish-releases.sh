@@ -84,12 +84,17 @@ on_error() {
   printf '\033[1;31m========================================================================\033[0m\n' >&2
   printf '  Cause : voir le message juste au-dessus (souvent un depot non\n' >&2
   printf '          publiable : working tree sale, ou en avance sur origin).\n' >&2
-  printf '  Les etapes suivantes N'"'"'ont pas ete executees' >&2
-  if [ "$WITH_ARM64_CROSS" = "1" ]; then
-    printf ' -- le packaging arm64 (5/5) non plus.\n' >&2
-  else
-    printf '.\n' >&2
-  fi
+  # Le packaging arm64 fait partie de l'etape 5/5 : le dire "non execute" quand c'est
+  # l'etape 5 elle-meme qui echoue serait faux (l'arm64 y a justement ete tente).
+  case "$CURRENT_STEP" in
+    5/5*) printf '  Echec pendant le packaging : voir plus haut quels projets (FAILED / REFUSED).\n' >&2 ;;
+    *)    printf '  Les etapes suivantes N'"'"'ont pas ete executees' >&2
+          if [ "$WITH_ARM64_CROSS" = "1" ]; then
+            printf ' -- le packaging arm64 (5/5) non plus.\n' >&2
+          else
+            printf '.\n' >&2
+          fi ;;
+  esac
   printf '  Corrige la cause, puis relance la publication.\n' >&2
 }
 trap on_error ERR

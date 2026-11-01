@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.12] - 2026-11-02
+
+### Fixed
+
+- **`publish-releases.sh` failure banner**: when step 5/5 itself fails it no longer claims that
+  the arm64 packaging "was not executed" (it was, and may be what failed). It now points to the
+  FAILED / REFUSED lines of the packaging output.
+
 ## [0.37.11] - 2026-11-01
 
 ### Changed
