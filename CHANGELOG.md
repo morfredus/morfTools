@@ -7,7 +7,7 @@
 - **`publish-releases.sh` and `publish-releases.ps1`.** The release publication chain (git pull,
   `morf dev pull/build`, source releases, `package-all.py --sync`) no longer lives in the repository.
   It moved outside the repos, to `<Codage>/scripts/morfSystem/` (`linux/` and `windows/`, one
-  script per target: `publish-sandbox-releases` and `publish-prod-releases`, sharing `lib/publish-chain.*`).
+  script per target: `release-morfsystem-travail` and `release-morfsystem-prod`, plus Linux variants, sharing `lib/release-morfsystem*`).
   The chain itself is unchanged. Comments that named the old scripts were updated.
 
 ## [0.37.12] - 2026-11-02
