@@ -31,7 +31,7 @@ already indexed.
 from an x86_64 Linux host (WSL): it widens the selection, and the project's own
 service.py package routes the named non-native arm64 target to the linux-arm64-cross
 CMake preset. It needs a prepared sysroot (MORF_SYSROOT); on any other host it is a
-declared no-op, so the same publish-releases invocation is safe everywhere.
+declared no-op, so the same publication-chain invocation is safe everywhere.
 """
 
 from __future__ import annotations

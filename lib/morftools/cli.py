@@ -1226,10 +1226,10 @@ def main(argv: list | None = None) -> int:
         projects = projects + workspace.extras()
 
     # Un extra est un firmware PlatformIO : il n'a pas de build natif cmake. Le
-    # cibler avec `build --only` (chaine publish-releases) n'est pas une erreur,
+    # cibler avec `build --only` (chaine de publication, hors depot : scripts/morfSystem) n'est pas une erreur,
     # package-all.py le compile a l'etape de packaging. On sort donc proprement.
     # Meme logique pour le chef d'orchestre (morfTools) : absent du manifeste par
-    # conception, deja mis a jour par le `git pull` de publish-releases (etape 1/5)
+    # conception, deja mis a jour par le `git pull` de la chaine de publication (etape 1/5)
     # et sans build natif a preparer.
     if args.command in ("build", "pull") and args.only and not any(
             p.name.lower() == args.only.lower() for p in projects):

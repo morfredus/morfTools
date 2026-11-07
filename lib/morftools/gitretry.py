@@ -3,7 +3,7 @@
 `git fetch`/`pull`/`push`/`clone` parlent à GitHub par SSH. Une connexion qui
 saute (« Connection closed by ... port 22 », « Connection reset », un blip DNS...)
 est un échec de TRANSPORT transitoire, pas une vraie erreur : un seul suffisait à
-faire échouer toute la chaîne de publication (publish-releases). Ce helper ne
+faire échouer toute la chaîne de publication (chaîne de publication). Ce helper ne
 réessaie QUE ces hoquets, avec un court backoff, et ne masque JAMAIS une vraie
 erreur (accès refusé, non-fast-forward, conflit, clé d'hôte inconnue...).
 """
