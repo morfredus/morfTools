@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.38.2] - 2026-11-10
+
+### Changed
+
+- `docs/SCRIPTS.md`: the Windows installer is built by ComponentHub, SiteWatch, LanAtlas and PhotoHub.
+
+## [0.38.1] - 2026-11-10
+
+### Fixed
+
+- `package-all.py`: an AppImage is now named `<Project>-<version>-<arch>.AppImage` (no `-linux-`, project casing kept, `.AppImage` extension), the convention AppImage repositories accept. It used to be `<project>-<version>-linux-<arch>.appimage`.
+
+### Changed
+
+- `docs/SCRIPTS.md`: `package-win.ps1` also builds the Inno Setup installer when it is installed.
+
 ## [0.38.0] - 2026-11-07
 
 ### Removed

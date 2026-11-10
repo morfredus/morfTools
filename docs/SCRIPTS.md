@@ -178,7 +178,7 @@ config d'un service, donc **à conserver**.
 | `scripts/linux/install.sh` | Intégration au bureau Linux (raccourci `.desktop`, icône). |
 | `scripts/linux/package-appimage.sh` | Construit une AppImage autonome. |
 | `scripts/linux/package-deb.sh` | Construit un paquet Debian (`.deb`). |
-| `scripts/windows/package-win.ps1` | Assemble une distribution Windows autonome (exe + DLL + plugins Qt). |
+| `scripts/windows/package-win.ps1` | Assemble une distribution Windows autonome (exe + DLL + plugins Qt), son ZIP et, si Inno Setup 6 est installé (ComponentHub, SiteWatch, LanAtlas, PhotoHub), l'installeur `-win64-setup.exe`. |
 | `scripts/windows/deploy-mingw.sh` | Copie à côté de l'exe les DLL non-Qt de `/mingw64/bin` nécessaires. |
 | `scripts/windows/vscode-mingw.ps1` | Configure l'environnement MinGW pour VS Code. |
 

@@ -171,6 +171,10 @@ def _script_artifact_name(project, target, version: str) -> str:
     """Canonical shared-dist name for an artifact made by a project script."""
     fmt = target.package.get("format")
     arch = target.package.get("architecture") or target.arch
+    if fmt == "appimage":
+        # Convention AppImage (depots AppImage compris) : Nom-version-arch.AppImage,
+        # sans l'OS (un « -linux- » fait refuser le fichier) et avec la casse du nom.
+        return f"{project.name}-{version}-{arch}.AppImage"
     return f"{project.name.lower()}-{version}-{target.os}-{arch}.{fmt}"
 
 
