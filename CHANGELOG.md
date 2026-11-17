@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.1] - 2026-11-17
+
+### Fixed
+
+- `morf build` on Windows: a `build-mingw` folder left by another MSYS2 environment is deleted before configuring. CMake reconfigures when the compiler changes but keeps the DLLs that `windeployqt` copied next to the executables, and tools run from the build folder (`rcc` for `AUTORCC`) load those DLLs before the ones on the `PATH`. After the move from MINGW64 to UCRT64, the old `Qt6Core.dll` made `rcc` crash ("The rcc list process failed", exit code `0xc0000409`) on PhotoHub and SiteWatch. A folder is considered stale when its cache comes from another environment (`mingw64`, `ucrt64`, `clang64`) or when its `Qt6Core.dll` differs from the one of the Qt in use.
+- `tests/test_stale_build.py`.
+
 ## [0.39.0] - 2026-11-17
 
 ### Changed

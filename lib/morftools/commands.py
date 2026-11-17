@@ -269,6 +269,61 @@ def windows_toolchain_warnings(overrides) -> list:
     return warnings
 
 
+def _md5(path: Path) -> str:
+    import hashlib
+    digest = hashlib.md5()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def stale_build_reason(build_dir: Path, overrides) -> str:
+    """Pourquoi un dossier de build Windows ne doit pas etre reutilise ('' si tout va bien).
+
+    CMake sait reconfigurer quand le compilateur change, mais il laisse sur place les DLL que
+    windeployqt a copiees a cote de l'exe. Or les outils lances depuis le dossier de build
+    (rcc pour AUTORCC, par exemple) chargent ces DLL AVANT celles du PATH : un Qt6Core.dll de
+    MINGW64 y fait alors tomber un outil UCRT64 (« rcc list process failed », 0xc0000409,
+    vu sur PhotoHub et SiteWatch le 2026-11-17). Deux signes de dossier perime :
+    - le cache vient d'un autre environnement MSYS2 (mingw64 / ucrt64 / clang64) ;
+    - le Qt6Core.dll deploye differe de celui du Qt actuellement utilise.
+    """
+    found = {o.split("=", 1)[0]: o.split("=", 1)[1] for o in overrides if "=" in o}
+    now = re.search(r"/(mingw64|ucrt64|clang64)/",
+                    found.get("-DCMAKE_CXX_COMPILER", "").replace("\\", "/").lower())
+    cache = build_dir / "CMakeCache.txt"
+    if now and cache.is_file():
+        old = re.search(r"^CMAKE_CXX_COMPILER:[^=]*=.*?[/\\](mingw64|ucrt64|clang64)[/\\]",
+                        cache.read_text(encoding="utf-8", errors="replace"),
+                        re.MULTILINE | re.IGNORECASE)
+        if old and old.group(1).lower() != now.group(1):
+            return f"configure avec {old.group(1).lower()}, toolchain actuelle {now.group(1)}"
+    prefix = found.get("-DCMAKE_PREFIX_PATH", "").split(";")[0]
+    deployed = build_dir / "Qt6Core.dll"
+    reference = Path(prefix) / "bin" / "Qt6Core.dll" if prefix else None
+    if reference and deployed.is_file() and reference.is_file() \
+            and _md5(deployed) != _md5(reference):
+        return "Qt6Core.dll deployee differente de celle du Qt actuel"
+    return ""
+
+
+def reset_stale_build_dir(project_path: Path, build_name: str, overrides) -> None:
+    """Supprime build_name (sous project_path) s'il est perime : voir stale_build_reason."""
+    build_dir = (project_path / build_name).resolve()
+    if not build_dir.is_dir() or project_path.resolve() not in build_dir.parents:
+        return
+    reason = stale_build_reason(build_dir, overrides)
+    if not reason:
+        return
+    print(f"[INFO] {build_dir.name} reinitialise ({reason})")
+    try:
+        shutil.rmtree(build_dir)
+    except OSError as exc:
+        raise RuntimeError(f"impossible de supprimer {build_dir} : {exc} "
+                           "(un exe du dossier est-il encore lance ?)") from exc
+
+
 #: Print the toolchain diagnostic only once per run, not once per project.
 _TOOLCHAIN_REPORTED = [False]
 
@@ -311,6 +366,9 @@ def cmake_build(project: Project, preset: str = "") -> None:
             for warning in windows_toolchain_warnings(overrides):
                 print(f"[WARN] {warning}")
             _TOOLCHAIN_REPORTED[0] = True
+
+    if overrides and preset == "mingw":
+        reset_stale_build_dir(project.path, "build-mingw", overrides)
 
     run(["cmake", "--preset", preset, *overrides], cwd=project.path)
     run(["cmake", "--build", "--preset", preset], cwd=project.path)
