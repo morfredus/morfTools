@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.39.0] - 2026-11-17
+
+### Changed
+
+- Windows build environment: MSYS2 `UCRT64` replaces the deprecated `MINGW64`, as in Ant Renamer Qt. `morf build` takes the Qt prefix from the same MSYS2 prefix as the compiler when that prefix contains Qt, instead of the first `qmake` on the `PATH` (a Qt from the official installer used to be paired with the MSYS2 compiler, mixing two C runtimes).
+
+### Added
+
+- `morf build` and `morf doctor` print a `[WARN]` when the compiler comes from `mingw64`, or when the compiler and Qt come from different MSYS2 prefixes.
+- Documentation (`ENVIRONNEMENT-DEV`, `CHANTIER-BUILD-TOOLCHAIN`, `SCRIPTS`) updated for `UCRT64` and its `mingw-w64-ucrt-x86_64-*` packages.
+
 ## [0.38.2] - 2026-11-10
 
 ### Changed

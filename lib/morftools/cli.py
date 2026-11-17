@@ -280,7 +280,7 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
     # HERE before `morf build` overrides the pins with them. Local checks only.
     import platform as _platform
     if _platform.system() == "Windows":
-        from .commands import detect_windows_toolchain
+        from .commands import detect_windows_toolchain, windows_toolchain_warnings
         overrides, _problems = detect_windows_toolchain()
         found = {o.split("=", 1)[0]: o.split("=", 1)[1] for o in overrides}
         tlines = [
@@ -297,6 +297,7 @@ def run_doctor(workspace: Workspace, projects: list, verbose: bool,
         else:
             tlines.append("[WARN] préfixe Qt introuvable "
                           "(définir CMAKE_PREFIX_PATH ou mettre qmake sur le PATH)")
+        tlines.extend(f"[WARN] {w}" for w in windows_toolchain_warnings(overrides))
         reporter.feed("\n".join(tlines), group="Toolchain build (Windows)",
                       name="mingw")
 

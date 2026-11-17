@@ -54,3 +54,16 @@ configurer, comme pour le reste du chantier.
 - Risque de toolchains mélangées sur le PATH (msys64 + Qt officielle) : la
   détection suit l'ordre du PATH ; sur une machine bien configurée, cohérent (le
   cas Asus l'a confirmé).
+
+## Mise à jour : MSYS2 UCRT64 (2026-11-17)
+
+L'environnement MSYS2 du parc passe de `MINGW64` (déprécié) à `UCRT64`, comme Ant
+Renamer Qt. La détection reste pilotée par le `PATH` : mettre `C:\msys64\ucrt64\bin`
+en tête suffit. Deux garde-fous s'ajoutent :
+
+- le préfixe Qt est pris **au même endroit que le compilateur** quand celui-ci est un
+  préfixe MSYS2 qui contient Qt (plus de Qt officiel associé au g++ de MSYS2) ;
+- `morf build` et `morf doctor` signalent (`[WARN]`) un compilateur `mingw64` ou un
+  compilateur et un Qt de préfixes différents.
+
+Les chemins figés ci-dessus (`C:/msys64/mingw64/...`) sont historiques.

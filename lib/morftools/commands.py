@@ -229,15 +229,44 @@ def detect_windows_toolchain() -> tuple:
     prefix = os.environ.get("CMAKE_PREFIX_PATH", "")
     qt_via_env = bool(prefix or os.environ.get("Qt6_DIR"))
     if not qt_via_env:
-        qmake = shutil.which("qmake6") or shutil.which("qmake")
-        if qmake:
-            prefix = str(Path(qmake).resolve().parent.parent)
+        # MSYS2 : Qt et compilateur partagent un meme prefixe (C:/msys64/ucrt64). On le
+        # prefere a "le premier qmake du PATH" : un Qt officiel (C:/Qt/<ver>/mingw_64)
+        # place plus tot sur le PATH serait sinon associe au g++ de MSYS2, deux runtimes
+        # C melanges dans un meme build.
+        cxx_prefix = Path(cxx).resolve().parent.parent if cxx else None
+        if cxx_prefix and (cxx_prefix / "lib" / "cmake" / "Qt6").is_dir():
+            prefix = str(cxx_prefix)
+        else:
+            qmake = shutil.which("qmake6") or shutil.which("qmake")
+            if qmake:
+                prefix = str(Path(qmake).resolve().parent.parent)
     if prefix:
         overrides.append(f"-DCMAKE_PREFIX_PATH={prefix}")
     elif not qt_via_env:
         problems.append("préfixe Qt introuvable "
                         "(ni CMAKE_PREFIX_PATH/Qt6_DIR, ni qmake sur le PATH)")
     return tuple(overrides), tuple(problems)
+
+
+def windows_toolchain_warnings(overrides) -> list:
+    """Avertissements sur une toolchain detectee (liste de textes, vide si tout va bien).
+
+    - MSYS2 MINGW64 est deprecie : UCRT64 (C:/msys64/ucrt64) est l'environnement du parc.
+    - Compilateur et Qt de deux prefixes MSYS2 differents : runtimes C melanges.
+    """
+    found = {o.split("=", 1)[0]: o.split("=", 1)[1] for o in overrides if "=" in o}
+    cxx = found.get("-DCMAKE_CXX_COMPILER", "").replace("\\", "/").lower()
+    qt = found.get("-DCMAKE_PREFIX_PATH", "").replace("\\", "/").lower()
+    warnings = []
+    if "/mingw64/" in cxx:
+        warnings.append("MSYS2 MINGW64 est deprecie : mettre C:/msys64/ucrt64/bin "
+                        "en tete du PATH (environnement UCRT64)")
+    if cxx and qt:
+        cxx_root = cxx.rsplit("/bin/", 1)[0]
+        if "/msys64/" in cxx_root and qt.split(";")[0].rstrip("/") != cxx_root:
+            warnings.append("compilateur et Qt ne viennent pas du meme prefixe "
+                            f"({cxx_root} / {qt.split(';')[0]}) : runtimes melanges")
+    return warnings
 
 
 #: Print the toolchain diagnostic only once per run, not once per project.
@@ -279,6 +308,8 @@ def cmake_build(project: Project, preset: str = "") -> None:
         if not _TOOLCHAIN_REPORTED[0]:
             shown = ", ".join(o.split("=", 1)[1] for o in overrides)
             print(f"[INFO] toolchain détectée sur cette machine : {shown}")
+            for warning in windows_toolchain_warnings(overrides):
+                print(f"[WARN] {warning}")
             _TOOLCHAIN_REPORTED[0] = True
 
     run(["cmake", "--preset", preset, *overrides], cwd=project.path)

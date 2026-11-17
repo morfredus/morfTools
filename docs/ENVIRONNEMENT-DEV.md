@@ -49,13 +49,13 @@ Composants Qt 6 utilisés dans le parc : **Core**, **Network** (partout), **Sql*
 Certains projets référencent des bibliothèques externes via `find_package`. Leur
 absence fait échouer la configuration CMake (`Could NOT find …`).
 
-| Bibliothèque | Projets qui en ont besoin | Paquet Debian/Ubuntu/Mint | Paquet MSYS2 (mingw64) |
+| Bibliothèque | Projets qui en ont besoin | Paquet Debian/Ubuntu/Mint | Paquet MSYS2 (ucrt64) |
 | --- | --- | --- | --- |
-| **OpenSSL** | morfCollector (coffre), SiteWatch (via libssh2) | `libssl-dev` | `mingw-w64-x86_64-openssl` |
-| **libssh2** | morfCollector (SFTP), SiteWatch | `libssh2-1-dev` | `mingw-w64-x86_64-libssh2` |
-| **nlohmann_json** | ComponentHub, SiteWatch, morfSync | `nlohmann-json3-dev` | `mingw-w64-x86_64-nlohmann-json` |
-| **zlib** | SiteWatch | `zlib1g-dev` | `mingw-w64-x86_64-zlib` |
-| **pkg-config** | morfCollector, SiteWatch (recherche de libssh2) | `pkg-config` | `mingw-w64-x86_64-pkgconf` |
+| **OpenSSL** | morfCollector (coffre), SiteWatch (via libssh2) | `libssl-dev` | `mingw-w64-ucrt-x86_64-openssl` |
+| **libssh2** | morfCollector (SFTP), SiteWatch | `libssh2-1-dev` | `mingw-w64-ucrt-x86_64-libssh2` |
+| **nlohmann_json** | ComponentHub, SiteWatch, morfSync | `nlohmann-json3-dev` | `mingw-w64-ucrt-x86_64-nlohmann-json` |
+| **zlib** | SiteWatch | `zlib1g-dev` | `mingw-w64-ucrt-x86_64-zlib` |
+| **pkg-config** | morfCollector, SiteWatch (recherche de libssh2) | `pkg-config` | `mingw-w64-ucrt-x86_64-pkgconf` |
 | **Threads** | morfSync | (fourni par le compilateur) | (fourni par le compilateur) |
 
 Les **services** morfCollector et morfSync déclarent leurs besoins dans
@@ -98,24 +98,28 @@ interactif).
 
 Deux approches, selon la toolchain choisie.
 
-#### Option A - MSYS2 / MinGW64 (recommandée : cohérente, tout au même endroit)
+#### Option A - MSYS2 / UCRT64 (recommandée : cohérente, tout au même endroit)
 
-Installer [MSYS2](https://www.msys2.org/), puis dans un shell **MINGW64** :
+Installer [MSYS2](https://www.msys2.org/), puis dans un shell **UCRT64** (le runtime UCRT remplace MINGW64, déprécié) :
 
 ```bash
 pacman -Syu
 pacman -S --needed \
     git python \
-    mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja \
-    mingw-w64-x86_64-pkgconf \
-    mingw-w64-x86_64-qt6-base mingw-w64-x86_64-qt6-charts \
-    mingw-w64-x86_64-qt6-serialport \
-    mingw-w64-x86_64-openssl mingw-w64-x86_64-libssh2 \
-    mingw-w64-x86_64-nlohmann-json mingw-w64-x86_64-zlib
+    mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja \
+    mingw-w64-ucrt-x86_64-pkgconf \
+    mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-charts \
+    mingw-w64-ucrt-x86_64-qt6-serialport \
+    mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-libssh2 \
+    mingw-w64-ucrt-x86_64-nlohmann-json mingw-w64-ucrt-x86_64-zlib
 ```
 
 Compilateur, Qt et toutes les bibliothèques proviennent de la même source : c'est
 la configuration la plus simple pour compiler l'intégralité du parc.
+
+`morf build` prend le compilateur et Qt dans l'ordre du `PATH` : mettre
+`C:\msys64\ucrt64\bin` en tête. `morf doctor` signale un `PATH` qui pointe encore
+vers `mingw64` ou qui mélange un Qt officiel et le compilateur de MSYS2.
 
 #### Option B - Qt officiel + bibliothèques ajoutées
 
