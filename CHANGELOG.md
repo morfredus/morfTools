@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.39.2] - 2026-11-17
+
+### Fixed
+
+- `morf build` on Windows with an MSYS2 compiler: the Qt of that same MSYS2 prefix now wins over `CMAKE_PREFIX_PATH` and `Qt6_DIR` from the environment. A PowerShell profile pointing to the official Qt (`C:/Qt/<version>/mingw_64`) paired that Qt, and its `rcc` run by `AUTORCC`, with the MSYS2 compiler and DLLs, hence "The rcc list process failed" (exit code `0xc0000409`) on ComponentHub, LanAtlas, morfMonitor, PhotoHub and SiteWatch. The variables are dropped for the process and a `[WARN]` says so.
+- A `build-mingw` folder is also reset when its cache still references another MSYS2 environment (for example `Qt6_DIR` or `nlohmann_json_DIR` on `mingw64` while the compiler is `ucrt64`), or a Qt prefix different from the one in use. CMake keeps those paths when it reconfigures after a compiler change, which sent `-isystem` to the other runtime's headers and broke morfCollector and morfSync (`'quick_exit' has not been declared`).
+- Tests extended in `tests/test_stale_build.py`.
+
 ## [0.39.1] - 2026-11-17
 
 ### Fixed

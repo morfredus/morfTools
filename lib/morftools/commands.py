@@ -228,18 +228,30 @@ def detect_windows_toolchain() -> tuple:
     # the PATH (.../<qtver>/mingw_64/bin/qmake.exe -> .../<qtver>/mingw_64).
     prefix = os.environ.get("CMAKE_PREFIX_PATH", "")
     qt_via_env = bool(prefix or os.environ.get("Qt6_DIR"))
-    if not qt_via_env:
-        # MSYS2 : Qt et compilateur partagent un meme prefixe (C:/msys64/ucrt64). On le
-        # prefere a "le premier qmake du PATH" : un Qt officiel (C:/Qt/<ver>/mingw_64)
-        # place plus tot sur le PATH serait sinon associe au g++ de MSYS2, deux runtimes
-        # C melanges dans un meme build.
-        cxx_prefix = Path(cxx).resolve().parent.parent if cxx else None
-        if cxx_prefix and (cxx_prefix / "lib" / "cmake" / "Qt6").is_dir():
-            prefix = str(cxx_prefix)
-        else:
-            qmake = shutil.which("qmake6") or shutil.which("qmake")
-            if qmake:
-                prefix = str(Path(qmake).resolve().parent.parent)
+
+    # MSYS2 : Qt et compilateur partagent un meme prefixe (C:/msys64/ucrt64). Ce prefixe
+    # GAGNE, y compris sur CMAKE_PREFIX_PATH / Qt6_DIR de l'environnement : un profil
+    # PowerShell qui vise le Qt officiel (C:/Qt/<ver>/mingw_64) associerait sinon ce Qt (et son
+    # rcc, lance par AUTORCC) au g++ et aux DLL de MSYS2, deux runtimes C dans un meme build
+    # (« rcc list process failed », 0xc0000409, 2026-11-17). On ecarte alors ces variables pour
+    # ce processus et ses enfants, et on le dit.
+    cxx_prefix = Path(cxx).resolve().parent.parent if cxx else None
+    msys_qt = bool(cxx and cxx_prefix and (cxx_prefix / "lib" / "cmake" / "Qt6").is_dir()
+                   and re.search(r"[/\\](mingw64|ucrt64|clang64)[/\\]bin[/\\]", cxx, re.IGNORECASE))
+    if msys_qt:
+        def _outside(value):
+            return value and not str(value).replace("\\", "/").lower().startswith(
+                str(cxx_prefix).replace("\\", "/").lower())
+        for var in ("CMAKE_PREFIX_PATH", "Qt6_DIR"):
+            if _outside(os.environ.get(var, "")):
+                print(f"[WARN] {var}={os.environ[var]} ignore : le Qt du compilateur "
+                      f"({cxx_prefix}) est utilise")
+                del os.environ[var]
+        prefix, qt_via_env = str(cxx_prefix), False
+    if not qt_via_env and not msys_qt:
+        qmake = shutil.which("qmake6") or shutil.which("qmake")
+        if qmake:
+            prefix = str(Path(qmake).resolve().parent.parent)
     if prefix:
         overrides.append(f"-DCMAKE_PREFIX_PATH={prefix}")
     elif not qt_via_env:
@@ -300,6 +312,23 @@ def stale_build_reason(build_dir: Path, overrides) -> str:
         if old and old.group(1).lower() != now.group(1):
             return f"configure avec {old.group(1).lower()}, toolchain actuelle {now.group(1)}"
     prefix = found.get("-DCMAKE_PREFIX_PATH", "").split(";")[0]
+    if cache.is_file():
+        text = cache.read_text(encoding="utf-8", errors="replace")
+        # CMake reconfigure quand le compilateur change mais GARDE des chemins de paquets
+        # trouves avant (Qt6_DIR, nlohmann_json_DIR...) : un seul chemin d'un autre environnement
+        # MSYS2 suffit a envoyer -isystem vers les en-tetes de l'autre runtime (« 'quick_exit'
+        # has not been declared », morfCollector et morfSync, 2026-11-17).
+        if now:
+            other = {e.lower() for e in re.findall(r"/msys64/(mingw64|ucrt64|clang64)/",
+                                                   text.replace("\\", "/"), re.IGNORECASE)}
+            other.discard(now.group(1))
+            if other:
+                return f"le cache reference encore {', '.join(sorted(other))}"
+        qt_cache = re.search(r"^Qt6_DIR:PATH=(.*)/lib/cmake/Qt6\s*$", text.replace("\\", "/"),
+                             re.MULTILINE)
+        if qt_cache and prefix and \
+                qt_cache.group(1).rstrip("/").lower() != prefix.replace("\\", "/").rstrip("/").lower():
+            return f"Qt du cache ({qt_cache.group(1)}) different du Qt actuel ({prefix})"
     deployed = build_dir / "Qt6Core.dll"
     reference = Path(prefix) / "bin" / "Qt6Core.dll" if prefix else None
     if reference and deployed.is_file() and reference.is_file() \
