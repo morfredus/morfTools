@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.39.3] - 2026-11-18
+
+### Changed
+
+- `ENVIRONNEMENT-DEV`: the official Qt toolchain (option B) is documented as a closed toolchain that cannot be combined with MSYS2 UCRT64, no longer as the reference; MSYS2 UCRT64 is recognised for build libraries.
+
 ## [0.39.2] - 2026-11-17
 
 ### Fixed

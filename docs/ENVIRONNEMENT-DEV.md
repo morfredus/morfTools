@@ -8,9 +8,10 @@ Principe : le parc ne suppose plus l'environnement du poste principal. `morf bui
 détecte la toolchain réellement présente (Qt, MinGW, Ninja) et s'y adapte. Restent
 à fournir, une fois par machine, la **toolchain** et les **bibliothèques de
 compilation** listées ici. Sur Debian/Ubuntu/Mint, `morf install`/`build` sait même
-proposer d'installer les dépendances de build déclarées ; sur une toolchain sans
-gestionnaire de paquets (Qt officielle sous Windows), elles doivent être présentes
-au préalable.
+proposer d'installer les dépendances de build déclarées ; sous Windows, MSYS2 UCRT64
+est reconnu (les bibliothèques sont vérifiées avec `pacman`, jamais installées par le
+build) ; sur une toolchain sans gestionnaire de paquets (Qt officielle), elles doivent
+être présentes au préalable.
 
 ---
 
@@ -121,19 +122,22 @@ la configuration la plus simple pour compiler l'intégralité du parc.
 `C:\msys64\ucrt64\bin` en tête. `morf doctor` signale un `PATH` qui pointe encore
 vers `mingw64` ou qui mélange un Qt officiel et le compilateur de MSYS2.
 
-#### Option B - Qt officiel + bibliothèques ajoutées
+#### Option B - toolchain officielle de Qt (non retenue pour le parc)
 
-La toolchain de l'installeur Qt officiel (Qt + MinGW + Ninja + CMake sous
-`C:\Qt\...`) suffit pour les services **Qt-only** (morfAnalytics, morfMonitor,
-morfNotify, morfPhoto, morfSensor, morfTemplateService, morfUpdate, morfBeacon,
-PhotoHub, ComponentHub sans json…). `morf build` détecte cette toolchain et
-compile ces projets.
+L'installeur Qt officiel (Qt + MinGW 13 + Ninja + CMake sous `C:\Qt\...`) forme une
+toolchain **complète et fermée** : Qt, compilateur et runtime y sont compilés ensemble. Elle
+n'est plus la référence du parc, pour deux raisons :
 
-En revanche elle **ne fournit pas** OpenSSL, libssh2, nlohmann_json ni zlib :
-morfCollector, morfSync et SiteWatch ne compileront pas tant que ces
-bibliothèques ne sont pas disponibles pour cette toolchain MinGW (installées et
-visibles via `CMAKE_PREFIX_PATH` ou `pkg-config`). Fournir des versions
-**compatibles avec le MinGW de Qt**, ou basculer sur l'option A pour ces projets.
+- elle ne fournit ni OpenSSL, libssh2, nlohmann_json ni zlib : morfCollector, morfSync et
+  SiteWatch ne compilent pas sans bibliothèques ajoutées, compatibles avec ce MinGW ;
+- elle **ne se combine pas avec MSYS2** : un compilateur UCRT64 avec le Qt officiel (ou
+  l'inverse) mélange deux runtimes C et deux `libstdc++`. Résultat : `rcc` qui plante
+  (`The rcc list process failed`, code `0xc0000409`), ou un exécutable qui ne démarre pas
+  (« point d'entrée introuvable »).
+
+Sur une machine qui n'a que cette toolchain, `morf build` la détecte et compile les services
+Qt-only. Ne jamais la laisser sur le `PATH` ni dans `CMAKE_PREFIX_PATH` à côté d'UCRT64 :
+`morf build` ignore alors `CMAKE_PREFIX_PATH` au profit du Qt de MSYS2 et le signale.
 
 ---
 
