@@ -67,3 +67,8 @@ en tête suffit. Deux garde-fous s'ajoutent :
   compilateur et un Qt de préfixes différents.
 
 Les chemins figés ci-dessus (`C:/msys64/mingw64/...`) sont historiques.
+
+Suites (0.39.1 et 0.39.2) : le Qt du préfixe MSYS2 du compilateur l'emporte aussi sur
+`CMAKE_PREFIX_PATH` et `Qt6_DIR` de l'environnement (avertissement), et un `build-mingw` dont
+le cache référence un autre environnement, ou dont la `Qt6Core.dll` diffère, est supprimé avant
+la configuration. Voir `ENVIRONNEMENT-DEV` (environnement Windows de référence).

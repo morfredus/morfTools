@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.39.4] - 2026-11-18
+
+### Changed
+
+- Documentation: new "environnement Windows de référence" section in `ENVIRONNEMENT-DEV` (user `PATH`, `QT_ROOT`, PowerShell profile, VS Code terminal profile, build folders, symptoms of mixed environments); `SCRIPTS` describes the DLL alignment of `deploy-mingw.sh`; `CHANTIER-BUILD-TOOLCHAIN` covers 0.39.1 and 0.39.2.
+
 ## [0.39.3] - 2026-11-18
 
 ### Changed

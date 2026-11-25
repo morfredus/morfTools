@@ -122,6 +122,27 @@ la configuration la plus simple pour compiler l'intégralité du parc.
 `C:\msys64\ucrt64\bin` en tête. `morf doctor` signale un `PATH` qui pointe encore
 vers `mingw64` ou qui mélange un Qt officiel et le compilateur de MSYS2.
 
+#### Environnement Windows de référence
+
+Pour que le terminal, VS Code et les scripts voient le même environnement :
+
+- **`PATH` utilisateur** : `C:\msys64\ucrt64\bin` en premier ; ni `mingw64\bin` ni `C:\Qt\...`.
+- **`QT_ROOT`** = `C:\msys64\ucrt64` : les presets `mingw` lisent `CMAKE_PREFIX_PATH = $env{QT_ROOT}`.
+  Ne pas définir `CMAKE_PREFIX_PATH` ni `Qt6_DIR` globalement (ils imposeraient un Qt à tous les
+  projets) ; `morf build` les ignore d'ailleurs au profit du Qt du compilateur MSYS2 et le signale.
+- **Profil PowerShell** : ne pas y mettre le Qt officiel en tête du `PATH` (ni `CMAKE_PREFIX_PATH`).
+- **Terminal VS Code** : profil `MSYS2 UCRT64` par défaut (`C:\msys64\usr\bin\bash.exe --login -i`,
+  variables `MSYSTEM=UCRT64`, `CHERE_INVOKING=1`, `QT_ROOT=C:/msys64/ucrt64`). Un shell MINGW64
+  compile avec le mauvais compilateur (`echo $MSYSTEM` doit afficher `UCRT64`).
+- **Dossiers de build** : un `build-mingw` ne doit pas recevoir les DLL de deux environnements.
+  `morf build` le réinitialise quand son cache vient d'un autre environnement MSYS2 ou que sa
+  `Qt6Core.dll` diffère de celle du Qt utilisé ; les scripts `deploy-mingw.sh` des applications
+  graphiques alignent aussi les DLL sur le compilateur.
+
+Symptômes d'un mélange d'environnements : `The rcc list process failed` (code `0xc0000409`),
+`'quick_exit' has not been declared` (en-têtes de l'autre runtime repris d'un cache périmé), ou un
+exécutable qui ne démarre pas (« point d'entrée introuvable » : `libstdc++` d'un autre environnement).
+
 #### Option B - toolchain officielle de Qt (non retenue pour le parc)
 
 L'installeur Qt officiel (Qt + MinGW 13 + Ninja + CMake sous `C:\Qt\...`) forme une
