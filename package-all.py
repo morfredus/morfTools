@@ -541,9 +541,17 @@ def _ci_run_for_commit(project, workflow: str, sha: str, wait: bool) -> tuple:
         except json.JSONDecodeError:
             return []
 
+    def success(found):
+        ok = [r for r in found if r.get("conclusion") == "success"]
+        return ok[0]["databaseId"] if ok else None
+
     runs = listing()
+    # A finished successful run wins at once, whatever else is running for the commit
+    # (for example the run of the tag, which only repeats the run of the branch push).
+    if success(runs) is not None:
+        return repo, success(runs), ""
     if not runs and wait:
-        # A tag pushed seconds ago (release creation) starts its run with a short delay.
+        # A run started seconds ago (push, tag) may not be listed yet.
         import time
         for _ in range(CI_GRACE_SECONDS // 10):
             time.sleep(10)
@@ -558,9 +566,8 @@ def _ci_run_for_commit(project, workflow: str, sha: str, wait: bool) -> tuple:
                         "--repo", repo, "--exit-status"],
                        cwd=project.path, capture_output=True, check=False)
         runs = listing()
-    ok = [r for r in runs if r.get("conclusion") == "success"]
-    if ok:
-        return repo, ok[0]["databaseId"], ""
+    if success(runs) is not None:
+        return repo, success(runs), ""
     if any(r.get("status") != "completed" for r in runs):
         return repo, None, "a CI run is still in progress (use --wait-ci)"
     return repo, None, f"no successful {workflow} run for {sha[:8]}"

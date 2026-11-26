@@ -109,6 +109,22 @@ class CiPackageTest(unittest.TestCase):
         (status, _), _ = self.fetch()
         self.assertIn("--wait-ci", status)
 
+    def test_finished_success_wins_over_a_run_in_progress(self):
+        # e.g. the run of the branch push is done while the run of the tag is still going
+        self.runs = [{"databaseId": 9, "status": "in_progress", "conclusion": None},
+                     {"databaseId": 42, "status": "completed", "conclusion": "success"}]
+        waited = []
+        original = package_all.subprocess.run
+        package_all.subprocess.run = lambda *a, **k: waited.append(a) or original(*a, **k)
+        try:
+            out = self.tmp / "dist"
+            status, _ = package_all._fetch_ci_package(self.project, FakeTarget(CI), out,
+                                                      VERSION, False, True)
+        finally:
+            package_all.subprocess.run = original
+        self.assertEqual(status, "built")
+        self.assertEqual(waited, [], "must not wait when a successful run exists")
+
     def test_expired_artifact_is_unavailable(self):
         self.download_ok = False
         (status, _), _ = self.fetch()

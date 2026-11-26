@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.40.3] - 2026-11-26
+
+### Fixed
+
+- `package-all.py --wait-ci` no longer waits for a run in progress when a successful run already exists for the commit (typically the run of the branch push, while the run of the tag is still going): the finished run is used at once. Test added.
+
 ## [0.40.2] - 2026-11-26
 
 ### Added
