@@ -808,9 +808,9 @@ def main(argv=None) -> int:
                     if ci_status == "built":
                         error = _release_metadata(project, target, ci_artifact, version)
                         ci_result = (f"FAILED ({error})" if error
-                                     else "built locally (publication deferred)")
+                                     else "ready from CI (publication deferred)")
                     print(f"    -> {ci_result}")
-                    if ci_result == "built locally (publication deferred)":
+                    if ci_result == "ready from CI (publication deferred)":
                         produced += 1
                     elif ci_result.startswith("FAILED"):
                         failed += 1

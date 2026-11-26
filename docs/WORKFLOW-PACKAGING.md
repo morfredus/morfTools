@@ -335,7 +335,9 @@ Pour chaque cible qui porte un bloc `ci`, dans l'ordre :
 Options : `--no-ci` compile tout en local ; `--wait-ci` attend le run du commit (même s'il n'est pas
 encore apparu, 90 s au plus après la création du tag) **pour les cibles que la machine ne sait pas
 compiler** ; une cible native se compile plus vite qu'elle n'attend le run, elle ne prend donc le
-paquet CI que si le run est déjà terminé. Les chaînes de release passent `--wait-ci`. Pour éviter
+paquet CI que si le run est déjà terminé. Les chaînes de release passent `--wait-ci`, et `morf dev build --skip-ci-packaged` à l'étape 3/5 :
+un projet dont tous les livrables natifs viennent de la CI n'est pas compilé en préparation (le
+packaging le compile de lui-même si aucun run n'existe). Pour éviter
 toute compilation locale d'une cible native, laisser `packages.yml` finir sur le commit (il tourne à chaque
 push sur `main`, ou en lancement manuel) avant la chaîne : un run réussi du commit est utilisé
 tout de suite, même si un autre run du même commit est encore en cours. Les artefacts GitHub expirent (14 jours pour ComponentHub) : passé

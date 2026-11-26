@@ -963,6 +963,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Restrict to one project, by canonical name")
     parser.add_argument("--gui", action="store_true",
                         help="build/upgrade: build desktop GUI apps even on a headless machine")
+    parser.add_argument("--skip-ci-packaged", action="store_true",
+                        help="build: skip a project whose deliverables for this machine "
+                             "come from a CI run (package.ci in morfproject.json): the "
+                             "release chain does not need to compile it here first")
     parser.add_argument("--force", action="store_true",
                         help="upgrade: redeploy and restart each service even when "
                              "nothing changed. purge: erase even while the service "
@@ -1009,6 +1013,35 @@ def build_parser() -> argparse.ArgumentParser:
 #: expects from it.
 DEV_COMMANDS = {"clone", "fetch", "pull", "status", "push", "commit",
                 "build", "clean"}
+
+
+def _packaged_by_ci(project_path) -> bool:
+    """True when EVERY deliverable this machine builds natively is declared as coming
+    from a CI run (`package.ci` in morfproject.json). Then the release chain's
+    preparatory compile is wasted work: package-all takes the CI package, and compiles
+    by itself (configure + build) only when no run exists for the commit.
+
+    A project without a morfproject.json, a service, or a firmware is never skipped.
+    """
+    import platform as _platform
+    from . import morfproject
+    try:
+        declared = morfproject.load(project_path)
+    except morfproject.MorfProjectError:
+        return False
+    if declared is None or declared.provider != "project":
+        return False
+    system = _platform.system()
+    machine = _platform.machine().lower()
+    cur_os = "windows" if system == "Windows" else system.lower()
+    cur_arch = "arm64" if machine in ("aarch64", "arm64") else (
+        "x86_64" if machine in ("x86_64", "amd64") else machine)
+    if system == "Windows":
+        cur_arch = "x86_64"
+    native = [t for t in declared.targets.values()
+              if t.build.get("tool") != "platformio"
+              and t.os == cur_os and t.arch == cur_arch]
+    return bool(native) and all(t.package.get("ci") for t in native)
 
 
 def _expand_dev(args) -> int | None:
@@ -1125,6 +1158,9 @@ def main(argv: list | None = None) -> int:
         return 2
     if args.update and args.command != "doctor":
         print("--update only applies to doctor.", file=sys.stderr)
+        return 2
+    if args.skip_ci_packaged and args.command != "build":
+        print("--skip-ci-packaged only applies to build.", file=sys.stderr)
         return 2
     if args.gui and args.command not in ("build", "upgrade"):
         print("--gui only applies to build and upgrade.", file=sys.stderr)
@@ -1274,6 +1310,11 @@ def main(argv: list | None = None) -> int:
         _project_banner(project.local_name)
         if args.command != "clone" and not project.exists:
             print(f"[SKIP] {project.local_name} (not cloned)")
+            continue
+
+        if args.command == "build" and args.skip_ci_packaged and _packaged_by_ci(project.path):
+            print(f"[SKIP] {project.local_name}: its packages for this machine come from "
+                  "a CI run (package-all builds locally only if no run is found)")
             continue
 
         try:

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.41.0] - 2026-11-26
+
+### Added
+
+- `morf build --skip-ci-packaged`: skips a project when every deliverable this machine builds natively is declared as coming from a CI run (`package.ci`). The release chains (Windows and Linux) pass it: their step 3/5 compiled ComponentHub in full although `package-all.py` then took all four packages from the CI run. `package-all.py` still configures and builds by itself when no run exists for the commit, so nothing is lost. Services, firmware and projects without `package.ci` are never skipped.
+
+### Changed
+
+- `package-all.py` reports a package taken from CI as `ready from CI (publication deferred)` instead of `built locally`.
+
 ## [0.40.3] - 2026-11-26
 
 ### Fixed
