@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.42.1] - 2026-11-26
+
+### Fixed
+
+- `gen-ci-workflows.py`: the Windows package job of morfdeploy services installs `git` in MSYS2 and marks the checkout as a safe directory. Without it the packaging refused to build ("build provenance is dirty=None"), as seen on the first CI runs of morfSync, morfNotify and morfPhoto.
+
+### Added
+
+- `gen-ci-workflows.py --fix TEXT`: patch bump, badges and a `Fixed` CHANGELOG entry after a workflow correction.
+
 ## [0.42.0] - 2026-11-26
 
 ### Added
