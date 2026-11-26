@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.42.0] - 2026-11-26
+
+### Added
+
+- `scripts/gen-ci-workflows.py`: generates the GitHub Actions workflows of every project that declares packaging targets (`ci.yml`, `packages.yml`, `scripts/ci/build-deb-container.sh`) and the `package.ci` block of each target, from `morfproject.json` and the `find_package` calls of the project's `CMakeLists.txt`. Three kinds: CMake applications, morfdeploy services and PlatformIO firmware (a firmware that compiles `secrets.h` gets only `ci.yml`). `--write`, `--bump`, `--only`; idempotent.
+
+### Changed
+
+- `package-all.py` names a package taken from CI exactly as a local build does for morfdeploy services, firmware and source bundles (`_public_name`), and can take a firmware target from CI when PlatformIO is absent.
+- `morf build --skip-ci-packaged` also covers morfdeploy services.
+
 ## [0.41.0] - 2026-11-26
 
 ### Added

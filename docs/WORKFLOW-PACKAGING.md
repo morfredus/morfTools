@@ -344,6 +344,33 @@ tout de suite, même si un autre run du même commit est encore en cours. Les ar
 ce délai, la compilation locale reprend. Le nom d'artefact et le motif `file` doivent
 correspondre à ce que le workflow publie (`{version}` est remplacé par le contenu de `VERSION`).
 
+## Workflows GitHub Actions des projets (générés)
+
+Les workflows de tous les projets sont **générés** par `scripts/gen-ci-workflows.py` : on corrige
+le générateur, jamais un `ci.yml` à la main. Pour chaque projet qui déclare des cibles de paquets
+dans `morfproject.json`, il écrit `.github/workflows/ci.yml` (compile et lance `ctest` à chaque
+pull request : Ubuntu 24.04 = Qt 6.4, Linux arm64, Windows MSYS2 UCRT64), `.github/workflows/packages.yml`
+(les paquets, à chaque push sur `main` ou en lancement manuel), `scripts/ci/build-deb-container.sh`
+(le `.deb` construit dans un conteneur Debian Trixie, comme celui du Pi) et le bloc `package.ci`
+de chaque cible. Les dépendances de compilation viennent du `CMakeLists.txt` du projet
+(`find_package`), sans liste à tenir à la main.
+
+```powershell
+python scripts\gen-ci-workflows.py                       # plan, rien n'est écrit
+python scripts\gen-ci-workflows.py --write --only morfMonitor
+python scripts\gen-ci-workflows.py --write --bump        # + version mineure, badges, CHANGELOG, README
+```
+
+Trois familles : application CMake (`package-deb.sh`, `package-win.ps1`), service morfdeploy
+(`service.py package --target ...`) et firmware PlatformIO. Un firmware qui compile des valeurs
+privées (`include/secrets.h` : Wi-Fi, clé d'API, jeton) n'a que le `ci.yml` : un binaire fabriqué
+avec le `secrets_example.h` serait inutilisable, il reste construit en local. Les projets sans
+paquet (bibliothèque, outil, documentation, gabarit) et `morfDashboard` (archive source) n'ont pas
+de workflow.
+
+Les dépôts **sandbox** ont GitHub Actions désactivé : les workflows y sont versionnés mais ne
+tournent qu'en production (réactivation : `gh api -X PUT repos/<dépôt>/actions/permissions -F enabled=true`).
+
 ## Commandes ciblées et contrôles
 
 Pour limiter le parcours à quelques projets, remplacer `--all` par `--only` et

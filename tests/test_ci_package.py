@@ -34,6 +34,8 @@ class FakeTarget:
     name = "linux-arm64-deb"
     os = "linux"
     arch = "arm64"
+    build = {}
+    provider = "project"
 
     def __init__(self, ci=None):
         self.package = {"format": "deb", "architecture": "arm64", "script": "x.sh"}
@@ -124,6 +126,23 @@ class CiPackageTest(unittest.TestCase):
             package_all.subprocess.run = original
         self.assertEqual(status, "built")
         self.assertEqual(waited, [], "must not wait when a successful run exists")
+
+    def test_public_name_follows_the_provider(self):
+        project = FakeProject(self.tmp)
+        (self.tmp / "service.json").write_text('{"service_name": "morfmonitor"}', encoding="utf-8")
+
+        class Svc(FakeTarget):
+            provider = "morfdeploy"
+        deb = Svc(CI)
+        self.assertEqual(package_all._public_name(project, deb, "1.2.3"),
+                         "morfmonitor-1.2.3-linux-arm64.deb")
+
+        class Fw(FakeTarget):
+            provider = "project"
+            name = "esp32s3-ota"
+            build = {"tool": "platformio", "env": "hub"}
+        self.assertEqual(package_all._public_name(project, Fw(CI), "1.2.3"),
+                         "componenthub-1.2.3-esp32s3-ota.bin")
 
     def test_expired_artifact_is_unavailable(self):
         self.download_ok = False

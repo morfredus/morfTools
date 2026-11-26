@@ -1029,7 +1029,7 @@ def _packaged_by_ci(project_path) -> bool:
         declared = morfproject.load(project_path)
     except morfproject.MorfProjectError:
         return False
-    if declared is None or declared.provider != "project":
+    if declared is None or declared.provider not in ("project", "morfdeploy"):
         return False
     system = _platform.system()
     machine = _platform.machine().lower()

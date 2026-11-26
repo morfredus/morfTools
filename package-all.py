@@ -195,6 +195,24 @@ def _script_artifact_name(project, target, version: str) -> str:
     return f"{project.name.lower()}-{version}-{target.os}-{arch}.{fmt}"
 
 
+def _public_name(project, target, version: str) -> str:
+    """Name of a target's deliverable in the shared dist, whoever produced it.
+
+    One rule for a local build and for a package taken from CI, so both land under the
+    same name: morfdeploy services (service-version-os-arch), PlatformIO firmware
+    (project-version-target.bin), source bundles, and project scripts.
+    """
+    if target.package.get("format") == "source-bundle":
+        return _source_bundle_name(project, version)
+    if target.build.get("tool") == "platformio":
+        return f"{project.name.lower()}-{version}-{target.name}.bin"
+    if target.provider == "morfdeploy":
+        name = _expected_name(project, target, _service_name(project.path), version)
+        if name:
+            return name
+    return _script_artifact_name(project, target, version)
+
+
 def _source_bundle_name(project, version: str) -> str:
     """Canonical name of a source-bundle deliverable (projet non compilé).
 
@@ -612,7 +630,7 @@ def _fetch_ci_package(project, target, out: Path, version: str, dry: bool,
     if len(found) != 1:
         return f"unavailable: expected one file {wanted} in the artifact, found {len(found)}", None
     out.mkdir(parents=True, exist_ok=True)
-    artifact = out / _script_artifact_name(project, target, version)
+    artifact = out / _public_name(project, target, version)
     shutil.copy2(found[0], artifact)
     print(f"    downloaded from CI run {run_id}: {artifact.name}")
     target.package["_ci_run"] = {"repo": repo, "run_id": run_id, "workflow": workflow}
@@ -748,8 +766,7 @@ def main(argv=None) -> int:
         # Targets this machine cannot build but a CI run can supply (declared `ci` block).
         ci_only = [] if args.no_ci else [
             t for t in declared.targets.values()
-            if t.package.get("ci") and t not in native and t not in cross
-            and t.build.get("tool") != "platformio"]
+            if t.package.get("ci") and t not in native and t not in cross]
         to_build = native + cross + ci_only
         svc = _service_name(project.path)
         version = _read_first_line(project.path / "VERSION") or "0.0.0"
