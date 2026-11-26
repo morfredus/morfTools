@@ -309,6 +309,34 @@ gh release edit "v${version}" \
   --title "${project} - v${version}" --notes "$notes"
 ```
 
+## Prendre les paquets d'un run GitHub Actions
+
+Un projet dont le dépôt a un workflow de paquets (ComponentHub : `packages.yml`) peut le
+déclarer, **cible par cible**, dans `morfproject.json`. `package-all.py` récupère alors le
+paquet du run GitHub Actions au lieu de le compiler. Les projets sans bloc `ci` ne changent
+pas : le workflow n'est jamais exigé ni lancé par le script.
+
+```json
+"package": { "format": "deb", "architecture": "arm64",
+             "ci": { "workflow": "packages.yml",
+                     "artifact": "componenthub-deb-arm64",
+                     "file": "componenthub_{version}_arm64.deb" } }
+```
+
+Pour chaque cible qui porte un bloc `ci`, dans l'ordre :
+
+1. un paquet valide déjà présent dans `dist` (avec sa provenance) est conservé ;
+2. sinon, un run **réussi** du workflow est cherché pour le commit exact extrait (`HEAD`).
+   Un run d'un autre commit ou en échec n'est jamais utilisé. L'artefact est téléchargé,
+   renommé au nom public et reçoit son `.metadata.json`, qui consigne le run (`ci.run_id`) ;
+3. sinon, la cible est compilée en local comme avant. Une cible non native pour la machine
+   (Windows depuis WSL, arm64 depuis un x86_64) est alors ignorée : seul un run CI peut la fournir.
+
+Options : `--no-ci` compile tout en local ; `--wait-ci` attend un run encore en cours pour le
+commit au lieu de compiler. Les artefacts GitHub expirent (14 jours pour ComponentHub) : passé
+ce délai, la compilation locale reprend. Le nom d'artefact et le motif `file` doivent
+correspondre à ce que le workflow publie (`{version}` est remplacé par le contenu de `VERSION`).
+
 ## Commandes ciblées et contrôles
 
 Pour limiter le parcours à quelques projets, remplacer `--all` par `--only` et

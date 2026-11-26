@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.40.0] - 2026-11-26
+
+### Added
+
+- `package-all.py` can take a package from a GitHub Actions run instead of compiling it. A target opts in with a `package.ci` block in `morfproject.json` (`workflow`, `artifact`, `file`). The run must be a successful one for the exact commit being released; the file is downloaded, renamed to the public package name and given a provenance sidecar that records the run (`ci.run_id`). Without such a run the target is built locally as before, and a target not native to the machine is skipped. Projects without a `ci` block are unaffected; the script never starts a workflow.
+- Options `--no-ci` (build everything locally) and `--wait-ci` (wait for a run still in progress for that commit).
+- `tests/test_ci_package.py` (fake `gh`: run selection, expired or ambiguous artifact, provenance).
+
 ## [0.39.4] - 2026-11-18
 
 ### Changed

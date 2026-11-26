@@ -25,7 +25,23 @@ already indexed.
 
 
     python3 package-all.py [--sync] [--dry-run] [--force] [--out DIR] [--only NAME ...]
-                           [--with-arm64-cross]
+                           [--with-arm64-cross] [--no-ci] [--wait-ci]
+
+CI artifacts (optional, per target). A target whose ``package.ci`` block names a
+GitHub Actions workflow and an artifact is first looked up in the SUCCESSFUL run of
+that workflow for the exact commit being released; the file is downloaded into the
+shared dist, renamed to the public packaging name and given a provenance sidecar
+(with the run id). When there is no such run (or ``--no-ci``), the target is built
+locally exactly as before. A target not native to this machine is then skipped: only
+a CI run can supply it. A project without any ``ci`` block is untouched.
+
+    "package": { "format": "deb", "architecture": "arm64",
+                 "ci": { "workflow": "packages.yml",
+                         "artifact": "componenthub-deb-arm64",
+                         "file": "componenthub_{version}_arm64.deb" } }
+
+``--wait-ci`` waits for a run still in progress for that commit instead of building
+locally. The workflow is never started by this script.
 
 ``--with-arm64-cross`` additionally cross-builds each project's Linux arm64 target
 from an x86_64 Linux host (WSL): it widens the selection, and the project's own
@@ -367,6 +383,8 @@ def _release_metadata(project, target, artifact: Path, version: str) -> str | No
         "format": target.package.get("format"),
         "built_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
+    if target.package.get("_ci_run"):
+        metadata["ci"] = target.package["_ci_run"]
     sidecar = artifact.with_name(f"{artifact.name}.metadata.json")
     sidecar.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     print(f"    provenance: {sidecar.name}")
@@ -484,6 +502,106 @@ def _package_project_script(project, target, out: Path, version: str, dry: bool)
     return "built"
 
 
+_CI_DOWNLOADS: dict = {}
+
+
+def _git_head(project_path: Path) -> str | None:
+    result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project_path,
+                            text=True, capture_output=True, check=False)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def _gh(args: list, cwd: Path) -> str | None:
+    """Stdout of a gh call, or None on any failure (gh absent, not logged in, offline)."""
+    gh = shutil.which("gh")
+    if gh is None:
+        return None
+    result = subprocess.run([gh, *args], cwd=cwd, text=True, capture_output=True, check=False)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def _ci_run_for_commit(project, workflow: str, sha: str, wait: bool) -> tuple:
+    """(repo, run id, note) of the successful run of `workflow` for `sha`.
+
+    run id is None when there is none; `note` says why, in plain words.
+    """
+    repo = _gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
+               project.path)
+    if not repo:
+        return None, None, "gh unavailable or repository unknown"
+
+    def listing():
+        raw = _gh(["run", "list", "--repo", repo, "--workflow", workflow, "--commit", sha,
+                   "--json", "databaseId,status,conclusion", "--limit", "20"],
+                  project.path)
+        try:
+            return json.loads(raw) if raw else []
+        except json.JSONDecodeError:
+            return []
+
+    runs = listing()
+    pending = [r for r in runs if r.get("status") != "completed"]
+    if pending and wait:
+        run_id = pending[0]["databaseId"]
+        print(f"    CI run {run_id} in progress for {sha[:8]}: waiting")
+        subprocess.run([shutil.which("gh") or "gh", "run", "watch", str(run_id),
+                        "--repo", repo, "--exit-status"],
+                       cwd=project.path, capture_output=True, check=False)
+        runs = listing()
+    ok = [r for r in runs if r.get("conclusion") == "success"]
+    if ok:
+        return repo, ok[0]["databaseId"], ""
+    if any(r.get("status") != "completed" for r in runs):
+        return repo, None, "a CI run is still in progress (use --wait-ci)"
+    return repo, None, f"no successful {workflow} run for {sha[:8]}"
+
+
+def _fetch_ci_package(project, target, out: Path, version: str, dry: bool,
+                      wait: bool) -> tuple:
+    """Take the deliverable of a target from a CI run instead of compiling it.
+
+    Returns (status, artifact): status is "built" when the file is in `out` under its
+    public name (provenance not yet written), "planned" in a dry run, otherwise
+    "unavailable: <why>". The run must belong to the very commit checked out here,
+    which `_release_metadata` then records, so a package built from another commit
+    can never be released.
+    """
+    ci = target.package.get("ci") or {}
+    workflow, artifact_name, pattern = ci.get("workflow"), ci.get("artifact"), ci.get("file")
+    if not (workflow and artifact_name and pattern):
+        return "unavailable: incomplete ci block (workflow, artifact, file)", None
+    sha = _git_head(project.path)
+    if not sha:
+        return "unavailable: Git commit cannot be read", None
+    repo, run_id, note = _ci_run_for_commit(project, workflow, sha, wait)
+    if run_id is None:
+        return f"unavailable: {note}", None
+    if dry:
+        print(f"    would download artifact {artifact_name} of run {run_id} ({repo})")
+        return "planned", None
+    key = (repo, run_id, artifact_name)
+    folder = _CI_DOWNLOADS.get(key)
+    if folder is None:
+        import tempfile
+        folder = Path(tempfile.mkdtemp(prefix="morf-ci-"))
+        if _gh(["run", "download", str(run_id), "--repo", repo, "-n", artifact_name,
+                "-D", str(folder)], project.path) is None:
+            shutil.rmtree(folder, ignore_errors=True)
+            return (f"unavailable: artifact {artifact_name} missing or expired "
+                    f"in run {run_id}"), None
+        _CI_DOWNLOADS[key] = folder
+    wanted = pattern.replace("{version}", version)
+    found = [path for path in folder.rglob("*") if path.is_file() and path.match(wanted)]
+    if len(found) != 1:
+        return f"unavailable: expected one file {wanted} in the artifact, found {len(found)}", None
+    out.mkdir(parents=True, exist_ok=True)
+    artifact = out / _script_artifact_name(project, target, version)
+    shutil.copy2(found[0], artifact)
+    print(f"    downloaded from CI run {run_id}: {artifact.name}")
+    target.package["_ci_run"] = {"repo": repo, "run_id": run_id, "workflow": workflow}
+    return "built", artifact
+
+
 def _package_firmware(project, target, out: Path, version: str, dry: bool) -> str:
     """Build the firmware and rename its .bin, when PlatformIO is available."""
     if shutil.which("pio") is None and shutil.which("platformio") is None:
@@ -524,6 +642,10 @@ def main(argv=None) -> int:
                         help="shared distribution directory (default: <workspace>/dist)")
     parser.add_argument("--only", nargs="*", default=None, metavar="NAME",
                         help="restrict to these project names")
+    parser.add_argument("--no-ci", action="store_true",
+                        help="never take a package from a GitHub Actions run: build locally")
+    parser.add_argument("--wait-ci", action="store_true",
+                        help="wait for a CI run still in progress for the released commit")
     parser.add_argument("--with-arm64-cross", action="store_true",
                         help="ALSO cross-build each project's Linux arm64 target from "
                              "an x86_64 Linux host (WSL). Needs a prepared sysroot "
@@ -605,7 +727,12 @@ def main(argv=None) -> int:
         # (on a real arm64 host it is already native). Empty unless the host can cross.
         cross = _cross_targets(project, declared) if args.with_arm64_cross else []
         cross = [t for t in cross if t not in native]
-        to_build = native + cross
+        # Targets this machine cannot build but a CI run can supply (declared `ci` block).
+        ci_only = [] if args.no_ci else [
+            t for t in declared.targets.values()
+            if t.package.get("ci") and t not in native and t not in cross
+            and t.build.get("tool") != "platformio"]
+        to_build = native + cross + ci_only
         svc = _service_name(project.path)
         version = _read_first_line(project.path / "VERSION") or "0.0.0"
         notes = _project_release_notes(project, version, args.release_notes)
@@ -651,6 +778,26 @@ def main(argv=None) -> int:
 
             print(f"  {target.name} -> provider {target.provider}, "
                   f"format {target.package.get('format')}")
+            if target.package.get("ci") and not args.no_ci:
+                ci_status, ci_artifact = _fetch_ci_package(
+                    project, target, out, version, args.dry_run, args.wait_ci)
+                if ci_status in ("built", "planned"):
+                    ci_result = ci_status
+                    if ci_status == "built":
+                        error = _release_metadata(project, target, ci_artifact, version)
+                        ci_result = (f"FAILED ({error})" if error
+                                     else "built locally (publication deferred)")
+                    print(f"    -> {ci_result}")
+                    if ci_result == "built locally (publication deferred)":
+                        produced += 1
+                    elif ci_result.startswith("FAILED"):
+                        failed += 1
+                    continue
+                print(f"    CI: {ci_status}")
+                if target in ci_only:
+                    print("    -> skipped (not native here, no CI package)")
+                    skipped += 1
+                    continue
             before = set(out.glob(f"*.{target.package.get('format')}")) if out.exists() else set()
             if target.package.get("format") == "source-bundle":
                 # Projet non compilé : c'est le service.py du projet qui sait
