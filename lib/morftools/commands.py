@@ -278,6 +278,16 @@ def windows_toolchain_warnings(overrides) -> list:
         if "/msys64/" in cxx_root and qt.split(";")[0].rstrip("/") != cxx_root:
             warnings.append("compilateur et Qt ne viennent pas du meme prefixe "
                             f"({cxx_root} / {qt.split(';')[0]}) : runtimes melanges")
+    # deploy-mingw.sh compare les DLL avec `cmp` (paquet MSYS2 diffutils). Sans lui, la
+    # comparaison echoue en silence et une DLL perimee d'un autre environnement n'est pas
+    # remplacee (le build reussit quand meme, d'ou l'avertissement ici).
+    if "/msys64/" in cxx:
+        msys_root = cxx.split("/msys64/", 1)[0] + "/msys64"
+        # Seul le /usr/bin de MSYS2 compte : le script y fixe son PATH, un cmp de Git for
+        # Windows sur le PATH de Windows ne lui sert pas.
+        if not Path(msys_root, "usr", "bin", "cmp.exe").is_file():
+            warnings.append("cmp introuvable (paquet MSYS2 diffutils) : deploy-mingw.sh ne "
+                            "remplace pas les DLL perimees. Installer : pacman -S diffutils")
     return warnings
 
 

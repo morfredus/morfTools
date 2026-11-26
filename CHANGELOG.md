@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.40.2] - 2026-11-26
+
+### Added
+
+- `morf doctor` and `morf build` warn when `cmp` (MSYS2 package `diffutils`) is missing on a Windows machine with an MSYS2 compiler: `deploy-mingw.sh` needs it to replace stale DLLs, and without it the build still succeeds but keeps DLLs from another MSYS2 environment. `diffutils` is added to the `pacman` line of `ENVIRONNEMENT-DEV`.
+
+## [0.40.1] - 2026-11-26
+
+### Fixed
+
+- `package-all.py --wait-ci` now waits for the CI run of the commit even when it has not appeared yet (up to 90 s: a run started by the tag that the release step has just pushed), and only for targets this machine cannot build. The release chains (Windows and Linux) pass `--wait-ci`. Before, the run of a tag created seconds earlier was seen as missing or in progress and everything was compiled locally.
+
 ## [0.40.0] - 2026-11-26
 
 ### Added

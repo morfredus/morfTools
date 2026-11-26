@@ -40,8 +40,9 @@ a CI run can supply it. A project without any ``ci`` block is untouched.
                          "artifact": "componenthub-deb-arm64",
                          "file": "componenthub_{version}_arm64.deb" } }
 
-``--wait-ci`` waits for a run still in progress for that commit instead of building
-locally. The workflow is never started by this script.
+``--wait-ci`` waits for the run of that commit (also while it has not appeared yet, up
+to 90 s after a tag push) -- but only for targets this machine cannot build; a native
+target is quicker to compile than to wait for. The workflow is never started here.
 
 ``--with-arm64-cross`` additionally cross-builds each project's Linux arm64 target
 from an x86_64 Linux host (WSL): it widens the selection, and the project's own
@@ -503,6 +504,7 @@ def _package_project_script(project, target, out: Path, version: str, dry: bool)
 
 
 _CI_DOWNLOADS: dict = {}
+CI_GRACE_SECONDS = 90   # how long --wait-ci waits for a run to APPEAR for the commit
 
 
 def _git_head(project_path: Path) -> str | None:
@@ -540,6 +542,14 @@ def _ci_run_for_commit(project, workflow: str, sha: str, wait: bool) -> tuple:
             return []
 
     runs = listing()
+    if not runs and wait:
+        # A tag pushed seconds ago (release creation) starts its run with a short delay.
+        import time
+        for _ in range(CI_GRACE_SECONDS // 10):
+            time.sleep(10)
+            runs = listing()
+            if runs:
+                break
     pending = [r for r in runs if r.get("status") != "completed"]
     if pending and wait:
         run_id = pending[0]["databaseId"]
@@ -645,7 +655,8 @@ def main(argv=None) -> int:
     parser.add_argument("--no-ci", action="store_true",
                         help="never take a package from a GitHub Actions run: build locally")
     parser.add_argument("--wait-ci", action="store_true",
-                        help="wait for a CI run still in progress for the released commit")
+                        help="wait (up to the end of the run) for a CI package of a "
+                             "target this machine cannot build; native targets are never waited for")
     parser.add_argument("--with-arm64-cross", action="store_true",
                         help="ALSO cross-build each project's Linux arm64 target from "
                              "an x86_64 Linux host (WSL). Needs a prepared sysroot "
@@ -779,8 +790,12 @@ def main(argv=None) -> int:
             print(f"  {target.name} -> provider {target.provider}, "
                   f"format {target.package.get('format')}")
             if target.package.get("ci") and not args.no_ci:
+                # Waiting only pays off for a target this machine cannot build: a native one
+                # is quicker to compile than to wait for the run, so it takes the CI package
+                # only when the run is already finished.
                 ci_status, ci_artifact = _fetch_ci_package(
-                    project, target, out, version, args.dry_run, args.wait_ci)
+                    project, target, out, version, args.dry_run,
+                    args.wait_ci and target in ci_only)
                 if ci_status in ("built", "planned"):
                     ci_result = ci_status
                     if ci_status == "built":

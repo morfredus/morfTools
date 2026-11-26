@@ -332,8 +332,12 @@ Pour chaque cible qui porte un bloc `ci`, dans l'ordre :
 3. sinon, la cible est compilée en local comme avant. Une cible non native pour la machine
    (Windows depuis WSL, arm64 depuis un x86_64) est alors ignorée : seul un run CI peut la fournir.
 
-Options : `--no-ci` compile tout en local ; `--wait-ci` attend un run encore en cours pour le
-commit au lieu de compiler. Les artefacts GitHub expirent (14 jours pour ComponentHub) : passé
+Options : `--no-ci` compile tout en local ; `--wait-ci` attend le run du commit (même s'il n'est pas
+encore apparu, 90 s au plus après la création du tag) **pour les cibles que la machine ne sait pas
+compiler** ; une cible native se compile plus vite qu'elle n'attend le run, elle ne prend donc le
+paquet CI que si le run est déjà terminé. Les chaînes de release passent `--wait-ci`. Pour éviter
+toute compilation locale d'une cible native, lancer `packages.yml` (tag ou lancement manuel) avant
+la chaîne. Les artefacts GitHub expirent (14 jours pour ComponentHub) : passé
 ce délai, la compilation locale reprend. Le nom d'artefact et le motif `file` doivent
 correspondre à ce que le workflow publie (`{version}` est remplacé par le contenu de `VERSION`).
 

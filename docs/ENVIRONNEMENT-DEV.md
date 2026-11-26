@@ -106,7 +106,7 @@ Installer [MSYS2](https://www.msys2.org/), puis dans un shell **UCRT64** (le run
 ```bash
 pacman -Syu
 pacman -S --needed \
-    git python \
+    git python diffutils \
     mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja \
     mingw-w64-ucrt-x86_64-pkgconf \
     mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-charts \
