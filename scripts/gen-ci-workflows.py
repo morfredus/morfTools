@@ -96,7 +96,8 @@ def pacman_packages(root: Path, service: bool) -> list:
     pkgs += [pre + QT_PACMAN[c] for c in sorted(qt) if c in QT_PACMAN]
     pkgs += [pre + LIB_PACMAN[x] for x in sorted(libs)]
     if service:
-        pkgs += [pre + "python"]
+        # git: the packaging refuses to build without proof of the sources' state (provenance).
+        pkgs += [pre + "python", "git"]
     return pkgs + ["diffutils"]
 
 
@@ -337,6 +338,9 @@ def windows_job(job: str, title: str, p: Project, bdir: str, package: bool) -> s
         shell: msys2 {0}
         run: |
           export QT_ROOT="$(cygpath -m /ucrt64)"
+          # The checkout belongs to another user for MSYS2's git: allow it, or the provenance
+          # (git status) cannot be read and the packaging refuses to build.
+          git config --global --add safe.directory '*'
           python3 service.py package --target windows-x86_64-zip --out dist
 
       - uses: actions/upload-artifact@v4
@@ -755,6 +759,26 @@ def bump(version: str) -> str:
     return f"{major}.{int(minor) + 1}.0"
 
 
+def apply_fix(p: Project, text: str) -> list:
+    """Patch bump, badges and a `Fixed` CHANGELOG entry (the workflows were corrected)."""
+    nl = chr(10)
+    major, minor, patch = p.version.split(".")
+    new = f"{major}.{minor}.{int(patch) + 1}"
+    old = p.version
+    (p.root / "VERSION").write_text(new + nl, encoding="utf-8", newline=nl)
+    for name in ("README.md", "README.fr.md"):
+        path = p.root / name
+        content = path.read_text(encoding="utf-8")
+        path.write_text(content.replace(f"version-{old}", f"version-{new}", 1),
+                        encoding="utf-8", newline=nl)
+    cl = p.root / "CHANGELOG.md"
+    content = cl.read_text(encoding="utf-8")
+    first = content.index("## [")
+    entry = f"## [{new}] - {TODAY}" + nl*2 + "### Fixed" + nl*2 + f"- {text}" + nl*2
+    cl.write_text(content[:first] + entry + content[first:], encoding="utf-8", newline=nl)
+    return [f"version {old} -> {new}"]
+
+
 def apply_docs(p: Project) -> list:
     """Version bump, badges, CHANGELOG entry and README sections. Returns what was done."""
     done = []
@@ -817,6 +841,8 @@ def main(argv=None) -> int:
     parser.add_argument("--write", action="store_true", help="write the files (default: plan only)")
     parser.add_argument("--bump", action="store_true",
                         help="also bump the minor version, badges, CHANGELOG and README sections")
+    parser.add_argument("--fix", metavar="TEXT", default="",
+                        help="patch bump + a Fixed CHANGELOG entry with this text (workflow correction)")
     parser.add_argument("--root", type=Path, default=HERE.parent,
                         help="folder holding the *_travail clones (default: the workspace)")
     args = parser.parse_args(argv)
@@ -852,6 +878,9 @@ def main(argv=None) -> int:
             update_morfproject(p)
             if args.bump:
                 for line in apply_docs(p):
+                    print(f"  {line}")
+            elif args.fix:
+                for line in apply_fix(p, args.fix):
                     print(f"  {line}")
     return 0
 
